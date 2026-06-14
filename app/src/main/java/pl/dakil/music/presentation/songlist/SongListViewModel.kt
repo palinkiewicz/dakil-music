@@ -19,8 +19,11 @@ import pl.dakil.music.R
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SystemPlaylist
+import pl.dakil.music.domain.repository.SongTagEdit
 import pl.dakil.music.domain.repository.TagEdit
 import pl.dakil.music.domain.repository.TagWriteResult
+import pl.dakil.music.domain.util.DecomposeOptions
+import pl.dakil.music.domain.util.TitleDecomposer
 import pl.dakil.music.presentation.navigation.Routes
 import pl.dakil.music.presentation.navigation.SongListSource
 import pl.dakil.music.presentation.navigation.SourceType
@@ -45,7 +48,8 @@ sealed interface SongDialog {
         val isMulti: Boolean get() = songs.size > 1
     }
 
-    data class Decompose(val song: Song) : SongDialog
+    /** Decomposition applies to every song; the dialog previews [songs].first(). */
+    data class Decompose(val songs: List<Song>) : SongDialog
 }
 
 /** One-shot effects the screen consumes (snackbars, Scoped-Storage consent). */
@@ -79,7 +83,8 @@ class SongListViewModel(
     private val _events = Channel<SongListEvent>(Channel.BUFFERED)
     val events: Flow<SongListEvent> = _events.receiveAsFlow()
 
-    private var pendingTagWrite: Pair<List<Song>, TagEdit>? = null
+    /** A tag-write retried verbatim after the user grants Scoped-Storage consent. */
+    private var pendingWrite: (suspend () -> TagWriteResult)? = null
 
     // --- List interaction ----------------------------------------------------------
 
@@ -142,9 +147,9 @@ class SongListViewModel(
         if (songs.isNotEmpty()) _dialog.value = SongDialog.EditTags(songs)
     }
 
-    /** Title decomposition only makes sense for a single track. */
     fun startDecompose() {
-        selectedSongs().singleOrNull()?.let { _dialog.value = SongDialog.Decompose(it) }
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = SongDialog.Decompose(songs)
     }
 
     fun dismissDialog() {
@@ -156,16 +161,59 @@ class SongListViewModel(
             dismissDialog()
             return
         }
+        performWrite { container.editTags(songs, edit) }
+    }
+
+    /**
+     * Runs [TitleDecomposer] over each selected song with the same [options] and writes
+     * the resulting per-song title + artists. Songs that yield no extracted performers
+     * are left untouched.
+     */
+    fun applyDecomposition(songs: List<Song>, options: DecomposeOptions) {
+        val edits = songs.mapNotNull { song ->
+            val result = TitleDecomposer.decompose(song.title, options)
+            if (result.artists.isEmpty()) {
+                null
+            } else {
+                SongTagEdit(
+                    song = song,
+                    edit = TagEdit(
+                        title = result.title.takeIf { it.isNotBlank() },
+                        artist = result.artists.joinToString(", ").takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+        }
+        if (edits.isEmpty()) {
+            dismissDialog()
+            return
+        }
+        performWrite { container.editTags(edits) }
+    }
+
+    /** Called by the screen after the user grants Scoped-Storage write consent. */
+    fun onWritePermissionGranted() {
+        val retry = pendingWrite ?: return
+        pendingWrite = null
+        performWrite(retry)
+    }
+
+    /**
+     * Shared write pipeline: on success it refreshes the library so the list reflects
+     * the new tags immediately; on a permission denial it stashes the action to retry.
+     */
+    private fun performWrite(write: suspend () -> TagWriteResult) {
         viewModelScope.launch {
-            when (val result = container.editTags(songs, edit)) {
+            when (val result = write()) {
                 is TagWriteResult.Success -> {
+                    container.refreshLibrary()
                     _events.send(SongListEvent.Message(R.string.edit_tags_saved))
                     _dialog.value = null
                     clearSelection()
                 }
 
                 is TagWriteResult.RequiresPermission -> {
-                    pendingTagWrite = songs to edit
+                    pendingWrite = write
                     _events.send(SongListEvent.RequestWritePermission(result.intentSender))
                 }
 
@@ -174,24 +222,6 @@ class SongListViewModel(
                 }
             }
         }
-    }
-
-    /** Applies a decomposition result by writing the cleaned title + extracted artists. */
-    fun applyDecomposition(song: Song, title: String, artists: List<String>) {
-        saveTags(
-            songs = listOf(song),
-            edit = TagEdit(
-                title = title.takeIf { it.isNotBlank() },
-                artist = artists.joinToString(", ").takeIf { it.isNotBlank() },
-            ),
-        )
-    }
-
-    /** Called by the screen after the user grants Scoped-Storage write consent. */
-    fun onWritePermissionGranted() {
-        val (songs, edit) = pendingTagWrite ?: return
-        pendingTagWrite = null
-        saveTags(songs, edit)
     }
 
     private fun selectedSongs(): List<Song> {

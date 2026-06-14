@@ -12,8 +12,15 @@ import pl.dakil.music.domain.model.Song
  */
 interface TagEditorRepository {
 
+    /** Applies the same [newTags] to every song in [songs]. */
     suspend fun writeTags(songs: List<Song>, newTags: TagEdit): TagWriteResult
+
+    /** Applies a distinct [TagEdit] per song (used by multi-song title decomposition). */
+    suspend fun writeTags(edits: List<SongTagEdit>): TagWriteResult
 }
+
+/** Pairs a song with the specific edit to apply to it. */
+data class SongTagEdit(val song: Song, val edit: TagEdit)
 
 /**
  * A partial tag update: only non-null fields are written, leaving the rest intact.

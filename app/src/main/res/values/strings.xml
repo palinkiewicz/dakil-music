@@ -75,6 +75,7 @@
 
     <!-- Automatic title decomposition -->
     <string name="decompose_title">Decompose title</string>
+    <string name="decompose_multi_notice">Applies to %1$d songs using these rules. The preview shows the first song.</string>
     <string name="decompose_original">Current title</string>
     <string name="decompose_main_separator">Title / authors separator</string>
     <string name="decompose_authors_before">Authors are before the separator</string>

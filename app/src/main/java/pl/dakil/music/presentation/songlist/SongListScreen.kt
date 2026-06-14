@@ -162,11 +162,9 @@ fun SongListScreen(
         )
 
         is SongDialog.Decompose -> DecomposeTitleDialog(
-            song = current.song,
+            songs = current.songs,
             onDismiss = viewModel::dismissDialog,
-            onApply = { title, artists ->
-                viewModel.applyDecomposition(current.song, title, artists)
-            },
+            onApply = { options -> viewModel.applyDecomposition(current.songs, options) },
         )
 
         null -> Unit
@@ -231,8 +229,6 @@ private fun SelectionTopBar(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_decompose_title)) },
-                        // Title decomposition operates on a single track.
-                        enabled = selectedCount == 1,
                         onClick = {
                             menuExpanded = false
                             onDecompose()

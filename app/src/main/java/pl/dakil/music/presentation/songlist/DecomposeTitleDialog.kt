@@ -32,29 +32,31 @@ import pl.dakil.music.domain.util.TitleDecomposer
 
 /**
  * Lets the user pull performers out of a messy (e.g. YouTube-ripped) title and move
- * them into the artist tag. The result is previewed live as the options change.
+ * them into the artist tag. The chosen options are applied to every song in [songs];
+ * the live preview reflects the first one.
  */
 @Composable
 fun DecomposeTitleDialog(
-    song: Song,
+    songs: List<Song>,
     onDismiss: () -> Unit,
-    onApply: (title: String, artists: List<String>) -> Unit,
+    onApply: (DecomposeOptions) -> Unit,
 ) {
-    var mainSeparator by rememberSaveable(song.id) { mutableStateOf("-") }
-    var authorsBefore by rememberSaveable(song.id) { mutableStateOf(true) }
-    var extractFeat by rememberSaveable(song.id) { mutableStateOf(true) }
-    var removeAfter by rememberSaveable(song.id) { mutableStateOf("") }
+    val previewSong = songs.firstOrNull() ?: return
+    val key = previewSong.id
 
-    val result = remember(song.title, mainSeparator, authorsBefore, extractFeat, removeAfter) {
-        TitleDecomposer.decompose(
-            rawTitle = song.title,
-            options = DecomposeOptions(
-                mainSeparator = mainSeparator,
-                authorsBeforeSeparator = authorsBefore,
-                extractFeat = extractFeat,
-                removeAfter = removeAfter,
-            ),
-        )
+    var mainSeparator by rememberSaveable(key) { mutableStateOf("-") }
+    var authorsBefore by rememberSaveable(key) { mutableStateOf(true) }
+    var extractFeat by rememberSaveable(key) { mutableStateOf(true) }
+    var removeAfter by rememberSaveable(key) { mutableStateOf("") }
+
+    val options = DecomposeOptions(
+        mainSeparator = mainSeparator,
+        authorsBeforeSeparator = authorsBefore,
+        extractFeat = extractFeat,
+        removeAfter = removeAfter,
+    )
+    val result = remember(previewSong.title, options) {
+        TitleDecomposer.decompose(previewSong.title, options)
     }
 
     AlertDialog(
@@ -65,7 +67,14 @@ fun DecomposeTitleDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                LabeledValue(stringResource(R.string.decompose_original), song.title)
+                if (songs.size > 1) {
+                    Text(
+                        text = stringResource(R.string.decompose_multi_notice, songs.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                LabeledValue(stringResource(R.string.decompose_original), previewSong.title)
 
                 OutlinedTextField(
                     value = mainSeparator,
@@ -121,7 +130,7 @@ fun DecomposeTitleDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onApply(result.title, result.artists) },
+                onClick = { onApply(options) },
                 enabled = result.artists.isNotEmpty(),
             ) {
                 Text(stringResource(R.string.decompose_apply))
