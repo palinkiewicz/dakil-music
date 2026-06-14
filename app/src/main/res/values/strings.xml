@@ -17,6 +17,7 @@
     <string name="now_playing_title">Now Playing</string>
     <string name="now_playing_empty">Nothing is playing</string>
     <string name="now_playing_empty_hint">Pick a song from your library to start listening.</string>
+    <string name="now_playing_queue">Queue</string>
     <string name="cd_album_art">Album artwork</string>
     <string name="cd_play">Play</string>
     <string name="cd_pause">Pause</string>
@@ -37,6 +38,24 @@
     <string name="library_empty_albums">No albums found</string>
     <string name="library_empty_performers">No performers found</string>
     <string name="library_empty_songs">No songs here yet</string>
+    <string name="no_album">No album</string>
+
+    <!-- Detail screen actions -->
+    <string name="action_play_all">Play all</string>
+    <string name="action_shuffle_play">Shuffle and play</string>
+    <string name="action_add_to_queue">Add to queue</string>
+    <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="action_more">More options</string>
+    <string name="snackbar_added_to_queue">Added to queue</string>
+    <string name="snackbar_added_to_playlist">Added to playlist</string>
+
+    <!-- User playlists -->
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_create">Create</string>
+    <string name="playlist_rename">Rename</string>
+    <string name="playlist_rename_confirm">Rename</string>
+    <string name="playlist_name_label">Playlist name</string>
+    <string name="add_to_playlist_title">Add to playlist</string>
 
     <!-- Counts (quantity-aware) -->
     <plurals name="song_count">

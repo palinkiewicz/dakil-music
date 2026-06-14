@@ -19,6 +19,7 @@ import pl.dakil.music.R
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SystemPlaylist
+import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.domain.repository.SongTagEdit
 import pl.dakil.music.domain.repository.TagEdit
 import pl.dakil.music.domain.repository.TagWriteResult
@@ -50,6 +51,8 @@ sealed interface SongDialog {
 
     /** Decomposition applies to every song; the dialog previews [songs].first(). */
     data class Decompose(val songs: List<Song>) : SongDialog
+
+    data class AddToPlaylist(val songs: List<Song>) : SongDialog
 }
 
 /** One-shot effects the screen consumes (snackbars, Scoped-Storage consent). */
@@ -76,6 +79,9 @@ class SongListViewModel(
         val validSelection = selected intersect songs.mapTo(HashSet()) { it.id }
         SongListUiState(songs = songs, favoriteIds = favorites, selectedIds = validSelection)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongListUiState())
+
+    val userPlaylists: StateFlow<List<UserPlaylist>> = container.observeUserPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _dialog = MutableStateFlow<SongDialog?>(null)
     val dialog: StateFlow<SongDialog?> = _dialog.asStateFlow()
@@ -112,6 +118,50 @@ class SongListViewModel(
 
     fun selectAll() {
         selectedIds.value = uiState.value.songs.mapTo(HashSet()) { it.id }
+    }
+
+    // --- Playback ------------------------------------------------------------------
+
+    /** Plays the whole list in order. */
+    fun playAll() = container.playSongs(uiState.value.songs, 0)
+
+    /** Plays the list in a shuffled order. */
+    fun shufflePlay() = container.shufflePlay(uiState.value.songs)
+
+    fun addSelectionToQueue() {
+        val songs = selectedSongs()
+        if (songs.isEmpty()) return
+        container.addToQueue(songs)
+        viewModelScope.launch { _events.send(SongListEvent.Message(R.string.snackbar_added_to_queue)) }
+        clearSelection()
+    }
+
+    // --- Playlists -----------------------------------------------------------------
+
+    fun startAddToPlaylist() {
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = SongDialog.AddToPlaylist(songs)
+    }
+
+    fun addToExistingPlaylist(playlistId: String, songs: List<Song>) {
+        viewModelScope.launch {
+            container.addSongsToPlaylist(playlistId, songs.map { it.id })
+            afterPlaylistAdd()
+        }
+    }
+
+    fun createPlaylistAndAdd(name: String, songs: List<Song>) {
+        viewModelScope.launch {
+            val id = container.createPlaylist(name)
+            container.addSongsToPlaylist(id, songs.map { it.id })
+            afterPlaylistAdd()
+        }
+    }
+
+    private suspend fun afterPlaylistAdd() {
+        _events.send(SongListEvent.Message(R.string.snackbar_added_to_playlist))
+        _dialog.value = null
+        clearSelection()
     }
 
     // --- Bulk favorites ------------------------------------------------------------
@@ -235,6 +285,7 @@ class SongListViewModel(
         is SongListSource.AlbumSource -> container.getSongsForAlbum(source.albumId)
         is SongListSource.PerformerSource -> container.getSongsForPerformer(source.name)
         is SongListSource.PlaylistSource -> container.getSongsForPlaylist(source.playlist)
+        is SongListSource.UserPlaylistSource -> container.getUserPlaylistSongs(source.playlistId)
     }
 
     private fun parseSource(handle: SavedStateHandle): SongListSource {
@@ -243,7 +294,15 @@ class SongListViewModel(
         return when (SourceType.valueOf(type)) {
             SourceType.ALBUM -> SongListSource.AlbumSource(arg.toLongOrNull() ?: -1L)
             SourceType.PERFORMER -> SongListSource.PerformerSource(arg)
-            SourceType.PLAYLIST -> SongListSource.PlaylistSource(SystemPlaylist.valueOf(arg))
+            // A PLAYLIST arg is either a SystemPlaylist enum name or a user-playlist id.
+            SourceType.PLAYLIST -> {
+                val system = SystemPlaylist.entries.firstOrNull { it.name == arg }
+                if (system != null) {
+                    SongListSource.PlaylistSource(system)
+                } else {
+                    SongListSource.UserPlaylistSource(arg)
+                }
+            }
         }
     }
 }

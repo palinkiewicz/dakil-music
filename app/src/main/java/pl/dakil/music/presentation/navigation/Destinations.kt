@@ -23,6 +23,9 @@ object Routes {
 
     fun playlistSongs(playlist: SystemPlaylist) =
         "$SONG_LIST/${SourceType.PLAYLIST}/${playlist.name}"
+
+    fun userPlaylistSongs(id: String) =
+        "$SONG_LIST/${SourceType.PLAYLIST}/${Uri.encode(id)}"
 }
 
 enum class SourceType { ALBUM, PERFORMER, PLAYLIST }
@@ -32,4 +35,5 @@ sealed interface SongListSource {
     data class AlbumSource(val albumId: Long) : SongListSource
     data class PerformerSource(val name: String) : SongListSource
     data class PlaylistSource(val playlist: SystemPlaylist) : SongListSource
+    data class UserPlaylistSource(val playlistId: String) : SongListSource
 }

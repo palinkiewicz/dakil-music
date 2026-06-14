@@ -120,6 +120,7 @@ fun MusicApp() {
                     onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
                     onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
                     onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
+                    onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
                 )
             }
             composable(Routes.MORE) {

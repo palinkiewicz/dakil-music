@@ -14,13 +14,18 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
@@ -29,6 +34,8 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,10 +53,12 @@ import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SystemPlaylist
+import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.aspectRatioSquare
 import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 
 private enum class LibraryTab(val titleRes: Int) {
     ALBUMS(R.string.tab_albums),
@@ -69,6 +78,7 @@ fun LibraryScreen(
     onAlbumClick: (Long) -> Unit,
     onPerformerClick: (String) -> Unit,
     onPlaylistClick: (SystemPlaylist) -> Unit,
+    onUserPlaylistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
@@ -78,6 +88,10 @@ fun LibraryScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+
+    // null = no dialog; "" = create; otherwise the id of the playlist being renamed.
+    var creatingPlaylist by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = selectedTab) {
@@ -93,8 +107,40 @@ fun LibraryScreen(
         when (tabs[selectedTab]) {
             LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
             LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
-            LibraryTab.PLAYLISTS -> PlaylistsList(playlists, onPlaylistClick)
+            LibraryTab.PLAYLISTS -> PlaylistsList(
+                playlists = playlists,
+                onSystemClick = onPlaylistClick,
+                onUserClick = onUserPlaylistClick,
+                onCreate = { creatingPlaylist = true },
+                onRename = { renaming = it },
+            )
         }
+    }
+
+    if (creatingPlaylist) {
+        PlaylistNameDialog(
+            titleRes = R.string.playlist_new,
+            confirmRes = R.string.playlist_create,
+            initialName = "",
+            onDismiss = { creatingPlaylist = false },
+            onConfirm = {
+                viewModel.createPlaylist(it)
+                creatingPlaylist = false
+            },
+        )
+    }
+
+    renaming?.let { playlist ->
+        PlaylistNameDialog(
+            titleRes = R.string.playlist_rename,
+            confirmRes = R.string.playlist_rename_confirm,
+            initialName = playlist.name,
+            onDismiss = { renaming = null },
+            onConfirm = {
+                viewModel.renamePlaylist(playlist.id, it)
+                renaming = null
+            },
+        )
     }
 }
 
@@ -134,19 +180,25 @@ private fun AlbumCard(album: Album, onClick: (Long) -> Unit) {
                 .aspectRatioSquare(),
         )
         Text(
-            text = album.title.ifBlank { stringResource(R.string.unknown_album) },
+            text = if (album.isNoAlbum) {
+                stringResource(R.string.no_album)
+            } else {
+                album.title.ifBlank { stringResource(R.string.unknown_album) }
+            },
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp),
         )
-        Text(
-            text = album.artist.ifBlank { stringResource(R.string.unknown_artist) },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (!album.isNoAlbum) {
+            Text(
+                text = album.artist.ifBlank { stringResource(R.string.unknown_artist) },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -179,30 +231,61 @@ private fun PerformersList(performers: List<Performer>, onClick: (String) -> Uni
 }
 
 @Composable
-private fun PlaylistsList(playlists: List<Playlist>, onClick: (SystemPlaylist) -> Unit) {
+private fun PlaylistsList(
+    playlists: List<Playlist>,
+    onSystemClick: (SystemPlaylist) -> Unit,
+    onUserClick: (String) -> Unit,
+    onCreate: () -> Unit,
+    onRename: (UserPlaylist) -> Unit,
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(playlists, key = { it.type }) { playlist ->
+        item(key = "create") {
             ListItem(
-                headlineContent = { Text(stringResource(systemPlaylistNameRes(playlist.type))) },
-                supportingContent = {
+                headlineContent = { Text(stringResource(R.string.playlist_new)) },
+                leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.clickableRow(onCreate),
+            )
+        }
+        items(playlists, key = { it.systemType?.name ?: it.userPlaylist!!.id }) { playlist ->
+            val count = pluralStringResource(
+                R.plurals.song_count,
+                playlist.songCount,
+                playlist.songCount,
+            )
+            val userPlaylist = playlist.userPlaylist
+            ListItem(
+                headlineContent = {
                     Text(
-                        pluralStringResource(
-                            R.plurals.song_count,
-                            playlist.songCount,
-                            playlist.songCount,
-                        ),
+                        text = userPlaylist?.name
+                            ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
                     )
                 },
+                supportingContent = { Text(count) },
                 leadingContent = {
                     Icon(
-                        imageVector = when (playlist.type) {
-                            SystemPlaylist.FAVORITES -> Icons.Rounded.Favorite
-                            SystemPlaylist.ALL_SONGS -> Icons.Rounded.MusicNote
+                        imageVector = when {
+                            playlist.systemType == SystemPlaylist.FAVORITES -> Icons.Rounded.Favorite
+                            playlist.systemType == SystemPlaylist.ALL_SONGS -> Icons.Rounded.MusicNote
+                            else -> Icons.Rounded.QueueMusic
                         },
                         contentDescription = null,
                     )
                 },
-                modifier = Modifier.clickableRow { onClick(playlist.type) },
+                trailingContent = userPlaylist?.let {
+                    {
+                        IconButton(onClick = { onRename(it) }) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = stringResource(R.string.playlist_rename),
+                            )
+                        }
+                    }
+                },
+                modifier = Modifier.clickableRow {
+                    if (userPlaylist != null) onUserClick(userPlaylist.id)
+                    else onSystemClick(playlist.systemType!!)
+                },
             )
         }
     }

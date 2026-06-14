@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.NO_ALBUM_ID
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.repository.MusicRepository
@@ -28,7 +29,9 @@ class MusicRepositoryImpl(
     override val songs: StateFlow<List<Song>> = _songs.asStateFlow()
 
     override val albums: Flow<List<Album>> = _songs.map { songs ->
-        songs.groupBy { it.albumId }
+        val (withoutAlbum, withAlbum) = songs.partition { it.album.isBlank() }
+
+        val realAlbums = withAlbum.groupBy { it.albumId }
             .map { (albumId, albumSongs) ->
                 val first = albumSongs.first()
                 Album(
@@ -40,6 +43,21 @@ class MusicRepositoryImpl(
                 )
             }
             .sortedBy { it.title.lowercase() }
+
+        // A single synthetic "No album" entry, surfaced first, for untagged songs.
+        val noAlbum = if (withoutAlbum.isEmpty()) {
+            null
+        } else {
+            Album(
+                id = NO_ALBUM_ID,
+                title = "",
+                artist = "",
+                artworkUri = null,
+                songCount = withoutAlbum.size,
+            )
+        }
+
+        listOfNotNull(noAlbum) + realAlbums
     }
 
     override val performers: Flow<List<Performer>> = _songs.map { songs ->
@@ -54,8 +72,11 @@ class MusicRepositoryImpl(
     }
 
     override fun songsForAlbum(albumId: Long): Flow<List<Song>> = _songs.map { songs ->
-        songs.filter { it.albumId == albumId }
-            .sortedBy { it.trackNumber }
+        if (albumId == NO_ALBUM_ID) {
+            songs.filter { it.album.isBlank() }.sortedBy { it.title.lowercase() }
+        } else {
+            songs.filter { it.albumId == albumId }.sortedBy { it.trackNumber }
+        }
     }
 
     override fun songsForPerformer(performerName: String): Flow<List<Song>> = _songs.map { songs ->

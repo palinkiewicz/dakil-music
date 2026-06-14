@@ -17,6 +17,22 @@ class PlaySongsUseCase(private val player: PlayerRepository) {
     }
 }
 
+/** Shuffles [songs] into a random order and plays the resulting queue from the top. */
+class ShufflePlayUseCase(private val player: PlayerRepository) {
+    operator fun invoke(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        player.play(songs.shuffled(), 0)
+    }
+}
+
+/** Appends songs to the end of the current queue. */
+class AddToQueueUseCase(private val player: PlayerRepository) {
+    operator fun invoke(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        player.addToQueue(songs)
+    }
+}
+
 /** Bundles the simple transport commands so the ViewModel depends on one object. */
 class PlaybackControlUseCase(private val player: PlayerRepository) {
     fun togglePlayPause() = player.togglePlayPause()
@@ -25,4 +41,5 @@ class PlaybackControlUseCase(private val player: PlayerRepository) {
     fun seekTo(positionMs: Long) = player.seekTo(positionMs)
     fun toggleShuffle() = player.toggleShuffle()
     fun cycleRepeatMode() = player.cycleRepeatMode()
+    fun skipToQueueItem(index: Int) = player.skipToQueueItem(index)
 }

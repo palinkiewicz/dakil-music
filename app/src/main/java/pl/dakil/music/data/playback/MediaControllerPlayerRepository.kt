@@ -88,6 +88,27 @@ class MediaControllerPlayerRepository(
         c.play()
     }
 
+    override fun addToQueue(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        val c = controller ?: run {
+            pendingAction = { addToQueue(songs) }
+            return
+        }
+        songs.forEach { queueById[it.id.toString()] = it }
+        val wasEmpty = c.mediaItemCount == 0
+        c.addMediaItems(songs.map(MediaItemMapper::toMediaItem))
+        if (wasEmpty) c.prepare()
+        syncState()
+    }
+
+    override fun skipToQueueItem(index: Int) {
+        val c = controller ?: return
+        if (index in 0 until c.mediaItemCount) {
+            c.seekToDefaultPosition(index)
+            c.play()
+        }
+    }
+
     override fun togglePlayPause() {
         val c = controller ?: return
         if (c.isPlaying) c.pause() else c.play()
@@ -128,6 +149,10 @@ class MediaControllerPlayerRepository(
     private fun syncState() {
         val c = controller ?: return
         val song = c.currentMediaItem?.mediaId?.let(queueById::get)
+        val queue = ArrayList<Song>(c.mediaItemCount)
+        for (i in 0 until c.mediaItemCount) {
+            queueById[c.getMediaItemAt(i).mediaId]?.let(queue::add)
+        }
         _playbackState.update {
             it.copy(
                 currentSong = song,
@@ -138,6 +163,8 @@ class MediaControllerPlayerRepository(
                 hasPrevious = c.hasPreviousMediaItem(),
                 shuffleEnabled = c.shuffleModeEnabled,
                 repeatMode = c.repeatMode.toRepeatMode(),
+                queue = queue,
+                currentIndex = c.currentMediaItemIndex,
             )
         }
         startOrStopPositionUpdates(c.isPlaying)

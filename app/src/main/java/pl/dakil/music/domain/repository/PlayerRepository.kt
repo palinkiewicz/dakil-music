@@ -15,6 +15,12 @@ interface PlayerRepository {
     /** Replaces the queue with [songs] and starts playback at [startIndex]. */
     fun play(songs: List<Song>, startIndex: Int)
 
+    /** Appends [songs] to the end of the current queue. */
+    fun addToQueue(songs: List<Song>)
+
+    /** Jumps to [index] in the current queue and plays. */
+    fun skipToQueueItem(index: Int)
+
     fun togglePlayPause()
 
     fun next()
