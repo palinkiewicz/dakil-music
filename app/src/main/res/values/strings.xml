@@ -52,7 +52,9 @@
     <string name="action_close_selection">Close selection</string>
     <string name="action_select_all">Select all</string>
     <string name="action_add_to_favorites">Add to favorites</string>
-    <string name="action_edit_tags">Edit metadata tags</string>
+    <string name="action_remove_from_favorites">Remove from favorites</string>
+    <string name="action_edit_tags">Edit tags</string>
+    <string name="action_decompose_title">Automatic title decomposition</string>
     <string name="snackbar_added_to_favorites">Added to favorites</string>
     <string name="snackbar_removed_from_favorites">Removed from favorites</string>
 
@@ -60,11 +62,26 @@
     <string name="edit_tags_title">Edit tags</string>
     <string name="edit_tags_field_title">Title</string>
     <string name="edit_tags_field_artist">Artist(s)</string>
+    <string name="edit_tags_field_genre">Genre</string>
     <string name="edit_tags_field_album">Album</string>
+    <string name="edit_tags_field_track">Track number</string>
+    <string name="edit_tags_field_year">Year</string>
+    <string name="edit_tags_multi_notice">Editing %1$d songs. Empty fields are left unchanged; only fields you fill in are applied to every selected song.</string>
     <string name="edit_tags_save">Save</string>
     <string name="edit_tags_cancel">Cancel</string>
     <string name="edit_tags_permission_needed">Saving tags requires permission to modify this file.</string>
     <string name="edit_tags_saved">Tags updated</string>
+    <string name="edit_tags_failed">Couldn\'t write tags to the file.</string>
+
+    <!-- Automatic title decomposition -->
+    <string name="decompose_title">Decompose title</string>
+    <string name="decompose_original">Current title</string>
+    <string name="decompose_main_separator">Title / authors separator</string>
+    <string name="decompose_authors_before">Authors are before the separator</string>
+    <string name="decompose_extract_feat">Also extract \"feat.\" performers</string>
+    <string name="decompose_remove_after">Remove text from (optional)</string>
+    <string name="decompose_preview">Preview</string>
+    <string name="decompose_apply">Apply</string>
 
     <!-- More / settings -->
     <string name="more_title">More</string>

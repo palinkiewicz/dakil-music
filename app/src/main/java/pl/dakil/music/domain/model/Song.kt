@@ -20,6 +20,8 @@ data class Song(
     val albumArtUri: Uri?,
     val durationMs: Long,
     val trackNumber: Int,
+    val year: Int,
+    val genre: String,
     val mimeType: String,
     val dateAddedSeconds: Long,
 ) {

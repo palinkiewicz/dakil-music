@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack hosts the Android-friendly JAudiotagger fork used for tag writing.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

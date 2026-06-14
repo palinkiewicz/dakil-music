@@ -33,6 +33,19 @@ data class SongListUiState(
     val inSelectionMode: Boolean get() = selectedIds.isNotEmpty()
     fun isSelected(id: Long) = id in selectedIds
     fun isFavorite(id: Long) = id in favoriteIds
+
+    /** True when every selected song is already a favorite (drives add vs remove). */
+    val allSelectedAreFavorite: Boolean
+        get() = selectedIds.isNotEmpty() && selectedIds.all { it in favoriteIds }
+}
+
+/** Which modal dialog (if any) is currently shown over the list. */
+sealed interface SongDialog {
+    data class EditTags(val songs: List<Song>) : SongDialog {
+        val isMulti: Boolean get() = songs.size > 1
+    }
+
+    data class Decompose(val song: Song) : SongDialog
 }
 
 /** One-shot effects the screen consumes (snackbars, Scoped-Storage consent). */
@@ -60,14 +73,13 @@ class SongListViewModel(
         SongListUiState(songs = songs, favoriteIds = favorites, selectedIds = validSelection)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongListUiState())
 
-    /** The song currently open in the tag editor, if any. */
-    private val _editingSong = MutableStateFlow<Song?>(null)
-    val editingSong: StateFlow<Song?> = _editingSong.asStateFlow()
+    private val _dialog = MutableStateFlow<SongDialog?>(null)
+    val dialog: StateFlow<SongDialog?> = _dialog.asStateFlow()
 
     private val _events = Channel<SongListEvent>(Channel.BUFFERED)
     val events: Flow<SongListEvent> = _events.receiveAsFlow()
 
-    private var pendingTagWrite: Pair<Song, TagEdit>? = null
+    private var pendingTagWrite: Pair<List<Song>, TagEdit>? = null
 
     // --- List interaction ----------------------------------------------------------
 
@@ -97,54 +109,94 @@ class SongListViewModel(
         selectedIds.value = uiState.value.songs.mapTo(HashSet()) { it.id }
     }
 
-    // --- Bulk actions --------------------------------------------------------------
+    // --- Bulk favorites ------------------------------------------------------------
 
-    fun addSelectedToFavorites() {
-        val ids = uiState.value.selectedIds
+    /**
+     * Adds the selection to favorites, or — when every selected song is already a
+     * favorite — removes them all instead.
+     */
+    fun toggleFavoritesForSelection() {
+        val state = uiState.value
+        val ids = state.selectedIds
         if (ids.isEmpty()) return
+        val makeFavorite = !state.allSelectedAreFavorite
         viewModelScope.launch {
-            container.setFavorites(ids, favorite = true)
-            _events.send(SongListEvent.Message(R.string.snackbar_added_to_favorites))
+            container.setFavorites(ids, favorite = makeFavorite)
+            _events.send(
+                SongListEvent.Message(
+                    if (makeFavorite) {
+                        R.string.snackbar_added_to_favorites
+                    } else {
+                        R.string.snackbar_removed_from_favorites
+                    },
+                ),
+            )
             clearSelection()
         }
     }
 
-    /** Opens the tag editor for the first selected song (tag writing is per-file). */
+    // --- Tag editing & decomposition -----------------------------------------------
+
     fun startEditTags() {
-        val firstId = uiState.value.selectedIds.firstOrNull() ?: return
-        _editingSong.value = uiState.value.songs.firstOrNull { it.id == firstId }
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = SongDialog.EditTags(songs)
     }
 
-    fun dismissEditTags() {
-        _editingSong.value = null
+    /** Title decomposition only makes sense for a single track. */
+    fun startDecompose() {
+        selectedSongs().singleOrNull()?.let { _dialog.value = SongDialog.Decompose(it) }
     }
 
-    fun saveTags(song: Song, edit: TagEdit) {
+    fun dismissDialog() {
+        _dialog.value = null
+    }
+
+    fun saveTags(songs: List<Song>, edit: TagEdit) {
+        if (edit.isEmpty || songs.isEmpty()) {
+            dismissDialog()
+            return
+        }
         viewModelScope.launch {
-            when (val result = container.editTags(song, edit)) {
+            when (val result = container.editTags(songs, edit)) {
                 is TagWriteResult.Success -> {
                     _events.send(SongListEvent.Message(R.string.edit_tags_saved))
-                    _editingSong.value = null
+                    _dialog.value = null
                     clearSelection()
                 }
 
                 is TagWriteResult.RequiresPermission -> {
-                    pendingTagWrite = song to edit
+                    pendingTagWrite = songs to edit
                     _events.send(SongListEvent.RequestWritePermission(result.intentSender))
                 }
 
                 is TagWriteResult.Error -> {
-                    _events.send(SongListEvent.Message(R.string.edit_tags_permission_needed))
+                    _events.send(SongListEvent.Message(R.string.edit_tags_failed))
                 }
             }
         }
     }
 
+    /** Applies a decomposition result by writing the cleaned title + extracted artists. */
+    fun applyDecomposition(song: Song, title: String, artists: List<String>) {
+        saveTags(
+            songs = listOf(song),
+            edit = TagEdit(
+                title = title.takeIf { it.isNotBlank() },
+                artist = artists.joinToString(", ").takeIf { it.isNotBlank() },
+            ),
+        )
+    }
+
     /** Called by the screen after the user grants Scoped-Storage write consent. */
     fun onWritePermissionGranted() {
-        val (song, edit) = pendingTagWrite ?: return
+        val (songs, edit) = pendingTagWrite ?: return
         pendingTagWrite = null
-        saveTags(song, edit)
+        saveTags(songs, edit)
+    }
+
+    private fun selectedSongs(): List<Song> {
+        val state = uiState.value
+        return state.songs.filter { it.id in state.selectedIds }
     }
 
     // --- Source resolution ---------------------------------------------------------

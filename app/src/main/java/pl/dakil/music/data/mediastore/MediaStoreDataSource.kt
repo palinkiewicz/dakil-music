@@ -3,6 +3,7 @@ package pl.dakil.music.data.mediastore
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,17 +22,22 @@ class MediaStoreDataSource(private val context: Context) {
     suspend fun queryAudio(): List<Song> = withContext(Dispatchers.IO) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.ALBUM_ID,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.TRACK,
-            MediaStore.Audio.Media.MIME_TYPE,
-            MediaStore.Audio.Media.DATE_ADDED,
-        )
+        // GENRE as a media column only exists from API 30 (R).
+        val hasGenreColumn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
+        val projection = buildList {
+            add(MediaStore.Audio.Media._ID)
+            add(MediaStore.Audio.Media.TITLE)
+            add(MediaStore.Audio.Media.ARTIST)
+            add(MediaStore.Audio.Media.ALBUM)
+            add(MediaStore.Audio.Media.ALBUM_ID)
+            add(MediaStore.Audio.Media.DURATION)
+            add(MediaStore.Audio.Media.TRACK)
+            add(MediaStore.Audio.Media.YEAR)
+            add(MediaStore.Audio.Media.MIME_TYPE)
+            add(MediaStore.Audio.Media.DATE_ADDED)
+            if (hasGenreColumn) add(MediaStore.Audio.Media.GENRE)
+        }.toTypedArray()
 
         // Only real music tracks with a positive duration (skips 0-length stubs).
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND " +
@@ -49,8 +55,14 @@ class MediaStoreDataSource(private val context: Context) {
                 val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                 val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+                val yearCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                 val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
                 val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+                val genreCol = if (hasGenreColumn) {
+                    cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
+                } else {
+                    -1
+                }
 
                 songs.ensureCapacity(cursor.count)
 
@@ -71,6 +83,8 @@ class MediaStoreDataSource(private val context: Context) {
                         durationMs = cursor.getLong(durationCol),
                         // TRACK is encoded as DDDTTT (disc*1000 + track); keep just the track part.
                         trackNumber = (cursor.getInt(trackCol) % 1000),
+                        year = cursor.getInt(yearCol),
+                        genre = if (genreCol >= 0) cursor.getString(genreCol).orEmpty() else "",
                         mimeType = cursor.getString(mimeCol) ?: "audio/*",
                         dateAddedSeconds = cursor.getLong(dateCol),
                     )

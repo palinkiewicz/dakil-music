@@ -14,6 +14,7 @@ coil = "2.7.0"
 datastore = "1.1.1"
 lifecycleViewmodelCompose = "2.10.0"
 coroutines = "1.9.0"
+jaudiotagger = "2.3.15"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.re
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+jaudiotagger = { group = "com.github.Adonai", name = "jaudiotagger", version.ref = "jaudiotagger" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -16,9 +16,12 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,7 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +66,7 @@ fun SongListScreen(
     viewModel: SongListViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val editingSong by viewModel.editingSong.collectAsStateWithLifecycle()
+    val dialog by viewModel.dialog.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -94,10 +99,12 @@ fun SongListScreen(
             if (state.inSelectionMode) {
                 SelectionTopBar(
                     selectedCount = state.selectedIds.size,
+                    allSelectedFavorite = state.allSelectedAreFavorite,
                     onClose = viewModel::clearSelection,
                     onSelectAll = viewModel::selectAll,
-                    onAddFavorites = viewModel::addSelectedToFavorites,
+                    onToggleFavorites = viewModel::toggleFavoritesForSelection,
                     onEditTags = viewModel::startEditTags,
+                    onDecompose = viewModel::startDecompose,
                 )
             } else {
                 CenterAlignedTopAppBar(
@@ -147,12 +154,22 @@ fun SongListScreen(
         }
     }
 
-    editingSong?.let { song ->
-        EditTagsDialog(
-            song = song,
-            onDismiss = viewModel::dismissEditTags,
-            onSave = { edit -> viewModel.saveTags(song, edit) },
+    when (val current = dialog) {
+        is SongDialog.EditTags -> EditTagsDialog(
+            songs = current.songs,
+            onDismiss = viewModel::dismissDialog,
+            onSave = { edit -> viewModel.saveTags(current.songs, edit) },
         )
+
+        is SongDialog.Decompose -> DecomposeTitleDialog(
+            song = current.song,
+            onDismiss = viewModel::dismissDialog,
+            onApply = { title, artists ->
+                viewModel.applyDecomposition(current.song, title, artists)
+            },
+        )
+
+        null -> Unit
     }
 }
 
@@ -160,11 +177,15 @@ fun SongListScreen(
 @Composable
 private fun SelectionTopBar(
     selectedCount: Int,
+    allSelectedFavorite: Boolean,
     onClose: () -> Unit,
     onSelectAll: () -> Unit,
-    onAddFavorites: () -> Unit,
+    onToggleFavorites: () -> Unit,
     onEditTags: () -> Unit,
+    onDecompose: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     TopAppBar(
         title = {
             Text(pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount))
@@ -175,12 +196,51 @@ private fun SelectionTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onAddFavorites) {
-                Icon(Icons.Rounded.Favorite, stringResource(R.string.action_add_to_favorites))
+            // Filled heart when every selection is already a favorite (tap = remove).
+            IconButton(onClick = onToggleFavorites) {
+                Icon(
+                    imageVector = if (allSelectedFavorite) {
+                        Icons.Rounded.Favorite
+                    } else {
+                        Icons.Rounded.FavoriteBorder
+                    },
+                    contentDescription = stringResource(
+                        if (allSelectedFavorite) {
+                            R.string.action_remove_from_favorites
+                        } else {
+                            R.string.action_add_to_favorites
+                        },
+                    ),
+                )
             }
-            IconButton(onClick = onEditTags, enabled = selectedCount == 1) {
-                Icon(Icons.Rounded.Edit, stringResource(R.string.action_edit_tags))
+
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Rounded.Edit, stringResource(R.string.action_edit_tags))
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_edit_tags)) },
+                        onClick = {
+                            menuExpanded = false
+                            onEditTags()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_decompose_title)) },
+                        // Title decomposition operates on a single track.
+                        enabled = selectedCount == 1,
+                        onClick = {
+                            menuExpanded = false
+                            onDecompose()
+                        },
+                    )
+                }
             }
+
             IconButton(onClick = onSelectAll) {
                 Icon(Icons.Rounded.SelectAll, stringResource(R.string.action_select_all))
             }
