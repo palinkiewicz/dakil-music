@@ -18,7 +18,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,9 +28,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pl.dakil.music.R
+import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.library.LibraryScreen
 import pl.dakil.music.presentation.more.MoreScreen
+import pl.dakil.music.presentation.nowplaying.NowPlayingNavIcon
 import pl.dakil.music.presentation.nowplaying.NowPlayingScreen
+import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
 import pl.dakil.music.presentation.settings.SettingsScreen
 import pl.dakil.music.presentation.songlist.SongListScreen
 
@@ -47,35 +51,55 @@ private enum class TopLevelDestination(
 fun MusicApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = backStackEntry?.destination
+    val currentRoute = backStackEntry?.destination?.route
 
-    val topLevelRoutes = TopLevelDestination.entries.map { it.route }.toSet()
-    val showBottomBar = currentDestination?.route in topLevelRoutes
+    // Detail screens map back to their parent tab so a tab always looks selected.
+    val activeRoute = when {
+        currentRoute == Routes.SETTINGS -> Routes.MORE
+        currentRoute?.startsWith(Routes.SONG_LIST) == true -> Routes.LIBRARY
+        else -> currentRoute
+    }
+
+    // Shared playback state drives the live Now Playing tab icon.
+    val nowPlayingViewModel: NowPlayingViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val nowPlaying by nowPlayingViewModel.uiState.collectAsStateWithLifecycle()
+    val progress = if (nowPlaying.durationMs > 0L) {
+        nowPlaying.positionMs.toFloat() / nowPlaying.durationMs
+    } else {
+        0f
+    }
 
     Scaffold(
         // Insets handled per-screen to avoid double padding with inner Scaffolds/TopAppBars.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (showBottomBar) {
-                NavigationBar {
-                    TopLevelDestination.entries.forEach { destination ->
-                        val selected = currentDestination?.hierarchy
-                            ?.any { it.route == destination.route } == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+            // Always visible so the user can see playback has started from any screen.
+            NavigationBar {
+                TopLevelDestination.entries.forEach { destination ->
+                    NavigationBarItem(
+                        selected = destination.route == activeRoute,
+                        onClick = {
+                            navController.navigate(destination.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
-                            },
-                            icon = { Icon(destination.icon, contentDescription = null) },
-                            label = { Text(stringResource(destination.labelRes)) },
-                        )
-                    }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            if (destination == TopLevelDestination.NOW_PLAYING) {
+                                NowPlayingNavIcon(
+                                    albumArtUri = nowPlaying.song?.albumArtUri,
+                                    hasSong = nowPlaying.song != null,
+                                    progress = progress,
+                                )
+                            } else {
+                                Icon(destination.icon, contentDescription = null)
+                            }
+                        },
+                        label = { Text(stringResource(destination.labelRes)) },
+                    )
                 }
             }
         },
