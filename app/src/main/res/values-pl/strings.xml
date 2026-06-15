@@ -1,0 +1,144 @@
+<resources>
+    <string name="app_name">Muzyka</string>
+
+    <string name="nav_now_playing">Teraz odtwarzane</string>
+    <string name="nav_library">Biblioteka</string>
+    <string name="nav_more">Więcej</string>
+
+    <string name="permission_title">Zezwól na dostęp do muzyki</string>
+    <string name="permission_rationale">Aplikacja Muzyka potrzebuje uprawnień do odczytu plików audio na Twoim urządzeniu, aby zbudować bibliotekę.</string>
+    <string name="permission_grant">Przyznaj dostęp</string>
+    <string name="permission_open_settings">Otwórz ustawienia</string>
+    <string name="permission_denied_permanently">Odmówiono dostępu. Aby kontynuować, włącz dostęp do plików audio w ustawieniach systemowych.</string>
+
+    <string name="now_playing_title">Teraz odtwarzane</string>
+    <string name="now_playing_empty">Nic nie jest odtwarzane</string>
+    <string name="now_playing_empty_hint">Wybierz utwór z biblioteki, aby zacząć słuchać.</string>
+    <string name="now_playing_queue">Kolejka</string>
+    <string name="action_clear_queue">Wyczyść</string>
+    <string name="cd_album_art">Okładka albumu</string>
+    <string name="cd_play">Odtwórz</string>
+    <string name="cd_pause">Wstrzymaj</string>
+    <string name="cd_next">Następny utwór</string>
+    <string name="cd_previous">Poprzedni utwór</string>
+    <string name="cd_add_to_favorites">Dodaj do ulubionych</string>
+    <string name="cd_remove_from_favorites">Usuń z ulubionych</string>
+    <string name="cd_shuffle">Odtwarzanie losowe</string>
+    <string name="cd_repeat">Powtarzanie</string>
+
+    <string name="library_title">Biblioteka</string>
+    <string name="tab_albums">Albumy</string>
+    <string name="tab_performers">Artyści</string>
+    <string name="tab_playlists">Playlisty</string>
+    <string name="playlist_all_songs">Wszystkie utwory</string>
+    <string name="playlist_favorites">Ulubione</string>
+    <string name="library_empty_albums">Nie znaleziono albumów</string>
+    <string name="library_empty_performers">Nie znaleziono artystów</string>
+    <string name="library_empty_songs">Brak utworów w bibliotece</string>
+    <string name="no_album">Brak albumu</string>
+
+    <string name="action_play_all">Odtwórz wszystko</string>
+    <string name="action_shuffle_play">Odtwórz losowo</string>
+    <string name="action_add_to_queue">Dodaj do kolejki</string>
+    <string name="action_add_to_playlist">Dodaj do playlisty</string>
+    <string name="action_more">Więcej opcji</string>
+    <string name="snackbar_added_to_queue">Dodano do kolejki</string>
+    <string name="snackbar_added_to_playlist">Dodano do playlisty</string>
+
+    <string name="playlist_new">Nowa playlista</string>
+    <string name="playlist_create">Utwórz</string>
+    <string name="playlist_rename">Zmień nazwę</string>
+    <string name="playlist_rename_confirm">Zmień nazwę</string>
+    <string name="playlist_delete">Usuń</string>
+    <string name="playlist_delete_title">Usunąć playlistę?</string>
+    <string name="playlist_delete_message">Playlista „%1$s” zostanie usunięta. Twoje utwory i pliki nie zostaną skasowane.</string>
+    <string name="playlist_name_label">Nazwa playlisty</string>
+    <string name="add_to_playlist_title">Dodaj do playlisty</string>
+
+    <plurals name="song_count">
+        <item quantity="one">%d utwór</item>
+        <item quantity="few">%d utwory</item>
+        <item quantity="many">%d utworów</item>
+    </plurals>
+    <plurals name="selected_count">
+        <item quantity="one">Wybrano %d</item>
+        <item quantity="few">Wybrano %d</item>
+        <item quantity="many">Wybrano %d</item>
+    </plurals>
+
+    <string name="action_close_selection">Zamknij wybór</string>
+    <string name="action_select_all">Zaznacz wszystko</string>
+    <string name="action_add_to_favorites">Dodaj do ulubionych</string>
+    <string name="action_remove_from_favorites">Usuń z ulubionych</string>
+    <string name="action_edit_tags">Edytuj tagi</string>
+    <string name="action_decompose_title">Rozdziel tytuł</string>
+    <string name="snackbar_added_to_favorites">Dodano do ulubionych</string>
+    <string name="snackbar_removed_from_favorites">Usunięto z ulubionych</string>
+
+    <string name="edit_tags_title">Edytuj tagi</string>
+    <string name="edit_tags_field_title">Tytuł</string>
+    <string name="edit_tags_field_artist">Artysta (artyści)</string>
+    <string name="edit_tags_field_genre">Gatunek</string>
+    <string name="edit_tags_field_album">Album</string>
+    <string name="edit_tags_field_track">Numer utworu</string>
+    <string name="edit_tags_field_year">Rok</string>
+    <string name="edit_tags_multi_notice">Edytujesz %1$d utworów. Puste pola pozostaną bez zmian – do każdego zaznaczonego utworu zostaną zastosowane tylko te wypełnione.</string>
+    <string name="edit_tags_save">Zapisz</string>
+    <string name="edit_tags_cancel">Anuluj</string>
+    <string name="edit_tags_permission_needed">Zapisanie tagów wymaga uprawnień do modyfikacji tego pliku.</string>
+    <string name="edit_tags_saved">Zaktualizowano tagi</string>
+    <string name="edit_tags_failed">Nie udało się zapisać tagów w pliku.</string>
+
+    <string name="decompose_title">Rozdziel tytuł</string>
+    <string name="decompose_multi_notice">Zostanie zastosowane do %1$d utworów zgodnie z poniższymi regułami. Podgląd pokazuje pierwszy utwór.</string>
+    <string name="decompose_original">Bieżący tytuł</string>
+    <string name="decompose_main_separator">Separator tytułu / artysty</string>
+    <string name="decompose_authors_before">Artyści znajdują się przed separatorem</string>
+    <string name="decompose_extract_feat">Wyodrębnij także artystów „feat.”</string>
+    <string name="decompose_remove_after">Usuń tekst od (opcjonalnie)</string>
+    <string name="decompose_preview">Podgląd</string>
+    <string name="decompose_apply">Zastosuj</string>
+
+    <string name="more_title">Więcej</string>
+    <string name="more_settings">Ustawienia</string>
+    <string name="more_settings_summary">Konfiguracja aplikacji i opcje odtwarzania</string>
+    <string name="more_refresh">Odśwież bibliotekę</string>
+    <string name="more_refresh_summary">Ponownie przeskanuj pamięć urządzenia w poszukiwaniu muzyki</string>
+    <string name="more_about">O aplikacji</string>
+    <string name="more_about_summary">Wersja i informacje o programie</string>
+    <string name="refresh_in_progress">Odświeżanie biblioteki…</string>
+    <string name="refresh_done">Biblioteka jest aktualna</string>
+
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_dynamic_color">Użyj koloru dynamicznego</string>
+    <string name="settings_dynamic_color_summary">Dopasuj kolorystykę aplikacji do Twojej tapety</string>
+    <string name="settings_theme">Ciemny motyw</string>
+    <string name="settings_theme_summary">Używaj systemowych ustawień ciemnego motywu</string>
+    <string name="settings_gapless">Odtwarzanie bez przerw</string>
+    <string name="settings_gapless_summary">Usuwa ciszę między kolejnymi utworami</string>
+    <string name="settings_remember_sort">Zapamiętaj kolejność sortowania</string>
+    <string name="settings_remember_sort_summary">Przywraca ostatnio używaną opcję sortowania po ponownym otwarciu biblioteki</string>
+
+    <string name="about_title">O aplikacji Muzyka</string>
+    <string name="about_version">Wersja %1$s</string>
+    <string name="about_description">Lekki lokalny odtwarzacz muzyki zbudowany za pomocą Jetpack Compose, Material 3 i AndroidX Media3.</string>
+    <string name="about_close">Zamknij</string>
+
+    <string name="sort_album_name">Nazwa albumu</string>
+    <string name="sort_artist_name">Nazwa artysty</string>
+    <string name="sort_song_count">Liczba utworów</string>
+    <string name="sort_duration">Czas trwania</string>
+    <string name="sort_playlist_name">Nazwa playlisty</string>
+    <string name="sort_direction_asc">Rosnąco</string>
+    <string name="sort_direction_desc">Malejąco</string>
+
+    <string name="search_hint">Szukaj</string>
+    <string name="search_clear">Wyczyść wyszukiwanie</string>
+    <string name="search_no_results">Brak wyników</string>
+    <string name="search_section_songs">Utwory</string>
+    <string name="search_view_more">Zobacz więcej</string>
+
+    <string name="action_back">Wstecz</string>
+    <string name="unknown_album">Nieznany album</string>
+    <string name="unknown_artist">Nieznany artysta</string>
+</resources>
