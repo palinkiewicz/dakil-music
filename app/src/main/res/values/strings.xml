@@ -128,6 +128,8 @@
     <string name="settings_gapless_summary">Remove silence between consecutive tracks</string>
     <string name="settings_remember_sort">Remember sort order</string>
     <string name="settings_remember_sort_summary">Restore last used sort option when reopening the library</string>
+    <string name="settings_album_columns">Album grid columns</string>
+    <string name="settings_album_columns_summary">Number of columns shown in the album grid</string>
 
     <!-- About dialog -->
     <string name="about_title">About Music</string>

@@ -118,6 +118,8 @@
     <string name="settings_gapless_summary">Usuwa ciszę między kolejnymi utworami</string>
     <string name="settings_remember_sort">Zapamiętaj kolejność sortowania</string>
     <string name="settings_remember_sort_summary">Przywraca ostatnio używaną opcję sortowania po ponownym otwarciu biblioteki</string>
+    <string name="settings_album_columns">Kolumny siatki albumów</string>
+    <string name="settings_album_columns_summary">Liczba kolumn wyświetlanych w siatce albumów</string>
 
     <string name="about_title">O aplikacji Muzyka</string>
     <string name="about_version">Wersja %1$s</string>

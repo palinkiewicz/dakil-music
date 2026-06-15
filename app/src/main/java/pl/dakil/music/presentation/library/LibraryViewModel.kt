@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -72,6 +73,10 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     // --- Data flows -----------------------------------------------------------------
+
+    val albumColumns: StateFlow<Int> = container.observeSettings()
+        .map { it.albumColumns }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 2)
 
     val albums: StateFlow<List<Album>> = combine(
         container.getAlbums(),

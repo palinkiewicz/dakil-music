@@ -125,6 +125,7 @@ fun LibraryScreen(
     val pagerState = rememberPagerState { tabs.size }
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+    val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
@@ -196,6 +197,7 @@ fun LibraryScreen(
                 when (tabs[page]) {
                     LibraryTab.ALBUMS -> AlbumsGrid(
                         albums = albums,
+                        columns = albumColumns,
                         sort = albumSort,
                         onSortSelect = viewModel::selectAlbumSort,
                         onClick = onAlbumClick,
@@ -481,6 +483,7 @@ private fun ViewMoreButton(onClick: () -> Unit) {
 @Composable
 private fun AlbumsGrid(
     albums: List<Album>,
+    columns: Int,
     sort: SortState<AlbumSortOption>,
     onSortSelect: (AlbumSortOption) -> Unit,
     onClick: (Long) -> Unit,
@@ -499,7 +502,7 @@ private fun AlbumsGrid(
     ) { topPadding ->
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Adaptive(minSize = 160.dp),
+            columns = GridCells.Fixed(columns),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,

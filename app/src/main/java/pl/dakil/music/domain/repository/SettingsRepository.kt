@@ -14,6 +14,8 @@ interface SettingsRepository {
     suspend fun setGaplessPlayback(enabled: Boolean)
 
     suspend fun setRememberSortState(enabled: Boolean)
+
+    suspend fun setAlbumColumns(count: Int)
 }
 
 data class AppSettings(
@@ -21,4 +23,5 @@ data class AppSettings(
     val forceDarkTheme: Boolean = false,
     val gaplessPlayback: Boolean = true,
     val rememberSortState: Boolean = false,
+    val albumColumns: Int = 2,
 )

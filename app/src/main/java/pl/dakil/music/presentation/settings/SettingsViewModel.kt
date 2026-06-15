@@ -29,4 +29,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setRememberSortState(enabled: Boolean) = viewModelScope.launch {
         container.updateSettings.setRememberSortState(enabled)
     }
+
+    fun setAlbumColumns(count: Int) = viewModelScope.launch {
+        container.updateSettings.setAlbumColumns(count)
+    }
 }

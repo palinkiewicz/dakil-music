@@ -1,10 +1,10 @@
 package pl.dakil.music.presentation.settings
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.dakil.music.R
@@ -79,8 +81,40 @@ fun SettingsScreen(
                 checked = settings.rememberSortState,
                 onCheckedChange = viewModel::setRememberSortState,
             )
+            SliderRow(
+                title = stringResource(R.string.settings_album_columns),
+                summary = stringResource(R.string.settings_album_columns_summary),
+                value = settings.albumColumns,
+                onValueChange = viewModel::setAlbumColumns,
+                valueRange = 1..4,
+            )
         }
     }
+}
+
+@Composable
+private fun SliderRow(
+    title: String,
+    summary: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    valueRange: IntRange,
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column {
+                Text(summary)
+                Slider(
+                    value = value.toFloat(),
+                    onValueChange = { onValueChange(it.roundToInt()) },
+                    valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+                    steps = valueRange.last - valueRange.first - 1,
+                )
+            }
+        },
+        trailingContent = { Text(value.toString()) },
+    )
 }
 
 @Composable
