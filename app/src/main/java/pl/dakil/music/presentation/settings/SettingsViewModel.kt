@@ -25,4 +25,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setGaplessPlayback(enabled: Boolean) = viewModelScope.launch {
         container.updateSettings.setGaplessPlayback(enabled)
     }
+
+    fun setRememberSortState(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setRememberSortState(enabled)
+    }
 }

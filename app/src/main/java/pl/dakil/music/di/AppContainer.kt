@@ -4,17 +4,20 @@ import android.content.Context
 import pl.dakil.music.data.datastore.favoritesDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
 import pl.dakil.music.data.datastore.settingsDataStore
+import pl.dakil.music.data.datastore.sortDataStore
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
 import pl.dakil.music.data.repository.FavoritesRepositoryImpl
 import pl.dakil.music.data.repository.MusicRepositoryImpl
 import pl.dakil.music.data.repository.SettingsRepositoryImpl
+import pl.dakil.music.data.repository.SortStateRepositoryImpl
 import pl.dakil.music.data.repository.TagEditorRepositoryImpl
 import pl.dakil.music.data.repository.UserPlaylistRepositoryImpl
 import pl.dakil.music.domain.repository.FavoritesRepository
 import pl.dakil.music.domain.repository.MusicRepository
 import pl.dakil.music.domain.repository.PlayerRepository
 import pl.dakil.music.domain.repository.SettingsRepository
+import pl.dakil.music.domain.repository.SortStateRepository
 import pl.dakil.music.domain.repository.TagEditorRepository
 import pl.dakil.music.domain.repository.UserPlaylistRepository
 import pl.dakil.music.domain.usecase.SearchLibraryUseCase
@@ -68,6 +71,8 @@ class AppContainer(context: Context) {
 
     val userPlaylistRepository: UserPlaylistRepository =
         UserPlaylistRepositoryImpl(appContext.playlistsDataStore)
+
+    val sortStateRepository: SortStateRepository = SortStateRepositoryImpl(appContext.sortDataStore)
 
     val tagEditorRepository: TagEditorRepository = TagEditorRepositoryImpl(appContext)
 

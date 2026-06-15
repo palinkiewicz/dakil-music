@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
@@ -34,17 +34,41 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     private val _playlistSort = MutableStateFlow(SortState(PlaylistSortOption.PLAYLIST_NAME))
     val playlistSort: StateFlow<SortState<PlaylistSortOption>> = _playlistSort
 
+    init {
+        viewModelScope.launch {
+            val rememberSort = container.observeSettings().first().rememberSortState
+            if (rememberSort) {
+                _albumSort.value = container.sortStateRepository.loadAlbumSort()
+                _artistSort.value = container.sortStateRepository.loadArtistSort()
+                _playlistSort.value = container.sortStateRepository.loadPlaylistSort()
+            }
+        }
+    }
+
     fun selectAlbumSort(option: AlbumSortOption) {
         _albumSort.value = _albumSort.value.select(option)
+        persistSortIfEnabled()
     }
 
     fun selectArtistSort(option: ArtistSortOption) {
         _artistSort.value = _artistSort.value.select(option)
+        persistSortIfEnabled()
     }
 
     fun selectPlaylistSort(option: PlaylistSortOption, systemPlaylistNames: Map<SystemPlaylist, String>) {
         _playlistSort.value = _playlistSort.value.select(option)
         _systemPlaylistNames.value = systemPlaylistNames
+        persistSortIfEnabled()
+    }
+
+    private fun persistSortIfEnabled() {
+        viewModelScope.launch {
+            if (container.observeSettings().first().rememberSortState) {
+                container.sortStateRepository.saveAlbumSort(_albumSort.value)
+                container.sortStateRepository.saveArtistSort(_artistSort.value)
+                container.sortStateRepository.savePlaylistSort(_playlistSort.value)
+            }
+        }
     }
 
     // --- Data flows -----------------------------------------------------------------

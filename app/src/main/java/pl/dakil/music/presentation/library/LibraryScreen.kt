@@ -31,7 +31,21 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -164,7 +179,7 @@ fun LibraryScreen(
         )
 
         if (query.isBlank()) {
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage, modifier = Modifier.zIndex(2f)) {
                 tabs.forEachIndexed { index, tab ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -474,22 +489,30 @@ private fun AlbumsGrid(
         EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
         return
     }
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item(key = "sort_row", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            SortChipRow(
-                options = AlbumSortOption.entries,
-                sort = sort,
-                onSelect = onSortSelect,
-            )
-        }
-        items(albums, key = { it.id }) { album ->
-            AlbumCard(album, onClick)
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(sort) { gridState.scrollToItem(0) }
+
+    ScrollAwareSortHeader(
+        sortChips = {
+            SortChipRow(options = AlbumSortOption.entries, sort = sort, onSelect = onSortSelect)
+        },
+    ) { topPadding ->
+        LazyVerticalGrid(
+            state = gridState,
+            columns = GridCells.Adaptive(minSize = 160.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = topPadding + 8.dp,
+                bottom = 16.dp,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(albums, key = { it.id }) { album ->
+                AlbumCard(album, onClick)
+            }
         }
     }
 }
@@ -544,31 +567,37 @@ private fun PerformersList(
         EmptyState(stringResource(R.string.library_empty_performers), Icons.Rounded.Person)
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item(key = "sort_row") {
-            SortChipRow(
-                options = ArtistSortOption.entries,
-                sort = sort,
-                onSelect = onSortSelect,
-            )
-        }
-        items(performers, key = { it.name }) { performer ->
-            ListItem(
-                headlineContent = { Text(performer.name) },
-                supportingContent = {
-                    Text(
-                        pluralStringResource(
-                            R.plurals.song_count,
-                            performer.songCount,
-                            performer.songCount,
-                        ),
-                    )
-                },
-                leadingContent = {
-                    Icon(Icons.Rounded.Person, contentDescription = null)
-                },
-                modifier = Modifier.clickableRow { onClick(performer.name) },
-            )
+    val listState = rememberLazyListState()
+    LaunchedEffect(sort) { listState.scrollToItem(0) }
+
+    ScrollAwareSortHeader(
+        sortChips = {
+            SortChipRow(options = ArtistSortOption.entries, sort = sort, onSelect = onSortSelect)
+        },
+    ) { topPadding ->
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(top = topPadding),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(performers, key = { it.name }) { performer ->
+                ListItem(
+                    headlineContent = { Text(performer.name) },
+                    supportingContent = {
+                        Text(
+                            pluralStringResource(
+                                R.plurals.song_count,
+                                performer.songCount,
+                                performer.songCount,
+                            ),
+                        )
+                    },
+                    leadingContent = {
+                        Icon(Icons.Rounded.Person, contentDescription = null)
+                    },
+                    modifier = Modifier.clickableRow { onClick(performer.name) },
+                )
+            }
         }
     }
 }
@@ -584,14 +613,19 @@ private fun PlaylistsList(
     onRename: (UserPlaylist) -> Unit,
     onDelete: (UserPlaylist) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item(key = "sort_row") {
-            SortChipRow(
-                options = PlaylistSortOption.entries,
-                sort = sort,
-                onSelect = onSortSelect,
-            )
-        }
+    val listState = rememberLazyListState()
+    LaunchedEffect(sort) { listState.scrollToItem(0) }
+
+    ScrollAwareSortHeader(
+        sortChips = {
+            SortChipRow(options = PlaylistSortOption.entries, sort = sort, onSelect = onSortSelect)
+        },
+    ) { topPadding ->
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(top = topPadding),
+        modifier = Modifier.fillMaxSize(),
+    ) {
         item(key = "create") {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.playlist_new)) },
@@ -648,6 +682,42 @@ private fun PlaylistsList(
                     else onSystemClick(playlist.systemType!!)
                 },
             )
+        }
+    }
+    }
+}
+
+@Composable
+private fun ScrollAwareSortHeader(
+    sortChips: @Composable () -> Unit,
+    content: @Composable (topPadding: Dp) -> Unit,
+) {
+    var chipHeightPx by remember { mutableIntStateOf(0) }
+    var chipOffsetYPx by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val oldOffset = chipOffsetYPx
+                chipOffsetYPx = (chipOffsetYPx + available.y).coerceIn(-chipHeightPx.toFloat(), 0f)
+                val consumed = chipOffsetYPx - oldOffset
+                return Offset(0f, consumed)
+            }
+        }
+    }
+
+    Box(modifier = Modifier.zIndex(1f).fillMaxSize().nestedScroll(nestedScrollConnection)) {
+        val topPadding = with(density) { (chipHeightPx + chipOffsetYPx).coerceAtLeast(0f).toDp() }
+        content(topPadding)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { chipHeightPx = it.height }
+                .offset { IntOffset(0, chipOffsetYPx.roundToInt()) }
+                .background(MaterialTheme.colorScheme.surface),
+        ) {
+            sortChips()
         }
     }
 }

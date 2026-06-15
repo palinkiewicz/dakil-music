@@ -73,6 +73,12 @@ fun SettingsScreen(
                 checked = settings.gaplessPlayback,
                 onCheckedChange = viewModel::setGaplessPlayback,
             )
+            SwitchRow(
+                title = stringResource(R.string.settings_remember_sort),
+                summary = stringResource(R.string.settings_remember_sort_summary),
+                checked = settings.rememberSortState,
+                onCheckedChange = viewModel::setRememberSortState,
+            )
         }
     }
 }

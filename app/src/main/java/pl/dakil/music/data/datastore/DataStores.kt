@@ -9,3 +9,4 @@ import androidx.datastore.preferences.preferencesDataStore
 val Context.favoritesDataStore: DataStore<Preferences> by preferencesDataStore(name = "favorites")
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 val Context.playlistsDataStore: DataStore<Preferences> by preferencesDataStore(name = "playlists")
+val Context.sortDataStore: DataStore<Preferences> by preferencesDataStore(name = "sort")

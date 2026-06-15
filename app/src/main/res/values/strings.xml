@@ -126,6 +126,8 @@
     <string name="settings_theme_summary">Follow the system dark theme setting</string>
     <string name="settings_gapless">Gapless playback</string>
     <string name="settings_gapless_summary">Remove silence between consecutive tracks</string>
+    <string name="settings_remember_sort">Remember sort order</string>
+    <string name="settings_remember_sort_summary">Restore last used sort option when reopening the library</string>
 
     <!-- About dialog -->
     <string name="about_title">About Music</string>
