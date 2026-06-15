@@ -17,6 +17,7 @@ import pl.dakil.music.domain.repository.PlayerRepository
 import pl.dakil.music.domain.repository.SettingsRepository
 import pl.dakil.music.domain.repository.TagEditorRepository
 import pl.dakil.music.domain.repository.UserPlaylistRepository
+import pl.dakil.music.domain.usecase.SearchLibraryUseCase
 import pl.dakil.music.domain.usecase.AddSongsToPlaylistUseCase
 import pl.dakil.music.domain.usecase.AddToQueueUseCase
 import pl.dakil.music.domain.usecase.CreatePlaylistUseCase
@@ -98,6 +99,8 @@ class AppContainer(context: Context) {
     val shufflePlay = ShufflePlayUseCase(playerRepository)
     val addToQueue = AddToQueueUseCase(playerRepository)
     val playbackControl = PlaybackControlUseCase(playerRepository)
+
+    val searchLibrary = SearchLibraryUseCase()
 
     val refreshLibrary = RefreshLibraryUseCase(musicRepository)
     val editTags = EditTagsUseCase(tagEditorRepository)

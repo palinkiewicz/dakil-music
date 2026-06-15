@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,12 +32,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +64,8 @@ import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
+import pl.dakil.music.domain.model.SearchResults
+import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SystemPlaylist
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
@@ -92,32 +102,85 @@ fun LibraryScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
 
     var creatingPlaylist by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
     var deleting by remember { mutableStateOf<UserPlaylist?>(null) }
 
+    val allSongsName = stringResource(R.string.playlist_all_songs)
+    val favoritesName = stringResource(R.string.playlist_favorites)
+    LaunchedEffect(allSongsName, favoritesName) {
+        viewModel.setSystemPlaylistNames(
+            mapOf(
+                SystemPlaylist.ALL_SONGS to allSongsName,
+                SystemPlaylist.FAVORITES to favoritesName,
+            ),
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
-        PrimaryTabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(stringResource(tab.titleRes)) },
+        TextField(
+            value = query,
+            onValueChange = viewModel::onQueryChange,
+            placeholder = { Text(stringResource(R.string.search_hint)) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = viewModel::clearQuery) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.search_clear),
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = CircleShape,
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+
+        if (query.isBlank()) {
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(stringResource(tab.titleRes)) },
+                    )
+                }
+            }
+
+            when (tabs[selectedTab]) {
+                LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
+                LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
+                LibraryTab.PLAYLISTS -> PlaylistsList(
+                    playlists = playlists,
+                    onSystemClick = onPlaylistClick,
+                    onUserClick = onUserPlaylistClick,
+                    onCreate = { creatingPlaylist = true },
+                    onRename = { renaming = it },
+                    onDelete = { deleting = it },
                 )
             }
-        }
-
-        when (tabs[selectedTab]) {
-            LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
-            LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
-            LibraryTab.PLAYLISTS -> PlaylistsList(
-                playlists = playlists,
-                onSystemClick = onPlaylistClick,
-                onUserClick = onUserPlaylistClick,
-                onCreate = { creatingPlaylist = true },
-                onRename = { renaming = it },
-                onDelete = { deleting = it },
+        } else {
+            SearchResultsList(
+                results = searchResults,
+                onSongClick = viewModel::playSong,
+                onAlbumClick = onAlbumClick,
+                onPerformerClick = onPerformerClick,
+                onPlaylistClick = onPlaylistClick,
+                onUserPlaylistClick = onUserPlaylistClick,
+                query = query,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
@@ -167,6 +230,201 @@ fun LibraryScreen(
                 }
             },
         )
+    }
+}
+
+private const val PAGE_SIZE = 4
+
+@Composable
+private fun SearchResultsList(
+    results: SearchResults,
+    onSongClick: (Song) -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onPerformerClick: (String) -> Unit,
+    onPlaylistClick: (SystemPlaylist) -> Unit,
+    onUserPlaylistClick: (String) -> Unit,
+    query: String,
+    modifier: Modifier = Modifier,
+) {
+    var songsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
+    var albumsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
+    var artistsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
+    var playlistsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
+
+    if (results.isEmpty) {
+        EmptyState(stringResource(R.string.search_no_results), Icons.Rounded.Search)
+        return
+    }
+
+    LazyColumn(modifier = modifier) {
+        if (results.songs.isNotEmpty()) {
+            item(key = "header_songs") {
+                SectionHeader(stringResource(R.string.search_section_songs))
+            }
+            items(results.songs.take(songsVisible), key = { "song_${it.id}" }) { song ->
+                ListItem(
+                    headlineContent = {
+                        Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    },
+                    supportingContent = {
+                        Text(
+                            song.artists.takeIf { it.isNotEmpty() }?.joinToString(", ")
+                                ?: stringResource(R.string.unknown_artist),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    leadingContent = {
+                        AlbumArt(
+                            uri = song.albumArtUri,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.size(48.dp),
+                        )
+                    },
+                    modifier = Modifier.clickableRow { onSongClick(song) },
+                )
+            }
+            if (results.songs.size > songsVisible) {
+                item(key = "more_songs") {
+                    ViewMoreButton { songsVisible += PAGE_SIZE }
+                }
+            }
+        }
+
+        if (results.albums.isNotEmpty()) {
+            item(key = "header_albums") {
+                SectionHeader(stringResource(R.string.tab_albums))
+            }
+            items(results.albums.take(albumsVisible), key = { "album_${it.id}" }) { album ->
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = album.title.ifBlank { stringResource(R.string.unknown_album) },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = album.artist.ifBlank { stringResource(R.string.unknown_artist) },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    leadingContent = {
+                        AlbumArt(
+                            uri = album.artworkUri,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.size(48.dp),
+                        )
+                    },
+                    modifier = Modifier.clickableRow { onAlbumClick(album.id) },
+                )
+            }
+            if (results.albums.size > albumsVisible) {
+                item(key = "more_albums") {
+                    ViewMoreButton { albumsVisible += PAGE_SIZE }
+                }
+            }
+        }
+
+        if (results.artists.isNotEmpty()) {
+            item(key = "header_artists") {
+                SectionHeader(stringResource(R.string.tab_performers))
+            }
+            items(results.artists.take(artistsVisible), key = { "artist_${it.name}" }) { artist ->
+                ListItem(
+                    headlineContent = {
+                        Text(artist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    },
+                    supportingContent = {
+                        Text(
+                            pluralStringResource(
+                                R.plurals.song_count,
+                                artist.songCount,
+                                artist.songCount,
+                            ),
+                        )
+                    },
+                    leadingContent = {
+                        Icon(Icons.Rounded.Person, contentDescription = null)
+                    },
+                    modifier = Modifier.clickableRow { onPerformerClick(artist.name) },
+                )
+            }
+            if (results.artists.size > artistsVisible) {
+                item(key = "more_artists") {
+                    ViewMoreButton { artistsVisible += PAGE_SIZE }
+                }
+            }
+        }
+
+        if (results.playlists.isNotEmpty()) {
+            item(key = "header_playlists") {
+                SectionHeader(stringResource(R.string.tab_playlists))
+            }
+            items(results.playlists.take(playlistsVisible), key = { "playlist_${it.systemType?.name ?: it.userPlaylist!!.id}" }) { playlist ->
+                val userPlaylist = playlist.userPlaylist
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = userPlaylist?.name
+                                ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            pluralStringResource(
+                                R.plurals.song_count,
+                                playlist.songCount,
+                                playlist.songCount,
+                            ),
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = when {
+                                playlist.systemType == SystemPlaylist.FAVORITES -> Icons.Rounded.Favorite
+                                playlist.systemType == SystemPlaylist.ALL_SONGS -> Icons.Rounded.MusicNote
+                                else -> Icons.Rounded.QueueMusic
+                            },
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.clickableRow {
+                        if (userPlaylist != null) onUserPlaylistClick(userPlaylist.id)
+                        else onPlaylistClick(playlist.systemType!!)
+                    },
+                )
+            }
+            if (results.playlists.size > playlistsVisible) {
+                item(key = "more_playlists") {
+                    ViewMoreButton { playlistsVisible += PAGE_SIZE }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun ViewMoreButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Text(stringResource(R.string.search_view_more))
     }
 }
 
