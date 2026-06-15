@@ -42,4 +42,5 @@ class PlaybackControlUseCase(private val player: PlayerRepository) {
     fun toggleShuffle() = player.toggleShuffle()
     fun cycleRepeatMode() = player.cycleRepeatMode()
     fun skipToQueueItem(index: Int) = player.skipToQueueItem(index)
+    fun clearQueue() = player.clearQueue()
 }

@@ -109,6 +109,11 @@ class MediaControllerPlayerRepository(
         }
     }
 
+    override fun clearQueue() {
+        queueById.clear()
+        controller?.clearMediaItems()
+    }
+
     override fun togglePlayPause() {
         val c = controller ?: return
         if (c.isPlaying) c.pause() else c.play()

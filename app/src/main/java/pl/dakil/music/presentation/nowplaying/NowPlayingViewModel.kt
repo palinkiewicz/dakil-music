@@ -64,6 +64,7 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     fun onToggleShuffle() = container.playbackControl.toggleShuffle()
     fun onCycleRepeat() = container.playbackControl.cycleRepeatMode()
     fun onQueueItemClick(index: Int) = container.playbackControl.skipToQueueItem(index)
+    fun onClearQueue() = container.playbackControl.clearQueue()
 
     fun onToggleFavorite() {
         val id = uiState.value.song?.id ?: return

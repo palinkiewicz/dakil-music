@@ -18,6 +18,7 @@
     <string name="now_playing_empty">Nothing is playing</string>
     <string name="now_playing_empty_hint">Pick a song from your library to start listening.</string>
     <string name="now_playing_queue">Queue</string>
+    <string name="action_clear_queue">Clear</string>
     <string name="cd_album_art">Album artwork</string>
     <string name="cd_play">Play</string>
     <string name="cd_pause">Pause</string>
@@ -54,6 +55,9 @@
     <string name="playlist_create">Create</string>
     <string name="playlist_rename">Rename</string>
     <string name="playlist_rename_confirm">Rename</string>
+    <string name="playlist_delete">Delete</string>
+    <string name="playlist_delete_title">Delete playlist?</string>
+    <string name="playlist_delete_message">\"%1$s\" will be removed. Your songs and files are not deleted.</string>
     <string name="playlist_name_label">Playlist name</string>
     <string name="add_to_playlist_title">Add to playlist</string>
 

@@ -37,6 +37,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +86,7 @@ fun NowPlayingScreen(
         onToggleFavorite = viewModel::onToggleFavorite,
         onAddToPlaylist = viewModel::openAddToPlaylist,
         onQueueItemClick = viewModel::onQueueItemClick,
+        onClearQueue = viewModel::onClearQueue,
         modifier = modifier,
     )
 
@@ -110,6 +112,7 @@ private fun NowPlayingContent(
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onQueueItemClick: (Int) -> Unit,
+    onClearQueue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val song = state.song ?: return
@@ -215,11 +218,21 @@ private fun NowPlayingContent(
 
         if (state.queue.isNotEmpty()) {
             item(key = "queue_header") {
-                Text(
-                    text = stringResource(R.string.now_playing_queue),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 12.dp, top = 8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.now_playing_queue),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onClearQueue) {
+                        Text(stringResource(R.string.action_clear_queue))
+                    }
+                }
             }
             itemsIndexed(state.queue, key = { index, _ -> index }) { index, queueSong ->
                 QueueRow(

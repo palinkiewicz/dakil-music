@@ -21,6 +21,9 @@ interface PlayerRepository {
     /** Jumps to [index] in the current queue and plays. */
     fun skipToQueueItem(index: Int)
 
+    /** Empties the queue and stops playback. */
+    fun clearQueue()
+
     fun togglePlayPause()
 
     fun next()

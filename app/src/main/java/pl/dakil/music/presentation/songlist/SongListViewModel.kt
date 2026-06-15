@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -33,10 +35,12 @@ data class SongListUiState(
     val songs: List<Song> = emptyList(),
     val favoriteIds: Set<Long> = emptySet(),
     val selectedIds: Set<Long> = emptySet(),
+    val currentSongId: Long? = null,
 ) {
     val inSelectionMode: Boolean get() = selectedIds.isNotEmpty()
     fun isSelected(id: Long) = id in selectedIds
     fun isFavorite(id: Long) = id in favoriteIds
+    fun isCurrent(id: Long) = currentSongId != null && id == currentSongId
 
     /** True when every selected song is already a favorite (drives add vs remove). */
     val allSelectedAreFavorite: Boolean
@@ -70,14 +74,25 @@ class SongListViewModel(
 
     private val selectedIds = MutableStateFlow<Set<Long>>(emptySet())
 
+    // Only the *which song* matters here, not its position — guard against churn.
+    private val currentSongId = container.observePlayback()
+        .map { it.currentSong?.id }
+        .distinctUntilChanged()
+
     val uiState: StateFlow<SongListUiState> = combine(
         songsFlow(source),
         container.observeFavorites(),
         selectedIds,
-    ) { songs, favorites, selected ->
+        currentSongId,
+    ) { songs, favorites, selected, currentId ->
         // Drop selections for songs no longer present (e.g. after a refresh).
         val validSelection = selected intersect songs.mapTo(HashSet()) { it.id }
-        SongListUiState(songs = songs, favoriteIds = favorites, selectedIds = validSelection)
+        SongListUiState(
+            songs = songs,
+            favoriteIds = favorites,
+            selectedIds = validSelection,
+            currentSongId = currentId,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongListUiState())
 
     val userPlaylists: StateFlow<List<UserPlaylist>> = container.observeUserPlaylists()

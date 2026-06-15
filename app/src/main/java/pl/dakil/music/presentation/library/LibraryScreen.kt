@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,12 +16,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -89,9 +93,9 @@ fun LibraryScreen(
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
-    // null = no dialog; "" = create; otherwise the id of the playlist being renamed.
     var creatingPlaylist by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
+    var deleting by remember { mutableStateOf<UserPlaylist?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = selectedTab) {
@@ -113,6 +117,7 @@ fun LibraryScreen(
                 onUserClick = onUserPlaylistClick,
                 onCreate = { creatingPlaylist = true },
                 onRename = { renaming = it },
+                onDelete = { deleting = it },
             )
         }
     }
@@ -139,6 +144,27 @@ fun LibraryScreen(
             onConfirm = {
                 viewModel.renamePlaylist(playlist.id, it)
                 renaming = null
+            },
+        )
+    }
+
+    deleting?.let { playlist ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text(stringResource(R.string.playlist_delete_title)) },
+            text = { Text(stringResource(R.string.playlist_delete_message, playlist.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deletePlaylist(playlist.id)
+                    deleting = null
+                }) {
+                    Text(stringResource(R.string.playlist_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleting = null }) {
+                    Text(stringResource(R.string.edit_tags_cancel))
+                }
             },
         )
     }
@@ -237,6 +263,7 @@ private fun PlaylistsList(
     onUserClick: (String) -> Unit,
     onCreate: () -> Unit,
     onRename: (UserPlaylist) -> Unit,
+    onDelete: (UserPlaylist) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item(key = "create") {
@@ -274,11 +301,19 @@ private fun PlaylistsList(
                 },
                 trailingContent = userPlaylist?.let {
                     {
-                        IconButton(onClick = { onRename(it) }) {
-                            Icon(
-                                Icons.Rounded.Edit,
-                                contentDescription = stringResource(R.string.playlist_rename),
-                            )
+                        Row {
+                            IconButton(onClick = { onRename(it) }) {
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    contentDescription = stringResource(R.string.playlist_rename),
+                                )
+                            }
+                            IconButton(onClick = { onDelete(it) }) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = stringResource(R.string.playlist_delete),
+                                )
+                            }
                         }
                     }
                 },

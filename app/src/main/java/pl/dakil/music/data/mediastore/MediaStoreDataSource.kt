@@ -97,13 +97,30 @@ class MediaStoreDataSource(private val context: Context) {
     private fun albumArtUri(albumId: Long): Uri =
         ContentUris.withAppendedId(ALBUM_ART_BASE_URI, albumId)
 
-    private fun String?.orEmptyArtist() =
-        if (isNullOrBlank() || this == MediaStore.UNKNOWN_STRING) "" else this
+    private fun String?.orEmptyArtist() = if (isUnknownTag()) "" else this!!
 
-    private fun String?.orEmptyAlbum() =
-        if (isNullOrBlank() || this == MediaStore.UNKNOWN_STRING) "" else this
+    private fun String?.orEmptyAlbum() = if (isUnknownTag()) "" else this!!
+
+    /**
+     * True when MediaStore is signalling "no value". Besides the canonical
+     * [MediaStore.UNKNOWN_STRING] ("<unknown>"), several OEMs substitute a localized
+     * or plain "unknown" label, which we also treat as missing so such tracks fall
+     * into the synthetic "No album" / unknown-artist buckets.
+     */
+    private fun String?.isUnknownTag(): Boolean {
+        if (isNullOrBlank()) return true
+        val normalized = trim().lowercase()
+        return normalized == MediaStore.UNKNOWN_STRING ||
+            normalized in UNKNOWN_MARKERS
+    }
 
     private companion object {
         val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
+        val UNKNOWN_MARKERS = setOf(
+            "<unknown>",
+            "unknown",
+            "unknown album",
+            "unknown artist",
+        )
     }
 }

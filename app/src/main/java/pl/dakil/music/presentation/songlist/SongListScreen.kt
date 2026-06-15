@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -64,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -151,6 +153,7 @@ fun SongListScreen(
                         selectionMode = state.inSelectionMode,
                         selected = state.isSelected(song.id),
                         favorite = state.isFavorite(song.id),
+                        current = state.isCurrent(song.id),
                         onClick = { viewModel.onSongClick(index) },
                         onLongClick = { viewModel.onSongLongClick(song.id) },
                     )
@@ -432,13 +435,16 @@ private fun SongRow(
     selectionMode: Boolean,
     selected: Boolean,
     favorite: Boolean,
+    current: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.secondaryContainer
-    } else {
-        MaterialTheme.colorScheme.surface
+    val containerColor = when {
+        selected -> MaterialTheme.colorScheme.secondaryContainer
+        // The currently-playing row gets a subtle primary tint.
+        current -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            .compositeOver(MaterialTheme.colorScheme.surface)
+        else -> MaterialTheme.colorScheme.surface
     }
 
     ListItem(
@@ -446,6 +452,14 @@ private fun SongRow(
         leadingContent = {
             when {
                 selectionMode -> Checkbox(checked = selected, onCheckedChange = { onClick() })
+                // The playing track shows a speaker in place of its number / cover art.
+                current -> Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.VolumeUp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 // Albums show the track number (or a note when untagged) instead of art.
                 albumMode -> AlbumTrackLeading(song.trackNumber, position)
                 else -> AlbumArt(
@@ -455,7 +469,14 @@ private fun SongRow(
                 )
             }
         },
-        headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        headlineContent = {
+            Text(
+                text = song.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (current) MaterialTheme.colorScheme.primary else Color.Unspecified,
+            )
+        },
         supportingContent = {
             Text(
                 text = song.artists.takeIf { it.isNotEmpty() }?.joinToString(", ")
