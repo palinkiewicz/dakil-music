@@ -19,3 +19,17 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# JAudiotagger (Adonai fork) needs its whole package kept. It loads ID3 frame-body
+# classes reflectively by name (Class.forName("...FrameBody" + frameId)), AND
+# several classes call getClass().getPackage().getName() — which returns null once
+# proguard-android-optimize.txt repackages classes into the root package, throwing
+# NPE. Keeping the package preserves both the class names and the package structure.
+-keep class org.jaudiotagger.** { *; }
+
+# The library references desktop/Java SE classes (javax.imageio, java.awt, etc.)
+# that don't exist on Android; silence the resulting R8 warnings.
+-dontwarn org.jaudiotagger.**
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn javax.swing.**
