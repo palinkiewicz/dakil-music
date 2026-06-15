@@ -1,6 +1,9 @@
 package pl.dakil.music.presentation.library
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +47,8 @@ import androidx.compose.material3.TextButton
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -86,7 +91,7 @@ fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
     SystemPlaylist.FAVORITES -> R.string.playlist_favorites
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     onAlbumClick: (Long) -> Unit,
@@ -96,14 +101,16 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = LibraryTab.entries
+    val pagerState = rememberPagerState { tabs.size }
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+
+    val scope = rememberCoroutineScope()
 
     var creatingPlaylist by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
@@ -149,27 +156,32 @@ fun LibraryScreen(
         )
 
         if (query.isBlank()) {
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 tabs.forEachIndexed { index, tab ->
                     Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                         text = { Text(stringResource(tab.titleRes)) },
                     )
                 }
             }
 
-            when (tabs[selectedTab]) {
-                LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
-                LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
-                LibraryTab.PLAYLISTS -> PlaylistsList(
-                    playlists = playlists,
-                    onSystemClick = onPlaylistClick,
-                    onUserClick = onUserPlaylistClick,
-                    onCreate = { creatingPlaylist = true },
-                    onRename = { renaming = it },
-                    onDelete = { deleting = it },
-                )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { page ->
+                when (tabs[page]) {
+                    LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
+                    LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
+                    LibraryTab.PLAYLISTS -> PlaylistsList(
+                        playlists = playlists,
+                        onSystemClick = onPlaylistClick,
+                        onUserClick = onUserPlaylistClick,
+                        onCreate = { creatingPlaylist = true },
+                        onRename = { renaming = it },
+                        onDelete = { deleting = it },
+                    )
+                }
             }
         } else {
             SearchResultsList(
