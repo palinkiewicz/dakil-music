@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -16,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +36,7 @@ import pl.dakil.music.R
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.clickableRow
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
     onOpenSettings: () -> Unit,
@@ -54,6 +57,9 @@ fun MoreScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(title = { Text(stringResource(R.string.more_title)) })
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
