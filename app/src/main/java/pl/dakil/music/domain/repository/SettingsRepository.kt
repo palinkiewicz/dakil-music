@@ -23,6 +23,8 @@ interface SettingsRepository {
 
     suspend fun setMinPlaySeconds(seconds: Int)
 
+    suspend fun setHistoryUpdateSeconds(seconds: Int)
+
     suspend fun setFirstDayOfWeek(isoDayOfWeek: Int)
 
     suspend fun setStatsDefaultRange(range: StatDefaultRange)
@@ -40,6 +42,8 @@ data class AppSettings(
     val statisticsEnabled: Boolean = true,
     /** Sessions shorter than this are discarded (0..30, step 5). */
     val minPlaySeconds: Int = 10,
+    /** How often the active session is checkpointed to disk; 0 disables it (0..15s). */
+    val historyUpdateSeconds: Int = 5,
     /** ISO day-of-week (Mon=1 .. Sun=7) used for weekly analytics. */
     val firstDayOfWeek: Int = 1,
     val statsDefaultRange: StatDefaultRange = StatDefaultRange.ALL_TIME,

@@ -1,5 +1,6 @@
 package pl.dakil.music.domain.usecase
 
+import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.ListeningRecord
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.StatMetric
@@ -10,6 +11,10 @@ import java.time.DayOfWeek
 
 class RecordListeningSessionUseCase(private val repository: ListeningHistoryRepository) {
     suspend operator fun invoke(record: ListeningRecord) = repository.record(record)
+}
+
+class ObserveHistoryChangesUseCase(private val repository: ListeningHistoryRepository) {
+    operator fun invoke(): Flow<Unit> = repository.changes()
 }
 
 class GetHistoryPageUseCase(private val repository: ListeningHistoryRepository) {

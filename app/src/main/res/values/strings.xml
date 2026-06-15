@@ -173,6 +173,9 @@
     <string name="settings_disable_stats_confirm">Turn off and erase</string>
     <string name="settings_min_play_seconds">Minimum play time</string>
     <string name="settings_min_play_seconds_summary">Plays shorter than this are not recorded</string>
+    <string name="settings_history_update_seconds">Live update interval</string>
+    <string name="settings_history_update_seconds_summary">How often the current song\'s progress is saved while playing</string>
+    <string name="settings_history_update_off">Off</string>
     <string name="settings_first_day_of_week">First day of week</string>
     <string name="settings_first_day_of_week_summary">Used for weekly statistics</string>
     <string name="settings_stats_default_range">Default time range</string>

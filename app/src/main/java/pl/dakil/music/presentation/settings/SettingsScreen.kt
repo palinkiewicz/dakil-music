@@ -146,6 +146,16 @@ fun SettingsScreen(
                 valueLabel = { "${it}s" },
                 enabled = statsEnabled,
             )
+            val offLabel = stringResource(R.string.settings_history_update_off)
+            SliderRow(
+                title = stringResource(R.string.settings_history_update_seconds),
+                summary = stringResource(R.string.settings_history_update_seconds_summary),
+                value = settings.historyUpdateSeconds,
+                onValueChange = viewModel::setHistoryUpdateSeconds,
+                valueRange = 0..15,
+                valueLabel = { if (it == 0) offLabel else "${it}s" },
+                enabled = statsEnabled,
+            )
             SelectRow(
                 title = stringResource(R.string.settings_first_day_of_week),
                 summary = stringResource(R.string.settings_first_day_of_week_summary),

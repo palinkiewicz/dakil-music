@@ -147,32 +147,29 @@ private fun Statistics.totalValue(metric: StatMetric): Long =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Selectors(state: StatisticsUiState, viewModel: StatisticsViewModel) {
+    // Chips sized to content and packed together, like the metric toggle below.
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         DropdownSelector(
             label = stringResource(statRangeTypeNameRes(state.rangeType)),
             options = StatRangeType.entries.map { it to stringResource(statRangeTypeNameRes(it)) },
             onSelect = viewModel::setRangeType,
-            modifier = Modifier.weight(1f),
         )
         when (state.rangeType) {
-            StatRangeType.ALL_TIME -> Spacer(Modifier.weight(1f))
+            StatRangeType.ALL_TIME -> Unit
             StatRangeType.YEARLY -> DropdownSelector(
                 label = state.selectedYear.toString(),
                 options = state.years.map { it to it.toString() },
                 onSelect = viewModel::selectYear,
-                modifier = Modifier.weight(1f),
             )
             StatRangeType.MONTHLY -> DropdownSelector(
                 label = state.selectedMonth.formatMonth(),
                 options = state.months.map { it to it.formatMonth() },
                 onSelect = viewModel::selectMonth,
-                modifier = Modifier.weight(1f),
             )
             StatRangeType.WEEKLY -> DropdownSelector(
                 label = state.selectedWeek.formatWeek(),
                 options = state.weeks.map { it to it.formatWeek() },
                 onSelect = viewModel::selectWeek,
-                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -386,7 +383,7 @@ private fun RoutinesSection(stats: Statistics, metric: StatMetric, firstDayOfWee
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        BarChart(values = stats.hourHistogram, labelFor = { i -> if (i % 6 == 0) i.toString() else "" })
+        BarChart(values = stats.hourHistogram, labelFor = { i -> if (i % 3 == 0) i.toString() else "" })
         Text(
             stringResource(R.string.stats_peak_weekdays),
             style = MaterialTheme.typography.titleSmall,

@@ -46,6 +46,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.updateSettings.setMinPlaySeconds(seconds)
     }
 
+    fun setHistoryUpdateSeconds(seconds: Int) = viewModelScope.launch {
+        container.updateSettings.setHistoryUpdateSeconds(seconds)
+    }
+
     fun setFirstDayOfWeek(isoDayOfWeek: Int) = viewModelScope.launch {
         container.updateSettings.setFirstDayOfWeek(isoDayOfWeek)
     }

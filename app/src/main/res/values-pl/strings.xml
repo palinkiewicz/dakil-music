@@ -160,6 +160,9 @@
     <string name="settings_disable_stats_confirm">Wyłącz i usuń</string>
     <string name="settings_min_play_seconds">Minimalny czas odtwarzania</string>
     <string name="settings_min_play_seconds_summary">Krótsze odtworzenia nie są zapisywane</string>
+    <string name="settings_history_update_seconds">Częstotliwość aktualizacji</string>
+    <string name="settings_history_update_seconds_summary">Jak często zapisywany jest postęp odtwarzanego utworu</string>
+    <string name="settings_history_update_off">Wył.</string>
     <string name="settings_first_day_of_week">Pierwszy dzień tygodnia</string>
     <string name="settings_first_day_of_week_summary">Używany w statystykach tygodniowych</string>
     <string name="settings_stats_default_range">Domyślny zakres czasu</string>

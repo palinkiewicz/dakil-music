@@ -3,6 +3,8 @@ package pl.dakil.music.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ListeningRecordDao {
@@ -10,11 +12,18 @@ interface ListeningRecordDao {
     @Insert
     suspend fun insert(record: ListeningRecordEntity): Long
 
+    @Update
+    suspend fun update(record: ListeningRecordEntity)
+
     @Insert
     suspend fun insertAll(records: List<ListeningRecordEntity>)
 
     @Query("SELECT COUNT(*) FROM listening_record")
     suspend fun count(): Int
+
+    /** Emits on every change to the table (insert/update/delete), for live UI refresh. */
+    @Query("SELECT COUNT(*) FROM listening_record")
+    fun observeCount(): Flow<Int>
 
     /** A page of history, newest first. */
     @Query("SELECT * FROM listening_record ORDER BY startTimestamp DESC LIMIT :limit OFFSET :offset")

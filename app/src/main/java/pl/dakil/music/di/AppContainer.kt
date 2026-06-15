@@ -38,6 +38,7 @@ import pl.dakil.music.domain.usecase.GetHistoryPageUseCase
 import pl.dakil.music.domain.usecase.GetStatisticsUseCase
 import pl.dakil.music.domain.usecase.ImportHistoryUseCase
 import pl.dakil.music.domain.usecase.MergeHistoryUseCase
+import pl.dakil.music.domain.usecase.ObserveHistoryChangesUseCase
 import pl.dakil.music.domain.usecase.PropagateRetagToHistoryUseCase
 import pl.dakil.music.domain.usecase.ReconcileHistoryUseCase
 import pl.dakil.music.domain.usecase.SearchLibraryUseCase
@@ -151,6 +152,7 @@ class AppContainer(context: Context) {
 
     val getHistoryPage = GetHistoryPageUseCase(listeningHistoryRepository)
     val getHistoryCount = GetHistoryCountUseCase(listeningHistoryRepository)
+    val observeHistoryChanges = ObserveHistoryChangesUseCase(listeningHistoryRepository)
     val getEarliestHistoryDate = GetEarliestHistoryDateUseCase(listeningHistoryRepository)
     val getStatistics = GetStatisticsUseCase(listeningHistoryRepository)
     val clearHistory = ClearHistoryUseCase(listeningHistoryRepository)

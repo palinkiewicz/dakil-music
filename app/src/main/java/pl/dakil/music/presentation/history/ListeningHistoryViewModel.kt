@@ -78,6 +78,9 @@ class ListeningHistoryViewModel(private val container: AppContainer) : ViewModel
     private val page = MutableStateFlow(Page())
     private val selectedIds = MutableStateFlow<Set<Long>>(emptySet())
 
+    /** How many records are currently shown; grows by [PAGE_SIZE] on "show more". */
+    private var targetCount = PAGE_SIZE
+
     private val currentSongId = container.observePlayback()
         .map { it.currentSong?.id }
         .distinctUntilChanged()
@@ -117,30 +120,26 @@ class ListeningHistoryViewModel(private val container: AppContainer) : ViewModel
 
     init {
         reload()
+        // Live refresh: the table changes as the active session is checkpointed.
+        viewModelScope.launch {
+            container.observeHistoryChanges().collect { reload() }
+        }
     }
 
     // --- Paging --------------------------------------------------------------------
 
     private fun reload() {
         viewModelScope.launch {
-            page.update { it.copy(loading = true) }
             val total = container.getHistoryCount()
-            val records = container.getHistoryPage(PAGE_SIZE, 0)
+            val records = container.getHistoryPage(targetCount, 0)
             page.value = Page(records, hasMore = records.size < total, loading = false)
         }
     }
 
     fun loadMore() {
         if (page.value.loading || !page.value.hasMore) return
-        viewModelScope.launch {
-            val offset = page.value.records.size
-            val total = container.getHistoryCount()
-            val more = container.getHistoryPage(PAGE_SIZE, offset)
-            page.update {
-                val combined = it.records + more
-                it.copy(records = combined, hasMore = combined.size < total)
-            }
-        }
+        targetCount += PAGE_SIZE
+        reload()
     }
 
     // --- Selection -----------------------------------------------------------------

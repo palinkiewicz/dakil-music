@@ -1,6 +1,8 @@
 package pl.dakil.music.data.repository
 
 import androidx.core.net.toUri
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import pl.dakil.music.data.db.ArtistsCodec
 import pl.dakil.music.data.db.ListeningRecordDao
 import pl.dakil.music.data.db.ListeningRecordEntity
@@ -23,6 +25,16 @@ class ListeningHistoryRepositoryImpl(
     override suspend fun record(record: ListeningRecord) {
         dao.insert(record.toEntity())
     }
+
+    override suspend fun upsert(record: ListeningRecord): Long =
+        if (record.id == 0L) {
+            dao.insert(record.toEntity())
+        } else {
+            dao.update(record.toEntity())
+            record.id
+        }
+
+    override fun changes(): Flow<Unit> = dao.observeCount().map { }
 
     override suspend fun count(): Int = dao.count()
 

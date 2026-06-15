@@ -1,5 +1,6 @@
 package pl.dakil.music.domain.repository
 
+import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.ListeningRecord
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.StatMetric
@@ -16,6 +17,15 @@ import java.time.DayOfWeek
 interface ListeningHistoryRepository {
 
     suspend fun record(record: ListeningRecord)
+
+    /**
+     * Inserts the record (when [ListeningRecord.id] is 0) or updates the existing
+     * row, returning its id. Used by live checkpointing of the active session.
+     */
+    suspend fun upsert(record: ListeningRecord): Long
+
+    /** Emits whenever the history table changes, so screens can refresh live. */
+    fun changes(): Flow<Unit>
 
     suspend fun count(): Int
 

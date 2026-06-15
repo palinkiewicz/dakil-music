@@ -26,6 +26,7 @@ class SettingsRepositoryImpl(
             albumColumns = prefs[KEY_ALBUM_COLUMNS] ?: 2,
             statisticsEnabled = prefs[KEY_STATS_ENABLED] ?: true,
             minPlaySeconds = prefs[KEY_MIN_PLAY_SECONDS] ?: 10,
+            historyUpdateSeconds = prefs[KEY_HISTORY_UPDATE_SECONDS] ?: 5,
             firstDayOfWeek = prefs[KEY_FIRST_DAY_OF_WEEK] ?: 1,
             statsDefaultRange = prefs[KEY_STATS_RANGE]
                 ?.let { name -> StatDefaultRange.entries.firstOrNull { it.name == name } }
@@ -59,6 +60,10 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[KEY_MIN_PLAY_SECONDS] = seconds }
     }
 
+    override suspend fun setHistoryUpdateSeconds(seconds: Int) {
+        dataStore.edit { it[KEY_HISTORY_UPDATE_SECONDS] = seconds }
+    }
+
     override suspend fun setFirstDayOfWeek(isoDayOfWeek: Int) {
         dataStore.edit { it[KEY_FIRST_DAY_OF_WEEK] = isoDayOfWeek }
     }
@@ -83,6 +88,7 @@ class SettingsRepositoryImpl(
         val KEY_ALBUM_COLUMNS = intPreferencesKey("album_columns")
         val KEY_STATS_ENABLED = booleanPreferencesKey("statistics_enabled")
         val KEY_MIN_PLAY_SECONDS = intPreferencesKey("min_play_seconds")
+        val KEY_HISTORY_UPDATE_SECONDS = intPreferencesKey("history_update_seconds")
         val KEY_FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val KEY_STATS_RANGE = stringPreferencesKey("stats_default_range")
         val KEY_STATS_METRIC = stringPreferencesKey("stats_default_metric")
