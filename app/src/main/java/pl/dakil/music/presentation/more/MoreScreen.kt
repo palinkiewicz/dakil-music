@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
@@ -40,6 +42,8 @@ import pl.dakil.music.presentation.components.clickableRow
 @Composable
 fun MoreScreen(
     onOpenSettings: () -> Unit,
+    onOpenListeningHistory: () -> Unit,
+    onOpenStatistics: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
@@ -66,6 +70,24 @@ fun MoreScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            item {
+                MoreItem(
+                    icon = Icons.Rounded.History,
+                    title = stringResource(R.string.more_listening_history),
+                    summary = stringResource(R.string.more_listening_history_summary),
+                    onClick = onOpenListeningHistory,
+                )
+            }
+            item { HorizontalDivider() }
+            item {
+                MoreItem(
+                    icon = Icons.Rounded.BarChart,
+                    title = stringResource(R.string.more_statistics),
+                    summary = stringResource(R.string.more_statistics_summary),
+                    onClick = onOpenStatistics,
+                )
+            }
+            item { HorizontalDivider() }
             item {
                 MoreItem(
                     icon = Icons.Rounded.Settings,

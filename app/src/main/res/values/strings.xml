@@ -156,4 +156,89 @@
     <string name="action_back">Back</string>
     <string name="unknown_album">Unknown album</string>
     <string name="unknown_artist">Unknown artist</string>
+
+    <!-- Listening history & statistics -->
+    <string name="action_cancel">Cancel</string>
+    <string name="more_listening_history">Listening history</string>
+    <string name="more_listening_history_summary">Songs you\'ve played recently</string>
+    <string name="more_statistics">Statistics</string>
+    <string name="more_statistics_summary">Your listening patterns and trends</string>
+
+    <!-- Settings -->
+    <string name="settings_section_statistics">Listening statistics</string>
+    <string name="settings_statistics_enabled">Gather listening statistics</string>
+    <string name="settings_statistics_enabled_summary">Track what you play, stored only on this device</string>
+    <string name="settings_disable_stats_title">Turn off statistics?</string>
+    <string name="settings_disable_stats_message">Your listening history is stored only on this device and is never uploaded. Turning statistics off will permanently erase all of it. This cannot be undone.</string>
+    <string name="settings_disable_stats_confirm">Turn off and erase</string>
+    <string name="settings_min_play_seconds">Minimum play time</string>
+    <string name="settings_min_play_seconds_summary">Plays shorter than this are not recorded</string>
+    <string name="settings_first_day_of_week">First day of week</string>
+    <string name="settings_first_day_of_week_summary">Used for weekly statistics</string>
+    <string name="settings_stats_default_range">Default time range</string>
+    <string name="settings_stats_default_range_summary">Shown when you open Statistics</string>
+    <string name="settings_stats_default_metric">Default measure</string>
+    <string name="settings_stats_default_metric_summary">Rank charts by duration or play count</string>
+
+    <!-- History screen -->
+    <string name="history_empty">No listening history yet</string>
+    <string name="history_show_more">Show more</string>
+    <string name="history_export">Export to CSV</string>
+    <string name="history_import">Import from CSV</string>
+    <string name="history_import_result">Imported %1$d, skipped %2$d</string>
+    <string name="history_import_invalid">Couldn\'t read that file</string>
+    <string name="history_export_done">History exported</string>
+    <string name="history_export_failed">Export failed</string>
+    <string name="history_played_for">%1$s</string>
+    <string name="history_times_played">×%1$d</string>
+    <string name="history_merge_done">History merged</string>
+    <string name="history_merge_title">Merge with existing</string>
+    <string name="history_merge_search_hint">Search songs</string>
+    <string name="history_merge_confirm_title">Merge history?</string>
+    <string name="history_merge_confirm_message">Merge plays of \"%1$s\" into \"%2$s\"?</string>
+    <string name="history_merge_confirm_action">Merge</string>
+
+    <!-- Statistics screen -->
+    <string name="stats_total_time">Total listening time</string>
+    <string name="stats_overview_counts">%1$d tracks by %2$d artists played %3$d times</string>
+    <string name="stats_top_tracks">Top tracks</string>
+    <string name="stats_top_artists">Top artists</string>
+    <string name="stats_top_albums">Top albums</string>
+    <string name="stats_show_more">Show more</string>
+    <string name="stats_show_less">Show less</string>
+    <string name="stats_routines">Routines</string>
+    <string name="stats_peak_hours">Peak hours</string>
+    <string name="stats_peak_weekdays">Peak weekdays</string>
+    <string name="stats_metric_duration">Listening duration</string>
+    <string name="stats_metric_plays">Times played</string>
+    <string name="stats_range_all_time">All time</string>
+    <string name="stats_range_yearly">Yearly</string>
+    <string name="stats_range_monthly">Monthly</string>
+    <string name="stats_range_weekly">Weekly</string>
+    <string name="stats_default_this_year">This year</string>
+    <string name="stats_default_previous_year">Previous year</string>
+    <string name="stats_default_this_month">This month</string>
+    <string name="stats_default_previous_month">Previous month</string>
+    <string name="stats_default_this_week">This week</string>
+    <string name="stats_default_previous_week">Previous week</string>
+    <plurals name="stats_play_count">
+        <item quantity="one">%d play</item>
+        <item quantity="other">%d plays</item>
+    </plurals>
+
+    <!-- Weekday names -->
+    <string name="weekday_monday">Monday</string>
+    <string name="weekday_tuesday">Tuesday</string>
+    <string name="weekday_wednesday">Wednesday</string>
+    <string name="weekday_thursday">Thursday</string>
+    <string name="weekday_friday">Friday</string>
+    <string name="weekday_saturday">Saturday</string>
+    <string name="weekday_sunday">Sunday</string>
+    <string name="weekday_short_monday">Mon</string>
+    <string name="weekday_short_tuesday">Tue</string>
+    <string name="weekday_short_wednesday">Wed</string>
+    <string name="weekday_short_thursday">Thu</string>
+    <string name="weekday_short_friday">Fri</string>
+    <string name="weekday_short_saturday">Sat</string>
+    <string name="weekday_short_sunday">Sun</string>
 </resources>

@@ -30,12 +30,25 @@ import pl.dakil.music.domain.repository.PlayerRepository
  * [mainScope]. A lightweight polling loop advances the position while playing —
  * the player itself doesn't emit per-frame position callbacks.
  */
+/**
+ * Internal seam letting [PlaybackHistoryTracker] observe raw Media3 events and
+ * resolve the current item back to a rich [Song]. [PlaybackState] alone is
+ * insufficient — it coalesces events and only samples position periodically.
+ */
+interface PlaybackTrackingSource {
+    fun addRawListener(listener: Player.Listener)
+    fun currentSongSnapshot(): Song?
+}
+
 class MediaControllerPlayerRepository(
     context: Context,
-) : PlayerRepository {
+) : PlayerRepository, PlaybackTrackingSource {
 
     private val appContext = context.applicationContext
     private val mainScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+
+    /** Extra listeners registered before the controller finished connecting. */
+    private val rawListeners = mutableListOf<Player.Listener>()
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -67,7 +80,10 @@ class MediaControllerPlayerRepository(
         controllerFuture = future
         future.addListener(
             {
-                controller = future.get().also { it.addListener(listener) }
+                controller = future.get().also { c ->
+                    c.addListener(listener)
+                    rawListeners.forEach(c::addListener)
+                }
                 syncState()
                 pendingAction?.invoke()
                 pendingAction = null
@@ -144,6 +160,14 @@ class MediaControllerPlayerRepository(
             else -> Player.REPEAT_MODE_OFF
         }
     }
+
+    override fun addRawListener(listener: Player.Listener) {
+        rawListeners.add(listener)
+        controller?.addListener(listener)
+    }
+
+    override fun currentSongSnapshot(): Song? =
+        controller?.currentMediaItem?.mediaId?.let(queueById::get)
 
     override fun release() {
         positionJob?.cancel()

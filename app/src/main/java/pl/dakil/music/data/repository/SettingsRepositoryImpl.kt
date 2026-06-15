@@ -5,8 +5,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import pl.dakil.music.domain.model.StatDefaultRange
+import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.repository.AppSettings
 import pl.dakil.music.domain.repository.SettingsRepository
 
@@ -21,6 +24,15 @@ class SettingsRepositoryImpl(
             gaplessPlayback = prefs[KEY_GAPLESS] ?: true,
             rememberSortState = prefs[KEY_REMEMBER_SORT] ?: false,
             albumColumns = prefs[KEY_ALBUM_COLUMNS] ?: 2,
+            statisticsEnabled = prefs[KEY_STATS_ENABLED] ?: true,
+            minPlaySeconds = prefs[KEY_MIN_PLAY_SECONDS] ?: 10,
+            firstDayOfWeek = prefs[KEY_FIRST_DAY_OF_WEEK] ?: 1,
+            statsDefaultRange = prefs[KEY_STATS_RANGE]
+                ?.let { name -> StatDefaultRange.entries.firstOrNull { it.name == name } }
+                ?: StatDefaultRange.ALL_TIME,
+            statsDefaultMetric = prefs[KEY_STATS_METRIC]
+                ?.let { name -> StatMetric.entries.firstOrNull { it.name == name } }
+                ?: StatMetric.SECONDS,
         )
     }
 
@@ -40,6 +52,25 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[KEY_ALBUM_COLUMNS] = count }
     }
 
+    override suspend fun setStatisticsEnabled(enabled: Boolean) =
+        edit(KEY_STATS_ENABLED, enabled)
+
+    override suspend fun setMinPlaySeconds(seconds: Int) {
+        dataStore.edit { it[KEY_MIN_PLAY_SECONDS] = seconds }
+    }
+
+    override suspend fun setFirstDayOfWeek(isoDayOfWeek: Int) {
+        dataStore.edit { it[KEY_FIRST_DAY_OF_WEEK] = isoDayOfWeek }
+    }
+
+    override suspend fun setStatsDefaultRange(range: StatDefaultRange) {
+        dataStore.edit { it[KEY_STATS_RANGE] = range.name }
+    }
+
+    override suspend fun setStatsDefaultMetric(metric: StatMetric) {
+        dataStore.edit { it[KEY_STATS_METRIC] = metric.name }
+    }
+
     private suspend fun edit(key: Preferences.Key<Boolean>, value: Boolean) {
         dataStore.edit { it[key] = value }
     }
@@ -50,5 +81,10 @@ class SettingsRepositoryImpl(
         val KEY_GAPLESS = booleanPreferencesKey("gapless_playback")
         val KEY_REMEMBER_SORT = booleanPreferencesKey("remember_sort_state")
         val KEY_ALBUM_COLUMNS = intPreferencesKey("album_columns")
+        val KEY_STATS_ENABLED = booleanPreferencesKey("statistics_enabled")
+        val KEY_MIN_PLAY_SECONDS = intPreferencesKey("min_play_seconds")
+        val KEY_FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
+        val KEY_STATS_RANGE = stringPreferencesKey("stats_default_range")
+        val KEY_STATS_METRIC = stringPreferencesKey("stats_default_metric")
     }
 }

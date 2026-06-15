@@ -1,6 +1,8 @@
 package pl.dakil.music.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import pl.dakil.music.domain.model.StatDefaultRange
+import pl.dakil.music.domain.model.StatMetric
 
 /** User preferences (DataStore-backed). All values have sensible defaults. */
 interface SettingsRepository {
@@ -16,6 +18,16 @@ interface SettingsRepository {
     suspend fun setRememberSortState(enabled: Boolean)
 
     suspend fun setAlbumColumns(count: Int)
+
+    suspend fun setStatisticsEnabled(enabled: Boolean)
+
+    suspend fun setMinPlaySeconds(seconds: Int)
+
+    suspend fun setFirstDayOfWeek(isoDayOfWeek: Int)
+
+    suspend fun setStatsDefaultRange(range: StatDefaultRange)
+
+    suspend fun setStatsDefaultMetric(metric: StatMetric)
 }
 
 data class AppSettings(
@@ -24,4 +36,12 @@ data class AppSettings(
     val gaplessPlayback: Boolean = true,
     val rememberSortState: Boolean = false,
     val albumColumns: Int = 2,
+    /** When false, no listening history is recorded. */
+    val statisticsEnabled: Boolean = true,
+    /** Sessions shorter than this are discarded (0..30, step 5). */
+    val minPlaySeconds: Int = 10,
+    /** ISO day-of-week (Mon=1 .. Sun=7) used for weekly analytics. */
+    val firstDayOfWeek: Int = 1,
+    val statsDefaultRange: StatDefaultRange = StatDefaultRange.ALL_TIME,
+    val statsDefaultMetric: StatMetric = StatMetric.SECONDS,
 )

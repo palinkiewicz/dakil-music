@@ -29,8 +29,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pl.dakil.music.R
 import pl.dakil.music.presentation.AppViewModelProvider
+import pl.dakil.music.presentation.history.ListeningHistoryScreen
 import pl.dakil.music.presentation.library.LibraryScreen
 import pl.dakil.music.presentation.more.MoreScreen
+import pl.dakil.music.presentation.statistics.StatisticsScreen
 import pl.dakil.music.presentation.nowplaying.NowPlayingNavIcon
 import pl.dakil.music.presentation.nowplaying.NowPlayingScreen
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
@@ -54,10 +56,9 @@ fun MusicApp() {
     val currentRoute = backStackEntry?.destination?.route
 
     // Detail screens map back to their parent tab so a tab always looks selected.
-    val activeRoute = when {
-        currentRoute == Routes.SETTINGS -> Routes.MORE
-        currentRoute?.startsWith(Routes.SONG_LIST) == true -> Routes.LIBRARY
-        else -> currentRoute
+    val activeRoute = when (currentRoute) {
+        Routes.SETTINGS, Routes.LISTENING_HISTORY, Routes.STATISTICS -> Routes.MORE
+        else -> if (currentRoute?.startsWith(Routes.SONG_LIST) == true) Routes.LIBRARY else currentRoute
     }
 
     // Shared playback state drives the live Now Playing tab icon.
@@ -124,10 +125,20 @@ fun MusicApp() {
                 )
             }
             composable(Routes.MORE) {
-                MoreScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+                MoreScreen(
+                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                    onOpenListeningHistory = { navController.navigate(Routes.LISTENING_HISTORY) },
+                    onOpenStatistics = { navController.navigate(Routes.STATISTICS) },
+                )
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.LISTENING_HISTORY) {
+                ListeningHistoryScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.STATISTICS) {
+                StatisticsScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.SONG_LIST_PATTERN,

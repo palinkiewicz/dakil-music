@@ -9,6 +9,8 @@ object Routes {
     const val LIBRARY = "library"
     const val MORE = "more"
     const val SETTINGS = "settings"
+    const val LISTENING_HISTORY = "listening_history"
+    const val STATISTICS = "statistics"
 
     // Shared song-list detail screen, parameterised by its source.
     const val SONG_LIST = "song_list"

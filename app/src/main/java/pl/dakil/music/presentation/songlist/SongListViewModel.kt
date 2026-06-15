@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -106,6 +107,7 @@ class SongListViewModel(
 
     /** A tag-write retried verbatim after the user grants Scoped-Storage consent. */
     private var pendingWrite: (suspend () -> TagWriteResult)? = null
+    private var pendingWriteIds: List<Long> = emptyList()
 
     // --- List interaction ----------------------------------------------------------
 
@@ -226,7 +228,7 @@ class SongListViewModel(
             dismissDialog()
             return
         }
-        performWrite { container.editTags(songs, edit) }
+        performWrite(songs.map { it.id }) { container.editTags(songs, edit) }
     }
 
     /**
@@ -253,25 +255,28 @@ class SongListViewModel(
             dismissDialog()
             return
         }
-        performWrite { container.editTags(edits) }
+        performWrite(edits.map { it.song.id }) { container.editTags(edits) }
     }
 
     /** Called by the screen after the user grants Scoped-Storage write consent. */
     fun onWritePermissionGranted() {
         val retry = pendingWrite ?: return
         pendingWrite = null
-        performWrite(retry)
+        performWrite(pendingWriteIds, retry)
     }
 
     /**
      * Shared write pipeline: on success it refreshes the library so the list reflects
      * the new tags immediately; on a permission denial it stashes the action to retry.
      */
-    private fun performWrite(write: suspend () -> TagWriteResult) {
+    private fun performWrite(affectedIds: List<Long>, write: suspend () -> TagWriteResult) {
         viewModelScope.launch {
             when (val result = write()) {
                 is TagWriteResult.Success -> {
                     container.refreshLibrary()
+                    // Keep listening history in sync with the new tags.
+                    val updated = container.musicRepository.songsByIds(affectedIds).first()
+                    if (updated.isNotEmpty()) container.propagateRetagToHistory(updated)
                     _events.send(SongListEvent.Message(R.string.edit_tags_saved))
                     _dialog.value = null
                     clearSelection()
@@ -279,6 +284,7 @@ class SongListViewModel(
 
                 is TagWriteResult.RequiresPermission -> {
                     pendingWrite = write
+                    pendingWriteIds = affectedIds
                     _events.send(SongListEvent.RequestWritePermission(result.intentSender))
                 }
 

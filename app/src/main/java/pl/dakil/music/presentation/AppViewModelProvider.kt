@@ -7,11 +7,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.presentation.history.ListeningHistoryViewModel
 import pl.dakil.music.presentation.library.LibraryViewModel
 import pl.dakil.music.presentation.more.MoreViewModel
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
 import pl.dakil.music.presentation.settings.SettingsViewModel
 import pl.dakil.music.presentation.songlist.SongListViewModel
+import pl.dakil.music.presentation.statistics.StatisticsViewModel
 
 /** Central [ViewModelProvider.Factory] that injects [AppContainer] into each ViewModel. */
 object AppViewModelProvider {
@@ -22,6 +24,8 @@ object AppViewModelProvider {
         initializer { MoreViewModel(container()) }
         initializer { SettingsViewModel(container()) }
         initializer { SongListViewModel(container(), this.createSavedStateHandle()) }
+        initializer { ListeningHistoryViewModel(container()) }
+        initializer { StatisticsViewModel(container()) }
     }
 }
 

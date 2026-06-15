@@ -143,4 +143,91 @@
     <string name="action_back">Wstecz</string>
     <string name="unknown_album">Nieznany album</string>
     <string name="unknown_artist">Nieznany artysta</string>
+
+    <!-- Historia odsłuchów i statystyki -->
+    <string name="action_cancel">Anuluj</string>
+    <string name="more_listening_history">Historia odsłuchów</string>
+    <string name="more_listening_history_summary">Ostatnio odtwarzane utwory</string>
+    <string name="more_statistics">Statystyki</string>
+    <string name="more_statistics_summary">Twoje nawyki i trendy słuchania</string>
+
+    <!-- Ustawienia -->
+    <string name="settings_section_statistics">Statystyki słuchania</string>
+    <string name="settings_statistics_enabled">Zbieraj statystyki słuchania</string>
+    <string name="settings_statistics_enabled_summary">Śledź co odtwarzasz, dane tylko na tym urządzeniu</string>
+    <string name="settings_disable_stats_title">Wyłączyć statystyki?</string>
+    <string name="settings_disable_stats_message">Twoja historia odsłuchów jest przechowywana tylko na tym urządzeniu i nigdy nie jest wysyłana. Wyłączenie statystyk trwale ją usunie. Tej operacji nie można cofnąć.</string>
+    <string name="settings_disable_stats_confirm">Wyłącz i usuń</string>
+    <string name="settings_min_play_seconds">Minimalny czas odtwarzania</string>
+    <string name="settings_min_play_seconds_summary">Krótsze odtworzenia nie są zapisywane</string>
+    <string name="settings_first_day_of_week">Pierwszy dzień tygodnia</string>
+    <string name="settings_first_day_of_week_summary">Używany w statystykach tygodniowych</string>
+    <string name="settings_stats_default_range">Domyślny zakres czasu</string>
+    <string name="settings_stats_default_range_summary">Pokazywany po otwarciu Statystyk</string>
+    <string name="settings_stats_default_metric">Domyślna miara</string>
+    <string name="settings_stats_default_metric_summary">Sortuj listy wg czasu lub liczby odtworzeń</string>
+
+    <!-- Ekran historii -->
+    <string name="history_empty">Brak historii odsłuchów</string>
+    <string name="history_show_more">Pokaż więcej</string>
+    <string name="history_export">Eksportuj do CSV</string>
+    <string name="history_import">Importuj z CSV</string>
+    <string name="history_import_result">Zaimportowano %1$d, pominięto %2$d</string>
+    <string name="history_import_invalid">Nie udało się odczytać pliku</string>
+    <string name="history_export_done">Wyeksportowano historię</string>
+    <string name="history_export_failed">Eksport nie powiódł się</string>
+    <string name="history_played_for">%1$s</string>
+    <string name="history_times_played">×%1$d</string>
+    <string name="history_merge_done">Scalono historię</string>
+    <string name="history_merge_title">Scal z istniejącym</string>
+    <string name="history_merge_search_hint">Szukaj utworów</string>
+    <string name="history_merge_confirm_title">Scalić historię?</string>
+    <string name="history_merge_confirm_message">Scalić odtworzenia „%1$s” z „%2$s”?</string>
+    <string name="history_merge_confirm_action">Scal</string>
+
+    <!-- Ekran statystyk -->
+    <string name="stats_total_time">Łączny czas słuchania</string>
+    <string name="stats_overview_counts">%1$d utworów %2$d artystów, %3$d odtworzeń</string>
+    <string name="stats_top_tracks">Najczęstsze utwory</string>
+    <string name="stats_top_artists">Najczęstsi artyści</string>
+    <string name="stats_top_albums">Najczęstsze albumy</string>
+    <string name="stats_show_more">Pokaż więcej</string>
+    <string name="stats_show_less">Pokaż mniej</string>
+    <string name="stats_routines">Nawyki</string>
+    <string name="stats_peak_hours">Szczytowe godziny</string>
+    <string name="stats_peak_weekdays">Szczytowe dni tygodnia</string>
+    <string name="stats_metric_duration">Czas słuchania</string>
+    <string name="stats_metric_plays">Liczba odtworzeń</string>
+    <string name="stats_range_all_time">Cały czas</string>
+    <string name="stats_range_yearly">Rocznie</string>
+    <string name="stats_range_monthly">Miesięcznie</string>
+    <string name="stats_range_weekly">Tygodniowo</string>
+    <string name="stats_default_this_year">Ten rok</string>
+    <string name="stats_default_previous_year">Poprzedni rok</string>
+    <string name="stats_default_this_month">Ten miesiąc</string>
+    <string name="stats_default_previous_month">Poprzedni miesiąc</string>
+    <string name="stats_default_this_week">Ten tydzień</string>
+    <string name="stats_default_previous_week">Poprzedni tydzień</string>
+    <plurals name="stats_play_count">
+        <item quantity="one">%d odtworzenie</item>
+        <item quantity="few">%d odtworzenia</item>
+        <item quantity="many">%d odtworzeń</item>
+        <item quantity="other">%d odtworzeń</item>
+    </plurals>
+
+    <!-- Nazwy dni tygodnia -->
+    <string name="weekday_monday">Poniedziałek</string>
+    <string name="weekday_tuesday">Wtorek</string>
+    <string name="weekday_wednesday">Środa</string>
+    <string name="weekday_thursday">Czwartek</string>
+    <string name="weekday_friday">Piątek</string>
+    <string name="weekday_saturday">Sobota</string>
+    <string name="weekday_sunday">Niedziela</string>
+    <string name="weekday_short_monday">Pon</string>
+    <string name="weekday_short_tuesday">Wto</string>
+    <string name="weekday_short_wednesday">Śro</string>
+    <string name="weekday_short_thursday">Czw</string>
+    <string name="weekday_short_friday">Pią</string>
+    <string name="weekday_short_saturday">Sob</string>
+    <string name="weekday_short_sunday">Nie</string>
 </resources>
