@@ -32,6 +32,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -332,15 +333,23 @@ private fun TransportControls(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onToggleShuffle) {
+        FilledTonalIconButton(
+            onClick = onToggleShuffle,
+            colors = if (state.shuffleEnabled) {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            } else {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Shuffle,
                 contentDescription = stringResource(R.string.cd_shuffle),
-                tint = if (state.shuffleEnabled) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
             )
         }
 
@@ -375,18 +384,26 @@ private fun TransportControls(
             Icon(Icons.Rounded.SkipNext, stringResource(R.string.cd_next))
         }
 
-        IconButton(onClick = onCycleRepeat) {
+        FilledTonalIconButton(
+            onClick = onCycleRepeat,
+            colors = if (state.repeatMode != RepeatMode.OFF) {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            } else {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) {
             Icon(
                 imageVector = when (state.repeatMode) {
                     RepeatMode.ONE -> Icons.Rounded.RepeatOne
                     else -> Icons.Rounded.Repeat
                 },
                 contentDescription = stringResource(R.string.cd_repeat),
-                tint = if (state.repeatMode == RepeatMode.OFF) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
             )
         }
     }
