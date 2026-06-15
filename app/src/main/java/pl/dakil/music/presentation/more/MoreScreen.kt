@@ -1,8 +1,12 @@
 package pl.dakil.music.presentation.more
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
@@ -60,6 +64,8 @@ fun MoreScreen(
 
     Scaffold(
         modifier = modifier,
+        // The host already insets for the bottom navigation bar; don't add it twice.
+        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(title = { Text(stringResource(R.string.more_title)) })
@@ -70,6 +76,7 @@ fun MoreScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // Group 1: history & statistics
             item {
                 MoreItem(
                     icon = Icons.Rounded.History,
@@ -78,7 +85,6 @@ fun MoreScreen(
                     onClick = onOpenListeningHistory,
                 )
             }
-            item { HorizontalDivider() }
             item {
                 MoreItem(
                     icon = Icons.Rounded.BarChart,
@@ -88,15 +94,7 @@ fun MoreScreen(
                 )
             }
             item { HorizontalDivider() }
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.Settings,
-                    title = stringResource(R.string.more_settings),
-                    summary = stringResource(R.string.more_settings_summary),
-                    onClick = onOpenSettings,
-                )
-            }
-            item { HorizontalDivider() }
+            // Group 2: library refresh
             item {
                 MoreItem(
                     icon = Icons.Rounded.Refresh,
@@ -113,6 +111,17 @@ fun MoreScreen(
                 )
             }
             item { HorizontalDivider() }
+            // Group 3: settings
+            item {
+                MoreItem(
+                    icon = Icons.Rounded.Settings,
+                    title = stringResource(R.string.more_settings),
+                    summary = stringResource(R.string.more_settings_summary),
+                    onClick = onOpenSettings,
+                )
+            }
+            item { HorizontalDivider() }
+            // Group 4: about
             item {
                 MoreItem(
                     icon = Icons.Rounded.Info,

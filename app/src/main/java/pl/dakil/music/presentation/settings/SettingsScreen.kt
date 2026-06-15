@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
@@ -204,6 +203,37 @@ private fun SectionHeader(title: String) {
     )
 }
 
+/**
+ * Shared base for every settings row, so switches, sliders and selects share the
+ * exact same paddings and sizing (the "minimum listening time" look). [trailing]
+ * is sized to its own content.
+ */
+@Composable
+private fun SettingRow(
+    title: String,
+    summary: String,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null,
+    supporting: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    ListItem(
+        modifier = Modifier
+            .then(
+                if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier,
+            )
+            .alpha(if (enabled) 1f else DISABLED_ALPHA),
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column {
+                Text(summary)
+                supporting?.invoke()
+            }
+        },
+        trailingContent = trailing,
+    )
+}
+
 @Composable
 private fun <T> SelectRow(
     title: String,
@@ -214,43 +244,32 @@ private fun <T> SelectRow(
     enabled: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    // A plain centered Row (rather than ListItem) keeps the value vertically
-    // centered even when the summary wraps to two lines.
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { expanded = true }
-            .alpha(if (enabled) 1f else DISABLED_ALPHA)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // The menu is anchored to this trailing box so it opens on the right.
-        Box {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(selectedLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
-            }
-            DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
-                options.forEach { (value, label) ->
-                    DropdownMenuItem(
-                        text = { Text(label) },
-                        onClick = {
-                            onSelect(value)
-                            expanded = false
-                        },
-                    )
+    SettingRow(
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        onClick = { expanded = true },
+        trailing = {
+            // Menu anchored to this trailing box so it opens on the right.
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(selectedLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
+                }
+                DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
+                    options.forEach { (value, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                onSelect(value)
+                                expanded = false
+                            },
+                        )
+                    }
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -264,26 +283,22 @@ private fun SliderRow(
     valueLabel: (Int) -> String = { it.toString() },
     enabled: Boolean = true,
 ) {
-    ListItem(
-        modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
-        headlineContent = { Text(title) },
-        supportingContent = {
-            Column {
-                Text(summary)
-                Slider(
-                    value = value.toFloat(),
-                    onValueChange = { onValueChange(it.roundToInt()) },
-                    valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
-                    steps = steps,
-                    enabled = enabled,
-                )
-            }
+    SettingRow(
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        supporting = {
+            Slider(
+                value = value.toFloat(),
+                onValueChange = { onValueChange(it.roundToInt()) },
+                valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+                steps = steps,
+                enabled = enabled,
+            )
         },
-        trailingContent = { Text(valueLabel(value)) },
+        trailing = { Text(valueLabel(value)) },
     )
 }
-
-private const val DISABLED_ALPHA = 0.38f
 
 @Composable
 private fun SwitchRow(
@@ -292,11 +307,11 @@ private fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(summary) },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        },
+    SettingRow(
+        title = title,
+        summary = summary,
+        trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
     )
 }
+
+private const val DISABLED_ALPHA = 0.38f
