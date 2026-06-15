@@ -36,20 +36,30 @@ class GetPlaylistsUseCase(
         userPlaylistRepository.playlists,
     ) { songs, favorites, userPlaylists ->
         val libraryIds = songs.mapTo(HashSet()) { it.id }
+        val durationById = songs.associate { it.id to it.durationMs }
         buildList {
-            add(Playlist(systemType = SystemPlaylist.ALL_SONGS, songCount = songs.size))
+            add(
+                Playlist(
+                    systemType = SystemPlaylist.ALL_SONGS,
+                    songCount = songs.size,
+                    durationMs = songs.sumOf { it.durationMs },
+                ),
+            )
+            val favoriteSongs = songs.filter { it.id in favorites }
             add(
                 Playlist(
                     systemType = SystemPlaylist.FAVORITES,
-                    songCount = songs.count { it.id in favorites },
+                    songCount = favoriteSongs.size,
+                    durationMs = favoriteSongs.sumOf { it.durationMs },
                 ),
             )
             userPlaylists.forEach { playlist ->
+                val presentIds = playlist.songIds.filter { it in libraryIds }
                 add(
                     Playlist(
                         userPlaylist = playlist,
-                        // Count only ids still present in the library.
-                        songCount = playlist.songIds.count { it in libraryIds },
+                        songCount = presentIds.size,
+                        durationMs = presentIds.sumOf { durationById[it] ?: 0L },
                     ),
                 )
             }

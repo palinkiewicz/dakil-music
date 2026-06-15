@@ -40,6 +40,7 @@ class MusicRepositoryImpl(
                     artist = first.rawArtist,
                     artworkUri = first.albumArtUri,
                     songCount = albumSongs.size,
+                    durationMs = albumSongs.sumOf { it.durationMs },
                 )
             }
             .sortedBy { it.title.lowercase() }
@@ -54,6 +55,7 @@ class MusicRepositoryImpl(
                 artist = "",
                 artworkUri = null,
                 songCount = withoutAlbum.size,
+                durationMs = withoutAlbum.sumOf { it.durationMs },
             )
         }
 

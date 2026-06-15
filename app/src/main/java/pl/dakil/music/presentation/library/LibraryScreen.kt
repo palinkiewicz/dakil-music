@@ -23,27 +23,32 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TextField
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,6 +112,9 @@ fun LibraryScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
+    val artistSort by viewModel.artistSort.collectAsStateWithLifecycle()
+    val playlistSort by viewModel.playlistSort.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
 
@@ -171,10 +179,25 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (tabs[page]) {
-                    LibraryTab.ALBUMS -> AlbumsGrid(albums, onAlbumClick)
-                    LibraryTab.PERFORMERS -> PerformersList(performers, onPerformerClick)
+                    LibraryTab.ALBUMS -> AlbumsGrid(
+                        albums = albums,
+                        sort = albumSort,
+                        onSortSelect = viewModel::selectAlbumSort,
+                        onClick = onAlbumClick,
+                    )
+                    LibraryTab.PERFORMERS -> PerformersList(
+                        performers = performers,
+                        sort = artistSort,
+                        onSortSelect = viewModel::selectArtistSort,
+                        onClick = onPerformerClick,
+                    )
                     LibraryTab.PLAYLISTS -> PlaylistsList(
                         playlists = playlists,
+                        sort = playlistSort,
+                        onSortSelect = { viewModel.selectPlaylistSort(it, mapOf(
+                            SystemPlaylist.ALL_SONGS to allSongsName,
+                            SystemPlaylist.FAVORITES to favoritesName,
+                        )) },
                         onSystemClick = onPlaylistClick,
                         onUserClick = onUserPlaylistClick,
                         onCreate = { creatingPlaylist = true },
@@ -441,18 +464,30 @@ private fun ViewMoreButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun AlbumsGrid(albums: List<Album>, onClick: (Long) -> Unit) {
+private fun AlbumsGrid(
+    albums: List<Album>,
+    sort: SortState<AlbumSortOption>,
+    onSortSelect: (AlbumSortOption) -> Unit,
+    onClick: (Long) -> Unit,
+) {
     if (albums.isEmpty()) {
         EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
         return
     }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        item(key = "sort_row", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            SortChipRow(
+                options = AlbumSortOption.entries,
+                sort = sort,
+                onSelect = onSortSelect,
+            )
+        }
         items(albums, key = { it.id }) { album ->
             AlbumCard(album, onClick)
         }
@@ -499,12 +534,24 @@ private fun AlbumCard(album: Album, onClick: (Long) -> Unit) {
 }
 
 @Composable
-private fun PerformersList(performers: List<Performer>, onClick: (String) -> Unit) {
+private fun PerformersList(
+    performers: List<Performer>,
+    sort: SortState<ArtistSortOption>,
+    onSortSelect: (ArtistSortOption) -> Unit,
+    onClick: (String) -> Unit,
+) {
     if (performers.isEmpty()) {
         EmptyState(stringResource(R.string.library_empty_performers), Icons.Rounded.Person)
         return
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "sort_row") {
+            SortChipRow(
+                options = ArtistSortOption.entries,
+                sort = sort,
+                onSelect = onSortSelect,
+            )
+        }
         items(performers, key = { it.name }) { performer ->
             ListItem(
                 headlineContent = { Text(performer.name) },
@@ -529,6 +576,8 @@ private fun PerformersList(performers: List<Performer>, onClick: (String) -> Uni
 @Composable
 private fun PlaylistsList(
     playlists: List<Playlist>,
+    sort: SortState<PlaylistSortOption>,
+    onSortSelect: (PlaylistSortOption) -> Unit,
     onSystemClick: (SystemPlaylist) -> Unit,
     onUserClick: (String) -> Unit,
     onCreate: () -> Unit,
@@ -536,6 +585,13 @@ private fun PlaylistsList(
     onDelete: (UserPlaylist) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "sort_row") {
+            SortChipRow(
+                options = PlaylistSortOption.entries,
+                sort = sort,
+                onSelect = onSortSelect,
+            )
+        }
         item(key = "create") {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.playlist_new)) },
@@ -590,6 +646,56 @@ private fun PlaylistsList(
                 modifier = Modifier.clickableRow {
                     if (userPlaylist != null) onUserClick(userPlaylist.id)
                     else onSystemClick(playlist.systemType!!)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun <T : Enum<T>> SortChipRow(
+    options: List<T>,
+    sort: SortState<T>,
+    onSelect: (T) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { option ->
+            val selected = option == sort.option
+            FilterChip(
+                selected = selected,
+                onClick = { onSelect(option) },
+                label = {
+                    val labelRes = when (option) {
+                        is AlbumSortOption -> option.labelRes
+                        is ArtistSortOption -> option.labelRes
+                        is PlaylistSortOption -> option.labelRes
+                        else -> 0
+                    }
+                    Text(stringResource(labelRes))
+                },
+                trailingIcon = {
+                    if (selected) {
+                        Icon(
+                            imageVector = if (sort.direction == SortDirection.ASC) {
+                                Icons.Rounded.KeyboardArrowUp
+                            } else {
+                                Icons.Rounded.KeyboardArrowDown
+                            },
+                            contentDescription = stringResource(
+                                if (sort.direction == SortDirection.ASC) {
+                                    R.string.sort_direction_asc
+                                } else {
+                                    R.string.sort_direction_desc
+                                },
+                            ),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 },
             )
         }

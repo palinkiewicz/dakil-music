@@ -133,6 +133,15 @@
     <string name="about_description">A lightweight local music player built with Jetpack Compose, Material 3 and AndroidX Media3.</string>
     <string name="about_close">Close</string>
 
+    <!-- Sorting -->
+    <string name="sort_album_name">Album name</string>
+    <string name="sort_artist_name">Artist name</string>
+    <string name="sort_song_count">No. of songs</string>
+    <string name="sort_duration">Duration</string>
+    <string name="sort_playlist_name">Playlist name</string>
+    <string name="sort_direction_asc">Ascending</string>
+    <string name="sort_direction_desc">Descending</string>
+
     <!-- Search -->
     <string name="search_hint">Search</string>
     <string name="search_clear">Clear search</string>

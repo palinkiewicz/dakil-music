@@ -17,6 +17,7 @@ data class Playlist(
     val systemType: SystemPlaylist? = null,
     val userPlaylist: UserPlaylist? = null,
     val songCount: Int = 0,
+    val durationMs: Long = 0L,
 ) {
     val isUser: Boolean get() = userPlaylist != null
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
@@ -16,37 +17,102 @@ import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
+import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SystemPlaylist
 
 @OptIn(FlowPreview::class)
 class LibraryViewModel(private val container: AppContainer) : ViewModel() {
 
-    val albums: StateFlow<List<Album>> = container.getAlbums()
+    // --- Sort state -----------------------------------------------------------------
+
+    private val _albumSort = MutableStateFlow(SortState(AlbumSortOption.ALBUM_NAME))
+    val albumSort: StateFlow<SortState<AlbumSortOption>> = _albumSort
+
+    private val _artistSort = MutableStateFlow(SortState(ArtistSortOption.ARTIST_NAME))
+    val artistSort: StateFlow<SortState<ArtistSortOption>> = _artistSort
+
+    private val _playlistSort = MutableStateFlow(SortState(PlaylistSortOption.PLAYLIST_NAME))
+    val playlistSort: StateFlow<SortState<PlaylistSortOption>> = _playlistSort
+
+    fun selectAlbumSort(option: AlbumSortOption) {
+        _albumSort.value = _albumSort.value.select(option)
+    }
+
+    fun selectArtistSort(option: ArtistSortOption) {
+        _artistSort.value = _artistSort.value.select(option)
+    }
+
+    fun selectPlaylistSort(option: PlaylistSortOption, systemPlaylistNames: Map<SystemPlaylist, String>) {
+        _playlistSort.value = _playlistSort.value.select(option)
+        _systemPlaylistNames.value = systemPlaylistNames
+    }
+
+    // --- Data flows -----------------------------------------------------------------
+
+    val albums: StateFlow<List<Album>> = combine(
+        container.getAlbums(),
+        _albumSort,
+    ) { list, sort ->
+        val comparator: Comparator<Album> = when (sort.option) {
+            AlbumSortOption.ALBUM_NAME -> compareBy { it.title.lowercase() }
+            AlbumSortOption.ARTIST_NAME -> compareBy { it.artist.lowercase() }
+            AlbumSortOption.SONG_COUNT -> compareBy { it.songCount }
+            AlbumSortOption.DURATION -> compareBy { it.durationMs }
+        }
+        val noAlbum = list.filter { it.isNoAlbum }
+        val real = list.filter { !it.isNoAlbum }.sortedWith(
+            if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator,
+        )
+        noAlbum + real
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val performers: StateFlow<List<Performer>> = combine(
+        container.getPerformers(),
+        _artistSort,
+    ) { list, sort ->
+        val comparator: Comparator<Performer> = when (sort.option) {
+            ArtistSortOption.ARTIST_NAME -> compareBy { it.name.lowercase() }
+            ArtistSortOption.SONG_COUNT -> compareBy { it.songCount }
+        }
+        list.sortedWith(if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _rawPlaylists = container.getPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val performers: StateFlow<List<Performer>> = container.getPerformers()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _systemPlaylistNames = MutableStateFlow<Map<SystemPlaylist, String>>(emptyMap())
 
-    val playlists: StateFlow<List<Playlist>> = container.getPlaylists()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val playlists: StateFlow<List<Playlist>> = combine(
+        _rawPlaylists,
+        _playlistSort,
+        _systemPlaylistNames,
+    ) { list, sort, names ->
+        fun displayName(p: Playlist) = p.userPlaylist?.name ?: p.systemType?.let { names[it] } ?: ""
+        val comparator: Comparator<Playlist> = when (sort.option) {
+            PlaylistSortOption.PLAYLIST_NAME -> compareBy { displayName(it).lowercase() }
+            PlaylistSortOption.SONG_COUNT -> compareBy { it.songCount }
+            PlaylistSortOption.DURATION -> compareBy { it.durationMs }
+        }
+        list.sortedWith(if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // --- Search ---------------------------------------------------------------------
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query
-
-    private val _systemPlaylistNames = MutableStateFlow<Map<SystemPlaylist, String>>(emptyMap())
 
     val searchResults: StateFlow<SearchResults> = combine(
         _query.debounce(150).distinctUntilChanged(),
         container.musicRepository.songs,
         albums,
         performers,
-        playlists,
+        _rawPlaylists,
         _systemPlaylistNames,
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val q = args[0] as String
         @Suppress("UNCHECKED_CAST")
-        val songs = args[1] as List<pl.dakil.music.domain.model.Song>
+        val songs = args[1] as List<Song>
         @Suppress("UNCHECKED_CAST")
         val albumList = args[2] as List<Album>
         @Suppress("UNCHECKED_CAST")
@@ -82,9 +148,11 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
         _systemPlaylistNames.value = names
     }
 
-    fun playSong(song: pl.dakil.music.domain.model.Song) {
+    fun playSong(song: Song) {
         container.playSongs(listOf(song))
     }
+
+    // --- Playlist management --------------------------------------------------------
 
     fun createPlaylist(name: String) {
         if (name.isBlank()) return

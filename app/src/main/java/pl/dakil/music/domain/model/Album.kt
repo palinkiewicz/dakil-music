@@ -11,6 +11,7 @@ data class Album(
     val artist: String,
     val artworkUri: Uri?,
     val songCount: Int,
+    val durationMs: Long = 0L,
 ) {
     val isNoAlbum: Boolean get() = id == NO_ALBUM_ID
 }
