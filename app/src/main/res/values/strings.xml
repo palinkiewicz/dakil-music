@@ -32,12 +32,12 @@
     <!-- Library -->
     <string name="library_title">Library</string>
     <string name="tab_albums">Albums</string>
-    <string name="tab_performers">Performers</string>
+    <string name="tab_performers">Artists</string>
     <string name="tab_playlists">Playlists</string>
     <string name="playlist_all_songs">All Songs</string>
     <string name="playlist_favorites">Favorites</string>
     <string name="library_empty_albums">No albums found</string>
-    <string name="library_empty_performers">No performers found</string>
+    <string name="library_empty_performers">No artists found</string>
     <string name="library_empty_songs">No songs here yet</string>
     <string name="no_album">No album</string>
 
@@ -77,7 +77,7 @@
     <string name="action_add_to_favorites">Add to favorites</string>
     <string name="action_remove_from_favorites">Remove from favorites</string>
     <string name="action_edit_tags">Edit tags</string>
-    <string name="action_decompose_title">Automatic title decomposition</string>
+    <string name="action_decompose_title">Decompose title</string>
     <string name="snackbar_added_to_favorites">Added to favorites</string>
     <string name="snackbar_removed_from_favorites">Removed from favorites</string>
 
@@ -102,7 +102,7 @@
     <string name="decompose_original">Current title</string>
     <string name="decompose_main_separator">Title / authors separator</string>
     <string name="decompose_authors_before">Authors are before the separator</string>
-    <string name="decompose_extract_feat">Also extract \"feat.\" performers</string>
+    <string name="decompose_extract_feat">Also extract \"feat.\" artists</string>
     <string name="decompose_remove_after">Remove text from (optional)</string>
     <string name="decompose_preview">Preview</string>
     <string name="decompose_apply">Apply</string>

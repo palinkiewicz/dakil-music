@@ -13,4 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
-/.claude/
+.claude/
+CLAUDE.md
