@@ -1,6 +1,10 @@
 package pl.dakil.music.presentation.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -85,6 +89,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.LazyListState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
@@ -111,7 +119,7 @@ fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
     SystemPlaylist.FAVORITES -> R.string.playlist_favorites
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryScreen(
     onAlbumClick: (Long) -> Unit,
@@ -119,10 +127,16 @@ fun LibraryScreen(
     onPlaylistClick: (SystemPlaylist) -> Unit,
     onUserPlaylistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onReselect: Flow<Unit> = emptyFlow(),
     viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val tabs = LibraryTab.entries
     val pagerState = rememberPagerState { tabs.size }
+
+    // Hoisted so re-tapping the Library tab can scroll the visible page to the top.
+    val albumsGridState = rememberLazyGridState()
+    val performersListState = rememberLazyListState()
+    val playlistsListState = rememberLazyListState()
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
@@ -149,6 +163,30 @@ fun LibraryScreen(
                 SystemPlaylist.FAVORITES to favoritesName,
             ),
         )
+    }
+
+    // Back exits search instead of leaving the app — but only once the keyboard is
+    // down. While the IME is up, back is left to the system so it closes the keyboard
+    // first. Covers button, gesture and predictive back alike.
+    val imeVisible = WindowInsets.isImeVisible
+    BackHandler(enabled = query.isNotEmpty() && !imeVisible) {
+        viewModel.clearQuery()
+    }
+
+    // Re-tapping the Library tab exits an active search, otherwise scrolls the
+    // currently visible page back to the top.
+    LaunchedEffect(onReselect) {
+        onReselect.collect {
+            if (viewModel.query.value.isNotEmpty()) {
+                viewModel.clearQuery()
+            } else {
+                when (tabs[pagerState.currentPage]) {
+                    LibraryTab.ALBUMS -> albumsGridState.animateScrollToItem(0)
+                    LibraryTab.PERFORMERS -> performersListState.animateScrollToItem(0)
+                    LibraryTab.PLAYLISTS -> playlistsListState.animateScrollToItem(0)
+                }
+            }
+        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -199,18 +237,21 @@ fun LibraryScreen(
                         albums = albums,
                         columns = albumColumns,
                         sort = albumSort,
+                        gridState = albumsGridState,
                         onSortSelect = viewModel::selectAlbumSort,
                         onClick = onAlbumClick,
                     )
                     LibraryTab.PERFORMERS -> PerformersList(
                         performers = performers,
                         sort = artistSort,
+                        listState = performersListState,
                         onSortSelect = viewModel::selectArtistSort,
                         onClick = onPerformerClick,
                     )
                     LibraryTab.PLAYLISTS -> PlaylistsList(
                         playlists = playlists,
                         sort = playlistSort,
+                        listState = playlistsListState,
                         onSortSelect = { viewModel.selectPlaylistSort(it, mapOf(
                             SystemPlaylist.ALL_SONGS to allSongsName,
                             SystemPlaylist.FAVORITES to favoritesName,
@@ -485,6 +526,7 @@ private fun AlbumsGrid(
     albums: List<Album>,
     columns: Int,
     sort: SortState<AlbumSortOption>,
+    gridState: LazyGridState,
     onSortSelect: (AlbumSortOption) -> Unit,
     onClick: (Long) -> Unit,
 ) {
@@ -492,7 +534,6 @@ private fun AlbumsGrid(
         EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
         return
     }
-    val gridState = rememberLazyGridState()
     LaunchedEffect(sort) { gridState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
@@ -563,6 +604,7 @@ private fun AlbumCard(album: Album, onClick: (Long) -> Unit) {
 private fun PerformersList(
     performers: List<Performer>,
     sort: SortState<ArtistSortOption>,
+    listState: LazyListState,
     onSortSelect: (ArtistSortOption) -> Unit,
     onClick: (String) -> Unit,
 ) {
@@ -570,7 +612,6 @@ private fun PerformersList(
         EmptyState(stringResource(R.string.library_empty_performers), Icons.Rounded.Person)
         return
     }
-    val listState = rememberLazyListState()
     LaunchedEffect(sort) { listState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
@@ -609,6 +650,7 @@ private fun PerformersList(
 private fun PlaylistsList(
     playlists: List<Playlist>,
     sort: SortState<PlaylistSortOption>,
+    listState: LazyListState,
     onSortSelect: (PlaylistSortOption) -> Unit,
     onSystemClick: (SystemPlaylist) -> Unit,
     onUserClick: (String) -> Unit,
@@ -616,7 +658,6 @@ private fun PlaylistsList(
     onRename: (UserPlaylist) -> Unit,
     onDelete: (UserPlaylist) -> Unit,
 ) {
-    val listState = rememberLazyListState()
     LaunchedEffect(sort) { listState.scrollToItem(0) }
 
     ScrollAwareSortHeader(

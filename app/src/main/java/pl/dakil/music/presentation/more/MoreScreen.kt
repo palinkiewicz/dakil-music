@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.History
@@ -37,7 +38,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.clickableRow
@@ -49,17 +52,24 @@ fun MoreScreen(
     onOpenListeningHistory: () -> Unit,
     onOpenStatistics: () -> Unit,
     modifier: Modifier = Modifier,
+    onReselect: Flow<Unit> = emptyFlow(),
     viewModel: MoreViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         viewModel.messages.collectLatest { res ->
             snackbarHostState.showSnackbar(context.getString(res))
         }
+    }
+
+    // Re-tapping the More tab scrolls back to the top.
+    LaunchedEffect(onReselect) {
+        onReselect.collect { listState.animateScrollToItem(0) }
     }
 
     Scaffold(
@@ -72,6 +82,7 @@ fun MoreScreen(
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

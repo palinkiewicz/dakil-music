@@ -15,12 +15,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -61,6 +65,10 @@ fun MusicApp() {
         else -> if (currentRoute?.startsWith(Routes.SONG_LIST) == true) Routes.LIBRARY else currentRoute
     }
 
+    // Emits the route of a tab that was tapped while already on its main screen, so that
+    // screen can react (scroll to top / exit search). Subscreen reselects pop instead.
+    val reselectFlow = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
+
     // Shared playback state drives the live Now Playing tab icon.
     val nowPlayingViewModel: NowPlayingViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val nowPlaying by nowPlayingViewModel.uiState.collectAsStateWithLifecycle()
@@ -80,12 +88,23 @@ fun MusicApp() {
                     NavigationBarItem(
                         selected = destination.route == activeRoute,
                         onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (destination.route == activeRoute) {
+                                // Re-tapping the active tab.
+                                if (currentRoute != destination.route) {
+                                    // Inside a subscreen → return to the tab's main screen.
+                                    navController.popBackStack(destination.route, inclusive = false)
+                                } else {
+                                    // Already on the main screen → let it reset (scroll/search).
+                                    reselectFlow.tryEmit(destination.route)
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            } else {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
                         icon = {
@@ -113,7 +132,10 @@ fun MusicApp() {
                 .padding(innerPadding),
         ) {
             composable(Routes.NOW_PLAYING) {
-                NowPlayingScreen(modifier = Modifier.statusBarsPadding())
+                NowPlayingScreen(
+                    modifier = Modifier.statusBarsPadding(),
+                    onReselect = remember { reselectFlow.filter { it == Routes.NOW_PLAYING }.map {} },
+                )
             }
             composable(Routes.LIBRARY) {
                 LibraryScreen(
@@ -122,6 +144,7 @@ fun MusicApp() {
                     onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
                     onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
                     onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
+                    onReselect = remember { reselectFlow.filter { it == Routes.LIBRARY }.map {} },
                 )
             }
             composable(Routes.MORE) {
@@ -129,6 +152,7 @@ fun MusicApp() {
                     onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                     onOpenListeningHistory = { navController.navigate(Routes.LISTENING_HISTORY) },
                     onOpenStatistics = { navController.navigate(Routes.STATISTICS) },
+                    onReselect = remember { reselectFlow.filter { it == Routes.MORE }.map {} },
                 )
             }
             composable(Routes.SETTINGS) {

@@ -70,6 +70,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.RepeatMode
@@ -84,6 +86,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun NowPlayingScreen(
     modifier: Modifier = Modifier,
+    onReselect: Flow<Unit> = emptyFlow(),
     viewModel: NowPlayingViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,6 +100,7 @@ fun NowPlayingScreen(
 
     NowPlayingContent(
         state = state,
+        onReselect = onReselect,
         onPlayPause = viewModel::onPlayPause,
         onNext = viewModel::onNext,
         onPrevious = viewModel::onPrevious,
@@ -138,12 +142,18 @@ private fun NowPlayingContent(
     onRemoveQueueItem: (Int) -> Unit,
     onClearQueue: () -> Unit,
     modifier: Modifier = Modifier,
+    onReselect: Flow<Unit> = emptyFlow(),
 ) {
     val song = state.song ?: return
 
     // The list contains the player + queue header before the queue items.
     val headerCount = 2
     val lazyListState = rememberLazyListState()
+
+    // Re-tapping the Now Playing tab scrolls back to the top.
+    LaunchedEffect(onReselect) {
+        onReselect.collect { lazyListState.animateScrollToItem(0) }
+    }
 
     // Reordering is performed on a local working copy: while a row is held we only
     // move it visually (other rows shift but their real order is untouched) and we
