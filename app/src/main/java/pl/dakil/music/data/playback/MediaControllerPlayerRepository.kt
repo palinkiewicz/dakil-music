@@ -31,13 +31,15 @@ import pl.dakil.music.domain.repository.PlayerRepository
  * the player itself doesn't emit per-frame position callbacks.
  */
 /**
- * Internal seam letting [PlaybackHistoryTracker] observe raw Media3 events and
- * resolve the current item back to a rich [Song]. [PlaybackState] alone is
- * insufficient — it coalesces events and only samples position periodically.
+ * Internal seam letting [PlaybackHistoryTracker] read the current playback state on
+ * the main thread (the controller is main-thread only). Polling these is more
+ * robust than reacting to the controller's transition/discontinuity callbacks,
+ * which arrive inconsistently through the session proxy.
  */
 interface PlaybackTrackingSource {
-    fun addRawListener(listener: Player.Listener)
     fun currentSongSnapshot(): Song?
+    fun currentPositionMs(): Long
+    fun isPlaying(): Boolean
 }
 
 class MediaControllerPlayerRepository(
@@ -46,9 +48,6 @@ class MediaControllerPlayerRepository(
 
     private val appContext = context.applicationContext
     private val mainScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-
-    /** Extra listeners registered before the controller finished connecting. */
-    private val rawListeners = mutableListOf<Player.Listener>()
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -80,10 +79,7 @@ class MediaControllerPlayerRepository(
         controllerFuture = future
         future.addListener(
             {
-                controller = future.get().also { c ->
-                    c.addListener(listener)
-                    rawListeners.forEach(c::addListener)
-                }
+                controller = future.get().also { it.addListener(listener) }
                 syncState()
                 pendingAction?.invoke()
                 pendingAction = null
@@ -125,6 +121,19 @@ class MediaControllerPlayerRepository(
         }
     }
 
+    override fun moveQueueItem(from: Int, to: Int) {
+        val c = controller ?: return
+        val count = c.mediaItemCount
+        if (from in 0 until count && to in 0 until count && from != to) {
+            c.moveMediaItem(from, to)
+        }
+    }
+
+    override fun removeQueueItem(index: Int) {
+        val c = controller ?: return
+        if (index in 0 until c.mediaItemCount) c.removeMediaItem(index)
+    }
+
     override fun clearQueue() {
         queueById.clear()
         controller?.clearMediaItems()
@@ -161,13 +170,12 @@ class MediaControllerPlayerRepository(
         }
     }
 
-    override fun addRawListener(listener: Player.Listener) {
-        rawListeners.add(listener)
-        controller?.addListener(listener)
-    }
-
     override fun currentSongSnapshot(): Song? =
         controller?.currentMediaItem?.mediaId?.let(queueById::get)
+
+    override fun currentPositionMs(): Long = controller?.currentPosition?.coerceAtLeast(0L) ?: 0L
+
+    override fun isPlaying(): Boolean = controller?.isPlaying == true
 
     override fun release() {
         positionJob?.cancel()

@@ -1,39 +1,36 @@
 package pl.dakil.music.data.playback
 
 import android.os.SystemClock
-import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import pl.dakil.music.domain.model.ListeningRecord
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.repository.AppSettings
 import pl.dakil.music.domain.repository.ListeningHistoryRepository
 import pl.dakil.music.domain.repository.SettingsRepository
 import pl.dakil.music.domain.util.ContentKey
 
 /**
- * Records listening sessions by observing raw Media3 events from [source].
+ * Records listening sessions by polling the player once a second on the main
+ * thread. Polling is deliberately used instead of reacting to Media3's
+ * transition/discontinuity callbacks, which arrive inconsistently through the
+ * session proxy and previously caused looped songs to be miscounted.
  *
- * A session is the contiguous span one song is the current track. Looping
- * (repeat-one) keeps the session and bumps [ActiveSession.timesPlayed]; any other
- * transition flushes and opens a new one. Listened time is measured from the
- * monotonic clock, gated by play/pause, so paused/buffering time is never counted.
+ * A session is the contiguous span one song is the current track. While the song
+ * keeps playing, listened time accumulates (paused time excluded). When the song
+ * loops — the play position jumps from near the end back to the start —
+ * [ActiveSession.timesPlayed] is bumped. A change to a different song flushes the
+ * old session and opens a new one.
  *
- * The active session is also **checkpointed** to disk on an interval (see
- * `historyUpdateSeconds`) so an in-progress listen survives the process being
- * killed. The first checkpoint inserts a row; later ones update it in place.
- *
- * In-memory session state is touched from both the player's main thread (listener
- * callbacks) and the background checkpoint coroutine, so all mutations are guarded
- * by [lock]; the suspending DB writes happen outside the lock on immutable copies.
+ * The active session is also checkpointed to disk on the user-configured interval
+ * so an in-progress listen survives the process being killed; the first checkpoint
+ * inserts a row and later ones update it in place.
  */
 class PlaybackHistoryTracker(
     private val source: PlaybackTrackingSource,
@@ -49,6 +46,7 @@ class PlaybackHistoryTracker(
         var timesPlayed: Int = 1,
         /** Row id once persisted (by a checkpoint), else 0. */
         var recordId: Long = 0L,
+        var lastPersistElapsedMs: Long = 0L,
     )
 
     /** Immutable copy handed to the DB layer outside the lock. */
@@ -61,138 +59,117 @@ class PlaybackHistoryTracker(
         val timesPlayed: Int,
     )
 
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val lock = Any()
     private var active: ActiveSession? = null
-    private var isPlaying = false
+    private var lastPositionMs = 0L
 
-    private val listener = object : Player.Listener {
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            val toFlush: ActiveSession? = synchronized(lock) {
-                settleDelta()
-                val previous: ActiveSession?
-                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
-                    active?.timesPlayed = (active?.timesPlayed ?: 1) + 1
-                    previous = null
-                } else {
-                    previous = active
-                    startSession()
-                }
-                // Re-arm so listened time keeps accruing (settleDelta cleared it).
-                if (isPlaying) active?.lastResumeElapsedMs = SystemClock.elapsedRealtime()
-                previous
-            }
-            if (toFlush != null) flush(toFlush)
-        }
-
-        override fun onIsPlayingChanged(playing: Boolean) {
-            synchronized(lock) {
-                isPlaying = playing
-                if (playing) active?.lastResumeElapsedMs = SystemClock.elapsedRealtime() else settleDelta()
-            }
-        }
-
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) flushCurrent()
-        }
-
-        override fun onPlayerError(error: PlaybackException) {
-            flushCurrent()
-        }
-    }
+    @Volatile
+    private var settings = AppSettings()
 
     init {
-        source.addRawListener(listener)
-        scope.launch { checkpointLoop() }
+        scope.launch { settingsRepository.settings.collect { settings = it } }
+        scope.launch {
+            while (scope.isActive) {
+                tick()
+                delay(POLL_MS)
+            }
+        }
     }
 
-    /** Banks the time elapsed since the last resume into the active session. */
-    private fun settleDelta() {
+    /** One poll: reconcile the in-memory session with the live player, then persist. */
+    private suspend fun tick() {
+        val song = source.currentSongSnapshot()
+        val position = source.currentPositionMs()
+        val playing = source.isPlaying()
+        val now = SystemClock.elapsedRealtime()
+
+        var toFlush: Snapshot? = null
+        var checkpoint: Snapshot? = null
+
+        synchronized(lock) {
+            val current = active
+            if (song == null) {
+                // Nothing loaded — finalize any session in progress.
+                if (current != null) {
+                    settleDelta(now)
+                    toFlush = current.snapshot()
+                    active = null
+                }
+            } else if (current == null || current.song.id != song.id) {
+                // New (or first) song — finalize the previous one and start fresh.
+                if (current != null) {
+                    settleDelta(now)
+                    toFlush = current.snapshot()
+                }
+                active = ActiveSession(song = song, startWallMs = System.currentTimeMillis()).also {
+                    if (playing) it.lastResumeElapsedMs = now
+                }
+            } else {
+                // Same song still current.
+                if (lastPositionMs - position > LOOP_BACK_JUMP_MS && position < LOOP_START_MS) {
+                    current.timesPlayed++ // looped back to the start = another play
+                }
+                if (playing) {
+                    if (current.lastResumeElapsedMs < 0) current.lastResumeElapsedMs = now
+                } else {
+                    settleDelta(now)
+                }
+            }
+            lastPositionMs = position
+
+            val a = active
+            val interval = settings.historyUpdateSeconds
+            if (a != null && interval > 0 &&
+                (a.lastPersistElapsedMs == 0L || now - a.lastPersistElapsedMs >= interval * 1000L)
+            ) {
+                settleDelta(now)
+                if (playing) a.lastResumeElapsedMs = now
+                a.lastPersistElapsedMs = now
+                checkpoint = a.snapshot()
+            }
+        }
+
+        toFlush?.let { persist(it) }
+        checkpoint?.let { snap ->
+            val id = persist(snap)
+            if (id != null) synchronized(lock) { if (active === snap.session) snap.session.recordId = id }
+        }
+    }
+
+    /** Banks time elapsed since the last resume into the active session. */
+    private fun settleDelta(now: Long) {
         val s = active ?: return
         val resume = s.lastResumeElapsedMs
         if (resume >= 0) {
-            s.accumulatedMs += (SystemClock.elapsedRealtime() - resume).coerceAtLeast(0L)
+            s.accumulatedMs += (now - resume).coerceAtLeast(0L)
             s.lastResumeElapsedMs = -1L
         }
     }
 
-    private fun startSession() {
-        val song = source.currentSongSnapshot()
-        active = song?.let { ActiveSession(song = it, startWallMs = System.currentTimeMillis()) }
-    }
-
-    /** Settles and detaches the current session, then finalizes it on disk. */
-    private fun flushCurrent() {
-        val toFlush = synchronized(lock) {
-            settleDelta()
-            val current = active
-            active = null
-            current
-        }
-        if (toFlush != null) flush(toFlush)
-    }
-
-    private fun flush(session: ActiveSession) {
-        scope.launch {
-            persist(session.recordId, session.song, session.startWallMs, session.accumulatedMs, session.timesPlayed)
-        }
-    }
-
-    /** Periodically writes the in-progress session so a kill doesn't lose it. */
-    private suspend fun checkpointLoop() {
-        while (scope.isActive) {
-            val interval = settingsRepository.settings.first().historyUpdateSeconds
-            if (interval <= 0) {
-                delay(1_000L) // checkpointing off; re-check the setting shortly.
-                continue
-            }
-            delay(interval * 1_000L)
-            checkpoint()
-        }
-    }
-
-    private suspend fun checkpoint() {
-        val snapshot: Snapshot = synchronized(lock) {
-            settleDelta()
-            val s = active ?: return
-            // Keep counting: re-arm so the next tick measures from now.
-            if (isPlaying) s.lastResumeElapsedMs = SystemClock.elapsedRealtime()
-            Snapshot(s, s.recordId, s.song, s.startWallMs, s.accumulatedMs, s.timesPlayed)
-        }
-        val id = persist(snapshot.recordId, snapshot.song, snapshot.startWallMs, snapshot.accumulatedMs, snapshot.timesPlayed)
-            ?: return
-        synchronized(lock) {
-            if (active === snapshot.session) snapshot.session.recordId = id
-        }
-    }
+    private fun ActiveSession.snapshot(): Snapshot =
+        Snapshot(this, recordId, song, startWallMs, accumulatedMs, timesPlayed)
 
     /** Inserts or updates the record; returns the row id, or null if not persisted. */
-    private suspend fun persist(
-        recordId: Long,
-        song: Song,
-        startWallMs: Long,
-        accumulatedMs: Long,
-        timesPlayed: Int,
-    ): Long? {
-        if (accumulatedMs <= 0L) return null
-        val settings = settingsRepository.settings.first()
+    private suspend fun persist(s: Snapshot): Long? {
+        if (s.accumulatedMs <= 0L) return null
         if (!settings.statisticsEnabled) return null
-        val seconds = accumulatedMs / 1000L
+        val seconds = s.accumulatedMs / 1000L
         if (seconds < settings.minPlaySeconds) return null
         return historyRepository.upsert(
             ListeningRecord(
-                id = recordId,
-                songId = song.id,
-                startTimestamp = startWallMs,
+                id = s.recordId,
+                songId = s.song.id,
+                startTimestamp = s.startWallMs,
                 secondsPlayed = seconds.toInt(),
-                timesPlayed = timesPlayed,
-                title = song.title,
-                artists = song.artists,
-                album = song.album,
-                albumId = song.albumId,
-                albumArtUri = song.albumArtUri,
-                durationMs = song.durationMs,
-                contentKey = ContentKey.of(song),
+                timesPlayed = s.timesPlayed,
+                title = s.song.title,
+                artists = s.song.artists,
+                album = s.song.album,
+                albumId = s.song.albumId,
+                albumArtUri = s.song.albumArtUri,
+                durationMs = s.song.durationMs,
+                contentKey = ContentKey.of(s.song),
             ),
         )
     }
@@ -200,16 +177,20 @@ class PlaybackHistoryTracker(
     /** Best-effort final flush; called before the player is released. */
     fun release() {
         val toFlush = synchronized(lock) {
-            settleDelta()
+            settleDelta(SystemClock.elapsedRealtime())
             val current = active
             active = null
-            current
+            current?.snapshot()
         }
-        if (toFlush != null) {
-            runBlocking {
-                persist(toFlush.recordId, toFlush.song, toFlush.startWallMs, toFlush.accumulatedMs, toFlush.timesPlayed)
-            }
-        }
+        if (toFlush != null) runBlocking { persist(toFlush) }
         scope.cancel()
+    }
+
+    private companion object {
+        const val POLL_MS = 1_000L
+
+        /** A backward position jump larger than this, landing near the start, is a loop. */
+        const val LOOP_BACK_JUMP_MS = 1_500L
+        const val LOOP_START_MS = 2_500L
     }
 }
