@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Favorite
@@ -191,7 +192,7 @@ private fun NowPlayingContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Expressive, large rounded album art.
@@ -226,7 +227,7 @@ private fun NowPlayingContent(
 
                     IconButton(onClick = onAddToPlaylist) {
                         Icon(
-                            imageVector = Icons.Rounded.QueueMusic,
+                            imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
                             contentDescription = stringResource(R.string.action_add_to_playlist),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -287,7 +288,7 @@ private fun NowPlayingContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 24.dp, end = 12.dp, top = 8.dp),
+                        .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(

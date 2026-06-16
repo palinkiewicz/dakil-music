@@ -545,8 +545,8 @@ private fun AlbumsGrid(
             state = gridState,
             columns = GridCells.Fixed(columns),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
+                start = 8.dp,
+                end = 8.dp,
                 top = topPadding + 8.dp,
                 bottom = 16.dp,
             ),
