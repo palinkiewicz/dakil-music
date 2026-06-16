@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.repository.AppSettings
@@ -60,5 +61,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setStatsDefaultMetric(metric: StatMetric) = viewModelScope.launch {
         container.updateSettings.setStatsDefaultMetric(metric)
+    }
+
+    fun setQueueRemoveMode(mode: QueueRemoveMode) = viewModelScope.launch {
+        container.updateSettings.setQueueRemoveMode(mode)
     }
 }

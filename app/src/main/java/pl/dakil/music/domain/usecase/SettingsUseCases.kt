@@ -1,6 +1,7 @@
 package pl.dakil.music.domain.usecase
 
 import kotlinx.coroutines.flow.Flow
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.repository.AppSettings
@@ -22,4 +23,5 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setFirstDayOfWeek(isoDayOfWeek: Int) = repository.setFirstDayOfWeek(isoDayOfWeek)
     suspend fun setStatsDefaultRange(range: StatDefaultRange) = repository.setStatsDefaultRange(range)
     suspend fun setStatsDefaultMetric(metric: StatMetric) = repository.setStatsDefaultMetric(metric)
+    suspend fun setQueueRemoveMode(mode: QueueRemoveMode) = repository.setQueueRemoveMode(mode)
 }

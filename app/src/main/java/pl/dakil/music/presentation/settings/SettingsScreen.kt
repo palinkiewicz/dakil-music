@@ -43,9 +43,11 @@ import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.presentation.AppViewModelProvider
+import pl.dakil.music.presentation.components.queueRemoveModeNameRes
 import pl.dakil.music.presentation.components.statDefaultRangeNameRes
 import pl.dakil.music.presentation.components.statMetricNameRes
 import pl.dakil.music.presentation.components.weekdayNameRes
@@ -113,6 +115,13 @@ fun SettingsScreen(
                 value = settings.albumColumns,
                 onValueChange = viewModel::setAlbumColumns,
                 valueRange = 1..4,
+            )
+            SelectRow(
+                title = stringResource(R.string.settings_queue_remove_mode),
+                summary = stringResource(R.string.settings_queue_remove_mode_summary),
+                selectedLabel = stringResource(queueRemoveModeNameRes(settings.queueRemoveMode)),
+                options = QueueRemoveMode.entries.map { it to stringResource(queueRemoveModeNameRes(it)) },
+                onSelect = viewModel::setQueueRemoveMode,
             )
 
             SectionHeader(stringResource(R.string.settings_section_statistics))

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.PlaybackState
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.RepeatMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
@@ -27,6 +28,7 @@ data class NowPlayingUiState(
     val isCurrentFavorite: Boolean = false,
     val queue: List<Song> = emptyList(),
     val currentIndex: Int = -1,
+    val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
 )
 
 class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
@@ -34,7 +36,8 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     val uiState: StateFlow<NowPlayingUiState> = combine(
         container.observePlayback(),
         container.observeFavorites(),
-    ) { playback: PlaybackState, favorites ->
+        container.observeSettings(),
+    ) { playback: PlaybackState, favorites, settings ->
         NowPlayingUiState(
             song = playback.currentSong,
             isPlaying = playback.isPlaying,
@@ -47,6 +50,7 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             isCurrentFavorite = playback.currentSong?.id in favorites,
             queue = playback.queue,
             currentIndex = playback.currentIndex,
+            queueRemoveMode = settings.queueRemoveMode,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 
@@ -64,6 +68,8 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     fun onToggleShuffle() = container.playbackControl.toggleShuffle()
     fun onCycleRepeat() = container.playbackControl.cycleRepeatMode()
     fun onQueueItemClick(index: Int) = container.playbackControl.skipToQueueItem(index)
+    fun onMoveQueueItem(from: Int, to: Int) = container.playbackControl.moveQueueItem(from, to)
+    fun onRemoveQueueItem(index: Int) = container.playbackControl.removeQueueItem(index)
     fun onClearQueue() = container.playbackControl.clearQueue()
 
     fun onToggleFavorite() {

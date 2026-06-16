@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.repository.AppSettings
@@ -34,6 +35,9 @@ class SettingsRepositoryImpl(
             statsDefaultMetric = prefs[KEY_STATS_METRIC]
                 ?.let { name -> StatMetric.entries.firstOrNull { it.name == name } }
                 ?: StatMetric.SECONDS,
+            queueRemoveMode = prefs[KEY_QUEUE_REMOVE_MODE]
+                ?.let { name -> QueueRemoveMode.entries.firstOrNull { it.name == name } }
+                ?: QueueRemoveMode.SWIPE,
         )
     }
 
@@ -76,6 +80,10 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[KEY_STATS_METRIC] = metric.name }
     }
 
+    override suspend fun setQueueRemoveMode(mode: QueueRemoveMode) {
+        dataStore.edit { it[KEY_QUEUE_REMOVE_MODE] = mode.name }
+    }
+
     private suspend fun edit(key: Preferences.Key<Boolean>, value: Boolean) {
         dataStore.edit { it[key] = value }
     }
@@ -92,5 +100,6 @@ class SettingsRepositoryImpl(
         val KEY_FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val KEY_STATS_RANGE = stringPreferencesKey("stats_default_range")
         val KEY_STATS_METRIC = stringPreferencesKey("stats_default_metric")
+        val KEY_QUEUE_REMOVE_MODE = stringPreferencesKey("queue_remove_mode")
     }
 }

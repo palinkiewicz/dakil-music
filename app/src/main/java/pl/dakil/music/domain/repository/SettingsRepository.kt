@@ -1,6 +1,7 @@
 package pl.dakil.music.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 
@@ -30,6 +31,8 @@ interface SettingsRepository {
     suspend fun setStatsDefaultRange(range: StatDefaultRange)
 
     suspend fun setStatsDefaultMetric(metric: StatMetric)
+
+    suspend fun setQueueRemoveMode(mode: QueueRemoveMode)
 }
 
 data class AppSettings(
@@ -48,4 +51,6 @@ data class AppSettings(
     val firstDayOfWeek: Int = 1,
     val statsDefaultRange: StatDefaultRange = StatDefaultRange.ALL_TIME,
     val statsDefaultMetric: StatMetric = StatMetric.SECONDS,
+    /** How a song is removed from the play queue. */
+    val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
 )

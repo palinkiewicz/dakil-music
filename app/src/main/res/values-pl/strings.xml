@@ -16,6 +16,8 @@
     <string name="now_playing_empty_hint">Wybierz utwór z biblioteki, aby zacząć słuchać.</string>
     <string name="now_playing_queue">Kolejka</string>
     <string name="action_clear_queue">Wyczyść</string>
+    <string name="action_remove_from_queue">Usuń z kolejki</string>
+    <string name="cd_reorder">Zmień kolejność</string>
     <string name="cd_album_art">Okładka albumu</string>
     <string name="cd_play">Odtwórz</string>
     <string name="cd_pause">Wstrzymaj</string>
@@ -120,6 +122,11 @@
     <string name="settings_remember_sort_summary">Przywraca ostatnio używaną opcję sortowania po ponownym otwarciu biblioteki</string>
     <string name="settings_album_columns">Kolumny siatki albumów</string>
     <string name="settings_album_columns_summary">Liczba kolumn wyświetlanych w siatce albumów</string>
+    <string name="settings_queue_remove_mode">Sposób usuwania z kolejki</string>
+    <string name="settings_queue_remove_mode_summary">Jak usuwać utwór z kolejki odtwarzania</string>
+    <string name="queue_remove_mode_menu">Menu po przytrzymaniu</string>
+    <string name="queue_remove_mode_button">Przycisk usuwania</string>
+    <string name="queue_remove_mode_swipe">Przesuń, aby usunąć</string>
 
     <string name="about_title">O aplikacji Muzyka</string>
     <string name="about_version">Wersja %1$s</string>

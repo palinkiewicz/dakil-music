@@ -19,6 +19,8 @@
     <string name="now_playing_empty_hint">Pick a song from your library to start listening.</string>
     <string name="now_playing_queue">Queue</string>
     <string name="action_clear_queue">Clear</string>
+    <string name="action_remove_from_queue">Remove from queue</string>
+    <string name="cd_reorder">Reorder</string>
     <string name="cd_album_art">Album artwork</string>
     <string name="cd_play">Play</string>
     <string name="cd_pause">Pause</string>
@@ -130,6 +132,11 @@
     <string name="settings_remember_sort_summary">Restore last used sort option when reopening the library</string>
     <string name="settings_album_columns">Album grid columns</string>
     <string name="settings_album_columns_summary">Number of columns shown in the album grid</string>
+    <string name="settings_queue_remove_mode">Queue remove style</string>
+    <string name="settings_queue_remove_mode_summary">How to remove a song from the play queue</string>
+    <string name="queue_remove_mode_menu">Long-press menu</string>
+    <string name="queue_remove_mode_button">Remove button</string>
+    <string name="queue_remove_mode_swipe">Swipe to remove</string>
 
     <!-- About dialog -->
     <string name="about_title">About Music</string>
