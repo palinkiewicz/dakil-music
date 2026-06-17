@@ -173,6 +173,10 @@ class SongListViewModel(
     private val _dialog = MutableStateFlow<SongDialog?>(null)
     val dialog: StateFlow<SongDialog?> = _dialog.asStateFlow()
 
+    /** Bumped after a cover-art write so the UI re-fetches embedded art (busts Coil's cache). */
+    private val _coverArtVersion = MutableStateFlow(0)
+    val coverArtVersion: StateFlow<Int> = _coverArtVersion.asStateFlow()
+
     private val _events = Channel<SongListEvent>(Channel.BUFFERED)
     val events: Flow<SongListEvent> = _events.receiveAsFlow()
 
@@ -548,7 +552,10 @@ class SongListViewModel(
     private fun writeArtwork(songs: List<Song>, artwork: ArtworkData) {
         performWrite(
             affectedIds = songs.map { it.id },
-            onSuccess = { container.coverArtRefresher.invalidate(songs) },
+            onSuccess = {
+                container.coverArtRefresher.invalidate(songs)
+                _coverArtVersion.update { it + 1 }
+            },
         ) { container.editTags(songs, TagEdit(artwork = artwork)) }
     }
 

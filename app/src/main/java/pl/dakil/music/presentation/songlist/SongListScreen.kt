@@ -120,6 +120,7 @@ fun SongListScreen(
     val currentAlbum by viewModel.currentAlbum.collectAsStateWithLifecycle()
     val authoredAlbums by viewModel.authoredAlbums.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val coverArtVersion by viewModel.coverArtVersion.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -202,7 +203,7 @@ fun SongListScreen(
                 item(key = "header") {
                     SongListHeader(
                         title = title,
-                        artUri = state.songs.firstOrNull()?.albumArtUri,
+                        artModel = state.songs.firstOrNull()?.coverArtModel(coverArtVersion),
                         author = if (isAlbum) currentAlbum?.artist?.takeIf { it.isNotBlank() } else null,
                         year = if (isAlbum) currentAlbum?.year ?: 0 else 0,
                         songCount = state.songs.size,
@@ -262,6 +263,7 @@ fun SongListScreen(
                                         dragging = dragging,
                                         onClick = { viewModel.onSongClick(index) },
                                         onLongClick = { viewModel.onSongLongClick(entry.song.id) },
+                                        coverArtVersion = coverArtVersion,
                                     )
                                 }
                                 Icon(
@@ -304,6 +306,7 @@ fun SongListScreen(
                             current = state.isCurrent(song.id),
                             onClick = { viewModel.onSongClick(index) },
                             onLongClick = { viewModel.onSongLongClick(song.id) },
+                            coverArtVersion = coverArtVersion,
                         )
                     }
                 }
@@ -453,7 +456,7 @@ fun SongListScreen(
 @Composable
 private fun SongListHeader(
     title: String,
-    artUri: android.net.Uri?,
+    artModel: Any?,
     author: String?,
     year: Int,
     songCount: Int,
@@ -465,7 +468,7 @@ private fun SongListHeader(
             .fillMaxWidth()
             .aspectRatio(1f),
     ) {
-        AlbumArt(model = artUri, shape = cornerShape, modifier = Modifier.fillMaxSize())
+        AlbumArt(model = artModel, shape = cornerShape, modifier = Modifier.fillMaxSize())
 
         // Top scrim keeps the back button / status bar legible over bright art.
         Box(
@@ -751,6 +754,7 @@ private fun SongRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     dragging: Boolean = false,
+    coverArtVersion: Int = 0,
 ) {
     val containerColor = when {
         // While picked up for reordering the row is tinted like the Now Playing queue.
@@ -778,7 +782,7 @@ private fun SongRow(
                 // Albums show the track number (or a note when untagged) instead of art.
                 albumMode -> AlbumTrackLeading(song.trackNumber, position)
                 else -> AlbumArt(
-                    model = song.coverArtModel(),
+                    model = song.coverArtModel(coverArtVersion),
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.size(48.dp),
                 )

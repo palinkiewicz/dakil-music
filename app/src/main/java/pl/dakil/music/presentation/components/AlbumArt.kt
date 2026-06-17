@@ -24,8 +24,13 @@ import pl.dakil.music.domain.model.Song
 /**
  * The Coil model to render a song's cover art: its own embedded art when the song's
  * album is in individual-cover-art mode, otherwise the shared MediaStore album art.
+ *
+ * [version] busts Coil's cache for embedded art: bumping it after a cover-art rewrite
+ * changes the request key so already-composed images (e.g. a pinned header) reload
+ * instead of showing the stale bitmap.
  */
-fun Song.coverArtModel(): Any? = if (individualCoverArt) EmbeddedArt(uri) else albumArtUri
+fun Song.coverArtModel(version: Int = 0): Any? =
+    if (individualCoverArt) EmbeddedArt(uri, version) else albumArtUri
 
 /**
  * Album artwork with a graceful placeholder. Coil resolves the given [model] (a
