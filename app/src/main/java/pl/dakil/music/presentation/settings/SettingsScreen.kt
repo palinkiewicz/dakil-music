@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -43,10 +44,13 @@ import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.presentation.AppViewModelProvider
+import pl.dakil.music.presentation.components.albumAuthorModeNameRes
 import pl.dakil.music.presentation.components.queueRemoveModeNameRes
 import pl.dakil.music.presentation.components.statDefaultRangeNameRes
 import pl.dakil.music.presentation.components.statMetricNameRes
@@ -56,6 +60,7 @@ import pl.dakil.music.presentation.components.weekdayNameRes
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onOpenAlbumRules: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
@@ -85,6 +90,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            SectionHeader(stringResource(R.string.settings_section_theme))
             SwitchRow(
                 title = stringResource(R.string.settings_dynamic_color),
                 summary = stringResource(R.string.settings_dynamic_color_summary),
@@ -97,12 +103,8 @@ fun SettingsScreen(
                 checked = settings.forceDarkTheme,
                 onCheckedChange = viewModel::setForceDarkTheme,
             )
-            SwitchRow(
-                title = stringResource(R.string.settings_gapless),
-                summary = stringResource(R.string.settings_gapless_summary),
-                checked = settings.gaplessPlayback,
-                onCheckedChange = viewModel::setGaplessPlayback,
-            )
+
+            SectionHeader(stringResource(R.string.settings_section_library))
             SwitchRow(
                 title = stringResource(R.string.settings_remember_sort),
                 summary = stringResource(R.string.settings_remember_sort_summary),
@@ -115,6 +117,54 @@ fun SettingsScreen(
                 value = settings.albumColumns,
                 onValueChange = viewModel::setAlbumColumns,
                 valueRange = 1..4,
+            )
+            SwitchRow(
+                title = stringResource(R.string.settings_album_shared_cover_art),
+                summary = stringResource(R.string.settings_album_shared_cover_art_summary),
+                checked = settings.albumCoverArtMode == AlbumCoverArtMode.SHARED,
+                onCheckedChange = {
+                    viewModel.setAlbumCoverArtMode(
+                        if (it) AlbumCoverArtMode.SHARED else AlbumCoverArtMode.INDIVIDUAL,
+                    )
+                },
+            )
+            SelectRow(
+                title = stringResource(R.string.settings_album_author_mode),
+                summary = stringResource(R.string.settings_album_author_mode_summary),
+                selectedLabel = stringResource(albumAuthorModeNameRes(settings.albumAuthorMode)),
+                options = AlbumAuthorMode.entries.map { it to stringResource(albumAuthorModeNameRes(it)) },
+                onSelect = viewModel::setAlbumAuthorMode,
+            )
+            SliderRow(
+                title = stringResource(R.string.settings_album_corner_roundness),
+                summary = stringResource(R.string.settings_album_corner_roundness_summary),
+                value = settings.albumCornerRoundnessDp,
+                onValueChange = { viewModel.setAlbumCornerRoundnessDp((it / 4) * 4) },
+                valueRange = 0..64,
+                steps = 15,
+                valueLabel = { "${it}dp" },
+            )
+            NavigationRow(
+                title = stringResource(R.string.settings_album_rules),
+                summary = stringResource(R.string.settings_album_rules_summary),
+                onClick = onOpenAlbumRules,
+            )
+
+            SectionHeader(stringResource(R.string.settings_section_now_playing))
+            SliderRow(
+                title = stringResource(R.string.settings_now_playing_corner_roundness),
+                summary = stringResource(R.string.settings_now_playing_corner_roundness_summary),
+                value = settings.nowPlayingCornerRoundnessDp,
+                onValueChange = { viewModel.setNowPlayingCornerRoundnessDp((it / 4) * 4) },
+                valueRange = 0..64,
+                steps = 15,
+                valueLabel = { "${it}dp" },
+            )
+            SwitchRow(
+                title = stringResource(R.string.settings_gapless),
+                summary = stringResource(R.string.settings_gapless_summary),
+                checked = settings.gaplessPlayback,
+                onCheckedChange = viewModel::setGaplessPlayback,
             )
             SelectRow(
                 title = stringResource(R.string.settings_queue_remove_mode),
@@ -330,6 +380,27 @@ private fun SwitchRow(
         title = title,
         summary = summary,
         trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
+    )
+}
+
+/** A row that opens another screen, marked with a trailing chevron. */
+@Composable
+private fun NavigationRow(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+) {
+    SettingRow(
+        title = title,
+        summary = summary,
+        onClick = onClick,
+        trailing = {
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
     )
 }
 

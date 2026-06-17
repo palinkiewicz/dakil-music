@@ -14,6 +14,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.TagOptionSingleton
+import org.jaudiotagger.tag.images.AndroidArtwork
+import org.jaudiotagger.tag.reference.PictureTypes
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.repository.SongTagEdit
 import pl.dakil.music.domain.repository.TagEdit
@@ -41,6 +44,9 @@ class TagEditorRepositoryImpl(
     init {
         // JAudiotagger is noisy on the default logger; quiet it down.
         Logger.getLogger("org.jaudiotagger").level = Level.SEVERE
+        // Use the Android image handler so artwork is read/written with Bitmap, not
+        // the desktop javax.imageio path (which is absent on Android and would throw).
+        TagOptionSingleton.getInstance().isAndroid = true
     }
 
     override suspend fun writeTags(songs: List<Song>, newTags: TagEdit): TagWriteResult =
@@ -112,6 +118,17 @@ class TagEditorRepositoryImpl(
             edit.genre?.let { tag.setField(FieldKey.GENRE, it) }
             edit.year?.let { tag.setField(FieldKey.YEAR, it) }
             edit.trackNumber?.let { tag.setField(FieldKey.TRACK, it) }
+            edit.artwork?.let { art ->
+                tag.deleteArtworkField()
+                val artwork = AndroidArtwork().apply {
+                    binaryData = art.bytes
+                    mimeType = art.mimeType
+                    pictureType = PictureTypes.DEFAULT_ID
+                    // Prime width/height from the bytes so FLAC/Vorbis pictures are valid.
+                    setImageFromData()
+                }
+                tag.setField(artwork)
+            }
             audioFile.commit()
 
             // 3. Stream the rewritten bytes back over the original file (needs write grant).

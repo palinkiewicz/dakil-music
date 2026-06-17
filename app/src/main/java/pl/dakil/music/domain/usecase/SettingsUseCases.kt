@@ -1,6 +1,8 @@
 package pl.dakil.music.domain.usecase
 
 import kotlinx.coroutines.flow.Flow
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -24,4 +26,8 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setStatsDefaultRange(range: StatDefaultRange) = repository.setStatsDefaultRange(range)
     suspend fun setStatsDefaultMetric(metric: StatMetric) = repository.setStatsDefaultMetric(metric)
     suspend fun setQueueRemoveMode(mode: QueueRemoveMode) = repository.setQueueRemoveMode(mode)
+    suspend fun setAlbumCoverArtMode(mode: AlbumCoverArtMode) = repository.setAlbumCoverArtMode(mode)
+    suspend fun setAlbumAuthorMode(mode: AlbumAuthorMode) = repository.setAlbumAuthorMode(mode)
+    suspend fun setAlbumCornerRoundnessDp(dp: Int) = repository.setAlbumCornerRoundnessDp(dp)
+    suspend fun setNowPlayingCornerRoundnessDp(dp: Int) = repository.setNowPlayingCornerRoundnessDp(dp)
 }

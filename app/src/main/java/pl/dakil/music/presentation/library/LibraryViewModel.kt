@@ -2,15 +2,18 @@ package pl.dakil.music.presentation.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
@@ -19,7 +22,11 @@ import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.model.StatMetric
+import pl.dakil.music.domain.model.Statistics
+import pl.dakil.music.domain.model.StatisticsWindow
 import pl.dakil.music.domain.model.SystemPlaylist
+import java.time.DayOfWeek
 
 @OptIn(FlowPreview::class)
 class LibraryViewModel(private val container: AppContainer) : ViewModel() {
@@ -78,15 +85,47 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
         .map { it.albumColumns }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 2)
 
+    val albumCornerDp: StateFlow<Int> = container.observeSettings()
+        .map { it.albumCornerRoundnessDp }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 16)
+
+    // All-time listening totals, recomputed when history changes, used by the
+    // "Listening duration" / "Tracks played" sort options (same ranking as Statistics).
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val allTimeStats: StateFlow<Statistics> = container.observeHistoryChanges()
+        .onStart { emit(Unit) }
+        .mapLatest {
+            container.getStatistics(
+                StatisticsWindow(0L, Long.MAX_VALUE),
+                StatMetric.SECONDS,
+                DayOfWeek.MONDAY,
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Statistics.EMPTY)
+
+    private val albumSecondsById = allTimeStats.map { stats ->
+        stats.topAlbums.associate { it.albumId to (it.seconds to it.plays) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    private val artistStatsByName = allTimeStats.map { stats ->
+        stats.topArtists.associate { it.name.lowercase() to (it.seconds to it.plays) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val albums: StateFlow<List<Album>> = combine(
         container.getAlbums(),
         _albumSort,
-    ) { list, sort ->
+        albumSecondsById,
+    ) { list, sort, stats ->
+        fun seconds(a: Album) = stats[a.id]?.first ?: 0L
+        fun plays(a: Album) = stats[a.id]?.second ?: 0L
         val comparator: Comparator<Album> = when (sort.option) {
             AlbumSortOption.ALBUM_NAME -> compareBy { it.title.lowercase() }
             AlbumSortOption.ARTIST_NAME -> compareBy { it.artist.lowercase() }
             AlbumSortOption.SONG_COUNT -> compareBy { it.songCount }
             AlbumSortOption.DURATION -> compareBy { it.durationMs }
+            AlbumSortOption.RELEASE_YEAR -> compareBy { it.year }
+            AlbumSortOption.LISTENING_DURATION -> compareBy { seconds(it) }
+            AlbumSortOption.TRACKS_PLAYED -> compareBy { plays(it) }
         }
         val noAlbum = list.filter { it.isNoAlbum }
         val real = list.filter { !it.isNoAlbum }.sortedWith(
@@ -98,10 +137,15 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     val performers: StateFlow<List<Performer>> = combine(
         container.getPerformers(),
         _artistSort,
-    ) { list, sort ->
+        artistStatsByName,
+    ) { list, sort, stats ->
+        fun seconds(p: Performer) = stats[p.name.lowercase()]?.first ?: 0L
+        fun plays(p: Performer) = stats[p.name.lowercase()]?.second ?: 0L
         val comparator: Comparator<Performer> = when (sort.option) {
             ArtistSortOption.ARTIST_NAME -> compareBy { it.name.lowercase() }
             ArtistSortOption.SONG_COUNT -> compareBy { it.songCount }
+            ArtistSortOption.LISTENING_DURATION -> compareBy { seconds(it) }
+            ArtistSortOption.TRACKS_PLAYED -> compareBy { plays(it) }
         }
         list.sortedWith(if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

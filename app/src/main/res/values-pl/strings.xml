@@ -240,4 +240,67 @@
     <string name="weekday_short_friday">Pią</string>
     <string name="weekday_short_saturday">Sob</string>
     <string name="weekday_short_sunday">Nie</string>
+
+    <!-- Library / album editing -->
+    <string name="action_save">Zapisz</string>
+    <string name="action_edit">Edytuj</string>
+    <string name="action_remove">Usuń</string>
+    <string name="action_change_cover_art">Zmień okładkę</string>
+    <string name="action_add_cover_art">Dodaj okładkę</string>
+    <string name="action_remove_from_playlist">Usuń z playlisty</string>
+    <string name="snackbar_removed_from_playlist">Usunięto z playlisty</string>
+    <string name="song_search_hint">Szukaj utworów…</string>
+    <string name="albums_authored_section">Albumy artysty</string>
+    <string name="songs_section">Utwory</string>
+    <string name="cover_art_invalid">Wybierz obraz PNG lub JPG</string>
+    <string name="cover_art_target_title">Zastosuj okładkę</string>
+    <string name="cover_art_target_message">Zastosować tę okładkę do wszystkich utworów albumu czy tylko do pierwszego?</string>
+    <string name="cover_art_target_all">Wszystkie utwory</string>
+    <string name="cover_art_target_first">Pierwszy utwór</string>
+    <string name="retag_confirm_title">Zmienić tagi?</string>
+    <plurals name="retag_confirm_message">
+        <item quantity="one">Spowoduje to nadpisanie tagów %d utworu.</item>
+        <item quantity="few">Spowoduje to nadpisanie tagów %d utworów.</item>
+        <item quantity="many">Spowoduje to nadpisanie tagów %d utworów.</item>
+        <item quantity="other">Spowoduje to nadpisanie tagów %d utworów.</item>
+    </plurals>
+
+    <!-- Album / artist edit dialogs -->
+    <string name="album_edit_title">Edytuj album</string>
+    <string name="album_edit_field_title">Tytuł</string>
+    <string name="album_edit_field_year">Rok</string>
+    <string name="album_edit_use_custom">Użyj ustawień niestandardowych</string>
+    <string name="artist_edit_title">Edytuj artystę</string>
+    <string name="artist_edit_field_name">Nazwa artysty</string>
+
+    <!-- Album author modes -->
+    <string name="album_author_mode_first_song_artists">Artyści pierwszego utworu</string>
+    <string name="album_author_mode_first_artist">Pierwszy artysta pierwszego utworu</string>
+    <string name="album_author_mode_most_common">Najczęstszy artysta</string>
+    <string name="album_author_mode_all_artists">Wszyscy artyści albumu</string>
+
+    <!-- Album rules screen -->
+    <string name="album_rules_empty">Żaden album nie ma jeszcze własnych reguł</string>
+    <string name="album_rules_cover_art_label">Własna okładka</string>
+    <string name="album_rules_delete">Usuń regułę</string>
+
+    <!-- New sort options -->
+    <string name="sort_release_year">Rok wydania</string>
+    <string name="sort_listening_duration">Czas słuchania</string>
+    <string name="sort_tracks_played">Odtworzenia</string>
+
+    <!-- New settings -->
+    <string name="settings_section_theme">Motyw</string>
+    <string name="settings_section_library">Biblioteka</string>
+    <string name="settings_section_now_playing">Teraz odtwarzane</string>
+    <string name="settings_album_shared_cover_art">Wspólna okładka dla utworów albumu</string>
+    <string name="settings_album_shared_cover_art_summary">Gdy wyłączone, każdy utwór pokazuje własną osadzoną okładkę</string>
+    <string name="settings_album_author_mode">Autor albumu</string>
+    <string name="settings_album_author_mode_summary">Sposób ustalania autora albumu</string>
+    <string name="settings_album_corner_roundness">Zaokrąglenie okładki albumu</string>
+    <string name="settings_album_corner_roundness_summary">Promień zaokrąglenia rogów okładki albumu</string>
+    <string name="settings_now_playing_corner_roundness">Zaokrąglenie okładki</string>
+    <string name="settings_now_playing_corner_roundness_summary">Promień zaokrąglenia okładki na ekranie odtwarzania</string>
+    <string name="settings_album_rules">Albumy z własnymi regułami</string>
+    <string name="settings_album_rules_summary">Zarządzaj nadpisaniami okładek i autorów albumów</string>
 </resources>

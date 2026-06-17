@@ -60,6 +60,7 @@ import pl.dakil.music.domain.model.Statistics
 import pl.dakil.music.domain.model.TrackStat
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.formatDuration
 import pl.dakil.music.presentation.components.statMetricNameRes
 import pl.dakil.music.presentation.components.statRangeTypeNameRes
@@ -81,6 +82,7 @@ fun StatisticsScreen(
     val liveSongs by viewModel.liveSongs.collectAsStateWithLifecycle()
     val mergeTarget by viewModel.mergeTarget.collectAsStateWithLifecycle()
     val liveIds = remember(liveSongs) { liveSongs.mapTo(HashSet()) { it.id } }
+    val liveById = remember(liveSongs) { liveSongs.associateBy { it.id } }
 
     Scaffold(
         modifier = modifier,
@@ -121,6 +123,7 @@ fun StatisticsScreen(
                 metric = state.metric,
                 total = stats.totalValue(state.metric),
                 isDeleted = { it.songId !in liveIds },
+                coverModel = { liveById[it.songId]?.coverArtModel() ?: it.albumArtUri },
                 onMergeDeleted = viewModel::startMerge,
             )
             TopArtistsSection(stats.topArtists, state.metric, stats.totalValue(state.metric))
@@ -251,12 +254,13 @@ private fun TopTracksSection(
     metric: StatMetric,
     total: Long,
     isDeleted: (TrackStat) -> Boolean,
+    coverModel: (TrackStat) -> Any?,
     onMergeDeleted: (TrackStat) -> Unit,
 ) {
     ChartSection(stringResource(R.string.stats_top_tracks), tracks) { track ->
         val deleted = isDeleted(track)
         ChartRow(
-            artUri = track.albumArtUri,
+            model = coverModel(track),
             deleted = deleted,
             title = track.title,
             subtitle = track.artists.joinToString(", ").ifBlank { stringResource(R.string.unknown_artist) },
@@ -272,7 +276,7 @@ private fun TopTracksSection(
 private fun TopArtistsSection(artists: List<ArtistStat>, metric: StatMetric, total: Long) {
     ChartSection(stringResource(R.string.stats_top_artists), artists) { artist ->
         ChartRow(
-            artUri = null,
+            model = null,
             deleted = false,
             title = artist.name,
             subtitle = null,
@@ -287,7 +291,7 @@ private fun TopArtistsSection(artists: List<ArtistStat>, metric: StatMetric, tot
 private fun TopAlbumsSection(albums: List<AlbumStat>, metric: StatMetric, total: Long) {
     ChartSection(stringResource(R.string.stats_top_albums), albums) { album ->
         ChartRow(
-            artUri = album.albumArtUri,
+            model = album.albumArtUri,
             deleted = false,
             title = album.album.ifBlank { stringResource(R.string.no_album) },
             subtitle = null,
@@ -319,7 +323,7 @@ private fun <T> ChartSection(title: String, items: List<T>, row: @Composable (T)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChartRow(
-    artUri: android.net.Uri?,
+    model: Any?,
     deleted: Boolean,
     title: String,
     subtitle: String?,
@@ -347,7 +351,7 @@ private fun ChartRow(
                 Icon(Icons.Rounded.MusicOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            AlbumArt(uri = artUri, shape = MaterialTheme.shapes.small, modifier = Modifier.size(40.dp))
+            AlbumArt(model = model, shape = MaterialTheme.shapes.small, modifier = Modifier.size(40.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

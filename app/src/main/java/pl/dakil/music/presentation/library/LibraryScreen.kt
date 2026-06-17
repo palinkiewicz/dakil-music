@@ -2,6 +2,7 @@ package pl.dakil.music.presentation.library
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
@@ -104,6 +105,7 @@ import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.aspectRatioSquare
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.clickableRow
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 
@@ -140,6 +142,7 @@ fun LibraryScreen(
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
+    val albumCornerDp by viewModel.albumCornerDp.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
@@ -236,6 +239,7 @@ fun LibraryScreen(
                     LibraryTab.ALBUMS -> AlbumsGrid(
                         albums = albums,
                         columns = albumColumns,
+                        cornerDp = albumCornerDp,
                         sort = albumSort,
                         gridState = albumsGridState,
                         onSortSelect = viewModel::selectAlbumSort,
@@ -369,7 +373,7 @@ private fun SearchResultsList(
                     },
                     leadingContent = {
                         AlbumArt(
-                            uri = song.albumArtUri,
+                            model = song.coverArtModel(),
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.size(48.dp),
                         )
@@ -406,7 +410,7 @@ private fun SearchResultsList(
                     },
                     leadingContent = {
                         AlbumArt(
-                            uri = album.artworkUri,
+                            model = album.artworkUri,
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.size(48.dp),
                         )
@@ -525,6 +529,7 @@ private fun ViewMoreButton(onClick: () -> Unit) {
 private fun AlbumsGrid(
     albums: List<Album>,
     columns: Int,
+    cornerDp: Int,
     sort: SortState<AlbumSortOption>,
     gridState: LazyGridState,
     onSortSelect: (AlbumSortOption) -> Unit,
@@ -555,14 +560,14 @@ private fun AlbumsGrid(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(albums, key = { it.id }) { album ->
-                AlbumCard(album, onClick)
+                AlbumCard(album, cornerDp, onClick)
             }
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: Album, onClick: (Long) -> Unit) {
+private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -571,8 +576,8 @@ private fun AlbumCard(album: Album, onClick: (Long) -> Unit) {
             .padding(8.dp),
     ) {
         AlbumArt(
-            uri = album.artworkUri,
-            shape = MaterialTheme.shapes.large,
+            model = album.artworkUri,
+            shape = RoundedCornerShape(cornerDp.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatioSquare(),

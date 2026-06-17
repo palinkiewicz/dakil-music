@@ -251,4 +251,65 @@
     <string name="weekday_short_friday">Fri</string>
     <string name="weekday_short_saturday">Sat</string>
     <string name="weekday_short_sunday">Sun</string>
+
+    <!-- Library / album editing -->
+    <string name="action_save">Save</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_change_cover_art">Change cover art</string>
+    <string name="action_add_cover_art">Add cover art</string>
+    <string name="action_remove_from_playlist">Remove from playlist</string>
+    <string name="snackbar_removed_from_playlist">Removed from playlist</string>
+    <string name="song_search_hint">Search songs…</string>
+    <string name="albums_authored_section">Albums authored</string>
+    <string name="songs_section">Songs</string>
+    <string name="cover_art_invalid">Please pick a PNG or JPG image</string>
+    <string name="cover_art_target_title">Apply cover art</string>
+    <string name="cover_art_target_message">Apply this cover art to every song in the album, or just the first song?</string>
+    <string name="cover_art_target_all">All songs</string>
+    <string name="cover_art_target_first">First song</string>
+    <string name="retag_confirm_title">Retag songs?</string>
+    <plurals name="retag_confirm_message">
+        <item quantity="one">This will rewrite the tags of %d song.</item>
+        <item quantity="other">This will rewrite the tags of %d songs.</item>
+    </plurals>
+
+    <!-- Album / artist edit dialogs -->
+    <string name="album_edit_title">Edit album</string>
+    <string name="album_edit_field_title">Title</string>
+    <string name="album_edit_field_year">Year</string>
+    <string name="album_edit_use_custom">Use custom settings</string>
+    <string name="artist_edit_title">Edit artist</string>
+    <string name="artist_edit_field_name">Artist name</string>
+
+    <!-- Album author modes -->
+    <string name="album_author_mode_first_song_artists">Artists of the first song</string>
+    <string name="album_author_mode_first_artist">First artist of the first song</string>
+    <string name="album_author_mode_most_common">Most common artist</string>
+    <string name="album_author_mode_all_artists">All artists in the album</string>
+
+    <!-- Album rules screen -->
+    <string name="album_rules_empty">No albums have custom rules yet</string>
+    <string name="album_rules_cover_art_label">Custom cover art</string>
+    <string name="album_rules_delete">Remove rule</string>
+
+    <!-- New sort options -->
+    <string name="sort_release_year">Release year</string>
+    <string name="sort_listening_duration">Listening duration</string>
+    <string name="sort_tracks_played">Tracks played</string>
+
+    <!-- New settings -->
+    <string name="settings_section_theme">Theme</string>
+    <string name="settings_section_library">Library</string>
+    <string name="settings_section_now_playing">Now Playing</string>
+    <string name="settings_album_shared_cover_art">Same cover art for album tracks</string>
+    <string name="settings_album_shared_cover_art_summary">When off, each track shows its own embedded cover art</string>
+    <string name="settings_album_author_mode">Album author</string>
+    <string name="settings_album_author_mode_summary">How an album\'s author is determined</string>
+    <string name="settings_album_corner_roundness">Album cover roundness</string>
+    <string name="settings_album_corner_roundness_summary">Corner radius of album cover art</string>
+    <string name="settings_now_playing_corner_roundness">Cover art roundness</string>
+    <string name="settings_now_playing_corner_roundness_summary">Corner radius of the Now Playing cover art</string>
+    <string name="settings_album_rules">Albums with custom rules</string>
+    <string name="settings_album_rules_summary">Manage per-album cover art and author overrides</string>
 </resources>

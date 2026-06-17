@@ -45,8 +45,8 @@ class StatisticsViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(StatisticsUiState())
     val uiState: StateFlow<StatisticsUiState> = _state.asStateFlow()
 
-    /** Live library, used to flag deleted top-tracks and back the merge picker. */
-    val liveSongs: StateFlow<List<Song>> = container.musicRepository.songs
+    /** Live library, used to flag deleted top-tracks, resolve cover art, and back the merge picker. */
+    val liveSongs: StateFlow<List<Song>> = container.musicRepository.annotatedSongs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _mergeTarget = MutableStateFlow<TrackStat?>(null)

@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,6 +80,7 @@ import pl.dakil.music.domain.model.RepeatMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.formatDuration
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import sh.calvin.reorderable.ReorderableItem
@@ -197,8 +199,8 @@ private fun NowPlayingContent(
             ) {
                 // Expressive, large rounded album art.
                 AlbumArt(
-                    uri = song.albumArtUri,
-                    shape = MaterialTheme.shapes.extraLarge,
+                    model = song.coverArtModel(),
+                    shape = RoundedCornerShape(state.coverArtRoundnessDp.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f),
@@ -469,7 +471,7 @@ private fun QueueListItem(
                         Spacer(Modifier.size(8.dp))
                     }
                     AlbumArt(
-                        uri = song.albumArtUri,
+                        model = song.coverArtModel(),
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.size(44.dp),
                     )

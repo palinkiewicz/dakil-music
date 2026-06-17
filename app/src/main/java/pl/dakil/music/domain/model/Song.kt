@@ -24,6 +24,12 @@ data class Song(
     val genre: String,
     val mimeType: String,
     val dateAddedSeconds: Long,
+    /**
+     * When true, this song should display its own embedded cover art rather than the
+     * album's shared art. Set by the repository from the cover-art settings/rule for
+     * the song's album; consumed only by the UI ([albumArtUri] is left untouched).
+     */
+    val individualCoverArt: Boolean = false,
 ) {
     /** Convenience for single-line UI rendering of all performers. */
     val artistsLabel: String get() = artists.joinToString(", ")

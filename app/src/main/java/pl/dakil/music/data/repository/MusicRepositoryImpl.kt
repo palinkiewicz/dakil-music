@@ -4,43 +4,70 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AlbumRule
 import pl.dakil.music.domain.model.NO_ALBUM_ID
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.repository.AlbumRuleRepository
+import pl.dakil.music.domain.repository.AppSettings
 import pl.dakil.music.domain.repository.MusicRepository
+import pl.dakil.music.domain.repository.SettingsRepository
+import pl.dakil.music.domain.util.AlbumAuthors
+import pl.dakil.music.domain.util.AlbumKey
 
 /**
  * Caches the MediaStore scan in memory and exposes derived collections. Albums and
  * performers are computed from the cached song list, so a single [refresh] keeps
- * every screen consistent. Derivations are plain [map]s — cheap and lazy.
+ * every screen consistent. Album author and per-song cover-art mode are resolved
+ * from the cover-art settings and any per-album rule overrides.
  */
 class MusicRepositoryImpl(
     private val dataSource: MediaStoreDataSource,
+    private val settingsRepository: SettingsRepository,
+    private val albumRuleRepository: AlbumRuleRepository,
 ) : MusicRepository {
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     private val refreshMutex = Mutex()
 
+    /** Raw scan; used by history/statistics reconciliation (no cover-art annotation). */
     override val songs: StateFlow<List<Song>> = _songs.asStateFlow()
 
-    override val albums: Flow<List<Album>> = _songs.map { songs ->
+    override val annotatedSongs: Flow<List<Song>> = combine(
+        _songs,
+        settingsRepository.settings,
+        albumRuleRepository.rules,
+    ) { songs, settings, rules -> annotate(songs, settings, rules) }
+
+    override val albums: Flow<List<Album>> = combine(
+        _songs,
+        settingsRepository.settings,
+        albumRuleRepository.rules,
+    ) { songs, settings, rules ->
         val (withoutAlbum, withAlbum) = songs.partition { it.album.isBlank() }
+        val ruleByKey = rules.associateBy { it.albumKey }
 
         val realAlbums = withAlbum.groupBy { it.albumId }
             .map { (albumId, albumSongs) ->
                 val first = albumSongs.first()
+                val mode = ruleByKey[AlbumKey.of(albumSongs)]?.authorMode ?: settings.albumAuthorMode
+                val authors = AlbumAuthors.authors(albumSongs, mode)
                 Album(
                     id = albumId,
                     title = first.album,
-                    artist = first.rawArtist,
+                    artist = authors.joinToString(", "),
                     artworkUri = first.albumArtUri,
                     songCount = albumSongs.size,
                     durationMs = albumSongs.sumOf { it.durationMs },
+                    year = albumSongs.maxOf { it.year },
+                    authors = authors,
                 )
             }
             .sortedBy { it.title.lowercase() }
@@ -73,7 +100,7 @@ class MusicRepositoryImpl(
             .sortedBy { it.name.lowercase() }
     }
 
-    override fun songsForAlbum(albumId: Long): Flow<List<Song>> = _songs.map { songs ->
+    override fun songsForAlbum(albumId: Long): Flow<List<Song>> = annotatedSongs.map { songs ->
         if (albumId == NO_ALBUM_ID) {
             songs.filter { it.album.isBlank() }.sortedBy { it.title.lowercase() }
         } else {
@@ -81,12 +108,12 @@ class MusicRepositoryImpl(
         }
     }
 
-    override fun songsForPerformer(performerName: String): Flow<List<Song>> = _songs.map { songs ->
+    override fun songsForPerformer(performerName: String): Flow<List<Song>> = annotatedSongs.map { songs ->
         songs.filter { song -> song.artists.any { it.equals(performerName, ignoreCase = true) } }
             .sortedBy { it.title.lowercase() }
     }
 
-    override fun songsByIds(ids: Collection<Long>): Flow<List<Song>> = _songs.map { songs ->
+    override fun songsByIds(ids: Collection<Long>): Flow<List<Song>> = annotatedSongs.map { songs ->
         val wanted = ids.toHashSet()
         songs.filter { it.id in wanted }
     }
@@ -95,6 +122,21 @@ class MusicRepositoryImpl(
         // Serialize concurrent refreshes (e.g. tapping "Refresh" rapidly).
         refreshMutex.withLock {
             _songs.value = dataSource.queryAudio()
+        }
+    }
+
+    /** Sets [Song.individualCoverArt] per the effective cover-art mode of each song's album. */
+    private fun annotate(songs: List<Song>, settings: AppSettings, rules: List<AlbumRule>): List<Song> {
+        val ruleByKey = rules.associateBy { it.albumKey }
+        // Group once so every song of an album resolves to the same (deterministic) key.
+        val modeByAlbumId = songs.filter { it.album.isNotBlank() }
+            .groupBy { it.albumId }
+            .mapValues { (_, albumSongs) ->
+                ruleByKey[AlbumKey.of(albumSongs)]?.coverArtMode ?: settings.albumCoverArtMode
+            }
+        return songs.map { song ->
+            val mode = if (song.album.isBlank()) settings.albumCoverArtMode else modeByAlbumId[song.albumId]
+            song.copy(individualCoverArt = mode == AlbumCoverArtMode.INDIVIDUAL)
         }
     }
 }

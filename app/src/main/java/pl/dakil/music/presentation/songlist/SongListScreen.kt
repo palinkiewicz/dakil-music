@@ -21,11 +21,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -37,6 +43,7 @@ import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,6 +58,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -76,25 +84,40 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.SongPickerDialog
+import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.formatDuration
+import pl.dakil.music.presentation.components.toSongEntries
 import pl.dakil.music.presentation.library.systemPlaylistNameRes
 import pl.dakil.music.presentation.navigation.SongListSource
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
+import pl.dakil.music.presentation.playlist.PlaylistNameDialog
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongListScreen(
     onBack: () -> Unit,
+    onAlbumClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SongListViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val dialog by viewModel.dialog.collectAsStateWithLifecycle()
     val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
+    val allSongs by viewModel.allSongs.collectAsStateWithLifecycle()
+    val currentAlbum by viewModel.currentAlbum.collectAsStateWithLifecycle()
+    val authoredAlbums by viewModel.authoredAlbums.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -106,6 +129,18 @@ fun SongListScreen(
         }
     }
 
+    // Native png/jpeg picker for cover art. pickForAlbum routes the result.
+    var pickForAlbum by remember { mutableStateOf(false) }
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) viewModel.onCoverArtPicked(context.contentResolver, uri, pickForAlbum)
+    }
+    fun launchImagePicker(forAlbum: Boolean) {
+        pickForAlbum = forAlbum
+        imagePicker.launch(arrayOf("image/png", "image/jpeg"))
+    }
+
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -114,18 +149,44 @@ fun SongListScreen(
 
                 is SongListEvent.RequestWritePermission ->
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())
+
+                is SongListEvent.NavigateBack -> onBack()
             }
         }
     }
 
-    val title = headerTitle(viewModel.source, state.songs, userPlaylists)
-    val isAlbum = viewModel.source is SongListSource.AlbumSource
+    val source = viewModel.source
+    val title = headerTitle(source, state.songs, userPlaylists)
+    val isAlbum = source is SongListSource.AlbumSource
+    val isPerformer = source is SongListSource.PerformerSource
+    val isUserPlaylist = source is SongListSource.UserPlaylistSource
+    val isFavorites = source is SongListSource.PlaylistSource &&
+        source.playlist == pl.dakil.music.domain.model.SystemPlaylist.FAVORITES
+    val canAddToPlaylist = isUserPlaylist || isFavorites
+    val cornerDp = settings.albumCornerRoundnessDp.dp
 
     val listState = rememberLazyListState()
     // Once the header has scrolled away, pin the title in the top bar.
     val collapsed by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 300 }
     }
+
+    // Local working copy for playlist drag-reorder (mirrors the Now Playing queue).
+    var localEntries by remember { mutableStateOf(state.songs.toSongEntries()) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragStartIndex by remember { mutableStateOf(-1) }
+    LaunchedEffect(state.songs) {
+        if (!isDragging) localEntries = state.songs.toSongEntries()
+    }
+    // The header is the single item before the playlist songs.
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        val f = from.index - 1
+        val t = to.index - 1
+        if (f in localEntries.indices && t in localEntries.indices) {
+            localEntries = localEntries.toMutableList().apply { add(t, removeAt(f)) }
+        }
+    }
+    val reorderable = (isUserPlaylist || isFavorites) && !state.inSelectionMode
 
     Box(modifier = modifier.fillMaxSize()) {
         if (state.songs.isEmpty()) {
@@ -140,23 +201,85 @@ fun SongListScreen(
                     SongListHeader(
                         title = title,
                         artUri = state.songs.firstOrNull()?.albumArtUri,
-                        author = if (isAlbum) state.songs.firstOrNull()?.rawArtist else null,
+                        author = if (isAlbum) currentAlbum?.artist?.takeIf { it.isNotBlank() } else null,
+                        year = if (isAlbum) currentAlbum?.year ?: 0 else 0,
                         songCount = state.songs.size,
                         totalDurationMs = state.songs.sumOf { it.durationMs },
+                        cornerShape = RoundedCornerShape(cornerDp),
                     )
                 }
-                itemsIndexed(state.songs, key = { _, song -> song.id }) { index, song ->
-                    SongRow(
-                        song = song,
-                        position = index + 1,
-                        albumMode = isAlbum,
-                        selectionMode = state.inSelectionMode,
-                        selected = state.isSelected(song.id),
-                        favorite = state.isFavorite(song.id),
-                        current = state.isCurrent(song.id),
-                        onClick = { viewModel.onSongClick(index) },
-                        onLongClick = { viewModel.onSongLongClick(song.id) },
-                    )
+
+                if (isPerformer && authoredAlbums.isNotEmpty()) {
+                    item(key = "authored_albums") {
+                        AuthoredAlbumsSection(
+                            albums = authoredAlbums,
+                            cornerShape = RoundedCornerShape(cornerDp),
+                            onAlbumClick = onAlbumClick,
+                        )
+                    }
+                    item(key = "songs_subheader") {
+                        SectionSubheader(stringResource(R.string.songs_section))
+                    }
+                }
+
+                if (reorderable) {
+                    itemsIndexed(localEntries, key = { _, entry -> entry.key }) { index, entry ->
+                        ReorderableItem(reorderState, key = entry.key) { _ ->
+                            val itemScope = this
+                            SongRow(
+                                song = entry.song,
+                                position = index + 1,
+                                albumMode = false,
+                                selectionMode = false,
+                                selected = false,
+                                favorite = state.isFavorite(entry.song.id),
+                                current = state.isCurrent(entry.song.id),
+                                onClick = { viewModel.onSongClick(index) },
+                                onLongClick = { viewModel.onSongLongClick(entry.song.id) },
+                                dragHandle = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DragHandle,
+                                        contentDescription = stringResource(R.string.cd_reorder),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        // Immediate drag on the handle (not long-press) so it never
+                                        // competes with the row's long-press selection gesture.
+                                        modifier = with(itemScope) {
+                                            Modifier.draggableHandle(
+                                                onDragStarted = {
+                                                    isDragging = true
+                                                    dragStartIndex = index
+                                                },
+                                                onDragStopped = {
+                                                    isDragging = false
+                                                    val to = localEntries.indexOfFirst { it.key == entry.key }
+                                                    if (dragStartIndex in localEntries.indices &&
+                                                        to >= 0 && dragStartIndex != to
+                                                    ) {
+                                                        viewModel.movePlaylistSong(dragStartIndex, to)
+                                                    }
+                                                    dragStartIndex = -1
+                                                },
+                                            )
+                                        }.size(24.dp),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(state.songs, key = { _, song -> song.id }) { index, song ->
+                        SongRow(
+                            song = song,
+                            position = index + 1,
+                            albumMode = isAlbum,
+                            selectionMode = state.inSelectionMode,
+                            selected = state.isSelected(song.id),
+                            favorite = state.isFavorite(song.id),
+                            current = state.isCurrent(song.id),
+                            onClick = { viewModel.onSongClick(index) },
+                            onLongClick = { viewModel.onSongLongClick(song.id) },
+                        )
+                    }
                 }
             }
         }
@@ -166,6 +289,9 @@ fun SongListScreen(
             SelectionTopBar(
                 selectedCount = state.selectedIds.size,
                 allSelectedFavorite = state.allSelectedAreFavorite,
+                singleSelectionHasArt = state.selectedIds.size == 1 &&
+                    state.songs.firstOrNull { it.id in state.selectedIds }?.albumArtUri != null,
+                showRemoveFromPlaylist = isUserPlaylist,
                 onClose = viewModel::clearSelection,
                 onSelectAll = viewModel::selectAll,
                 onToggleFavorites = viewModel::toggleFavoritesForSelection,
@@ -173,6 +299,8 @@ fun SongListScreen(
                 onAddToPlaylist = viewModel::startAddToPlaylist,
                 onEditTags = viewModel::startEditTags,
                 onDecompose = viewModel::startDecompose,
+                onChangeCoverArt = { launchImagePicker(forAlbum = false) },
+                onRemoveFromPlaylist = viewModel::removeSelectionFromPlaylist,
                 modifier = Modifier.align(Alignment.TopStart),
             )
         } else {
@@ -180,6 +308,21 @@ fun SongListScreen(
                 title = title,
                 collapsed = collapsed,
                 onBack = onBack,
+                onAddToQueue = viewModel::addAllToQueue,
+                onAddToPlaylist = if (canAddToPlaylist) viewModel::startAddSongToPlaylist else null,
+                onEdit = when {
+                    isAlbum -> viewModel::openAlbumEdit
+                    isPerformer -> viewModel::openArtistEdit
+                    isUserPlaylist -> viewModel::openPlaylistEdit
+                    else -> null
+                },
+                onChangeCoverArt = if (isAlbum) {
+                    { launchImagePicker(forAlbum = true) }
+                } else {
+                    null
+                },
+                albumHasArt = currentAlbum?.artworkUri != null,
+                onRemove = if (isUserPlaylist) viewModel::promptRemovePlaylist else null,
                 modifier = Modifier.align(Alignment.TopStart),
             )
         }
@@ -216,6 +359,67 @@ fun SongListScreen(
             onCreateNew = { name -> viewModel.createPlaylistAndAdd(name, current.songs) },
         )
 
+        is SongDialog.AddSongToPlaylist -> SongPickerDialog(
+            title = stringResource(R.string.action_add_to_playlist),
+            songs = allSongs,
+            onDismiss = viewModel::dismissDialog,
+            onPick = viewModel::addSongToCurrentPlaylist,
+        )
+
+        is SongDialog.EditAlbum -> EditAlbumDialog(
+            dialog = current,
+            onDismiss = viewModel::dismissDialog,
+            onSave = { t, y, custom, cover, author -> viewModel.saveAlbumEdit(t, y, custom, cover, author) },
+        )
+
+        is SongDialog.EditArtist -> EditArtistDialog(
+            initialName = current.name,
+            onDismiss = viewModel::dismissDialog,
+            onSave = viewModel::saveArtistName,
+        )
+
+        is SongDialog.EditPlaylist -> PlaylistNameDialog(
+            titleRes = R.string.playlist_rename,
+            confirmRes = R.string.playlist_rename_confirm,
+            initialName = current.currentName,
+            onDismiss = viewModel::dismissDialog,
+            onConfirm = viewModel::savePlaylistName,
+        )
+
+        is SongDialog.ConfirmRemovePlaylist -> AlertDialog(
+            onDismissRequest = viewModel::dismissDialog,
+            title = { Text(stringResource(R.string.playlist_delete_title)) },
+            text = { Text(stringResource(R.string.playlist_delete_message, current.name)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::removeCurrentPlaylist) {
+                    Text(stringResource(R.string.action_remove))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissDialog) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+
+        is SongDialog.ConfirmAlbumRetag -> ConfirmRetagDialog(
+            count = current.count,
+            onConfirm = { viewModel.confirmAlbumRetag(current.edit, current.songs) },
+            onDismiss = viewModel::dismissDialog,
+        )
+
+        is SongDialog.ConfirmArtistRetag -> ConfirmRetagDialog(
+            count = current.count,
+            onConfirm = { viewModel.confirmArtistRetag(current.edits) },
+            onDismiss = viewModel::dismissDialog,
+        )
+
+        is SongDialog.AlbumCoverArtTarget -> AlbumCoverArtTargetDialog(
+            onAllSongs = { viewModel.applyAlbumCoverArt(current.artwork, toAllSongs = true) },
+            onFirstSong = { viewModel.applyAlbumCoverArt(current.artwork, toAllSongs = false) },
+            onDismiss = viewModel::dismissDialog,
+        )
+
         null -> Unit
     }
 }
@@ -225,15 +429,17 @@ private fun SongListHeader(
     title: String,
     artUri: android.net.Uri?,
     author: String?,
+    year: Int,
     songCount: Int,
     totalDurationMs: Long,
+    cornerShape: androidx.compose.ui.graphics.Shape = RectangleShape,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f),
     ) {
-        AlbumArt(uri = artUri, shape = RectangleShape, modifier = Modifier.fillMaxSize())
+        AlbumArt(model = artUri, shape = cornerShape, modifier = Modifier.fillMaxSize())
 
         // Top scrim keeps the back button / status bar legible over bright art.
         Box(
@@ -284,7 +490,8 @@ private fun SongListHeader(
                 }
             }
             Text(
-                text = pluralStringResource(R.plurals.song_count, songCount, songCount) +
+                text = (if (year > 0) "$year  •  " else "") +
+                    pluralStringResource(R.plurals.song_count, songCount, songCount) +
                     "  •  " + formatDuration(totalDurationMs),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.85f),
@@ -299,6 +506,12 @@ private fun CollapsingTopBar(
     title: String,
     collapsed: Boolean,
     onBack: () -> Unit,
+    onAddToQueue: () -> Unit,
+    onAddToPlaylist: (() -> Unit)?,
+    onEdit: (() -> Unit)?,
+    onChangeCoverArt: (() -> Unit)?,
+    albumHasArt: Boolean,
+    onRemove: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val containerColor by animateColorAsState(
@@ -310,6 +523,8 @@ private fun CollapsingTopBar(
         label = "topBarColor",
     )
     val contentColor = if (collapsed) MaterialTheme.colorScheme.onSurface else Color.White
+    var menuExpanded by remember { mutableStateOf(false) }
+    val hasMenu = onEdit != null || onChangeCoverArt != null || onRemove != null
 
     TopAppBar(
         title = {
@@ -325,11 +540,61 @@ private fun CollapsingTopBar(
                 )
             }
         },
+        actions = {
+            IconButton(onClick = onAddToQueue) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.QueueMusic,
+                    contentDescription = stringResource(R.string.action_add_to_queue),
+                )
+            }
+            if (onAddToPlaylist != null) {
+                IconButton(onClick = onAddToPlaylist) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.PlaylistAdd,
+                        contentDescription = stringResource(R.string.action_add_to_playlist),
+                    )
+                }
+            }
+            if (hasMenu) {
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Rounded.MoreVert, stringResource(R.string.action_more))
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        onEdit?.let {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_edit)) },
+                                onClick = { menuExpanded = false; it() },
+                            )
+                        }
+                        onChangeCoverArt?.let {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            if (albumHasArt) R.string.action_change_cover_art else R.string.action_add_cover_art,
+                                        ),
+                                    )
+                                },
+                                onClick = { menuExpanded = false; it() },
+                            )
+                        }
+                        onRemove?.let {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_remove)) },
+                                onClick = { menuExpanded = false; it() },
+                            )
+                        }
+                    }
+                }
+            }
+        },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
             scrolledContainerColor = containerColor,
             navigationIconContentColor = contentColor,
             titleContentColor = contentColor,
+            actionIconContentColor = contentColor,
         ),
         modifier = modifier,
     )
@@ -340,6 +605,8 @@ private fun CollapsingTopBar(
 private fun SelectionTopBar(
     selectedCount: Int,
     allSelectedFavorite: Boolean,
+    singleSelectionHasArt: Boolean,
+    showRemoveFromPlaylist: Boolean,
     onClose: () -> Unit,
     onSelectAll: () -> Unit,
     onToggleFavorites: () -> Unit,
@@ -347,6 +614,8 @@ private fun SelectionTopBar(
     onAddToPlaylist: () -> Unit,
     onEditTags: () -> Unit,
     onDecompose: () -> Unit,
+    onChangeCoverArt: () -> Unit,
+    onRemoveFromPlaylist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -382,6 +651,17 @@ private fun SelectionTopBar(
                         onClick = { menuExpanded = false; onAddToPlaylist() },
                     )
                     DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    // "Add" when the lone selected song has no art, else "Change".
+                                    if (!singleSelectionHasArt) R.string.action_add_cover_art else R.string.action_change_cover_art,
+                                ),
+                            )
+                        },
+                        onClick = { menuExpanded = false; onChangeCoverArt() },
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_edit_tags)) },
                         onClick = { menuExpanded = false; onEditTags() },
                     )
@@ -389,6 +669,12 @@ private fun SelectionTopBar(
                         text = { Text(stringResource(R.string.action_decompose_title)) },
                         onClick = { menuExpanded = false; onDecompose() },
                     )
+                    if (showRemoveFromPlaylist) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_remove_from_playlist)) },
+                            onClick = { menuExpanded = false; onRemoveFromPlaylist() },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_select_all)) },
                         onClick = { menuExpanded = false; onSelectAll() },
@@ -438,6 +724,7 @@ private fun SongRow(
     current: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    dragHandle: (@Composable () -> Unit)? = null,
 ) {
     val containerColor = when {
         selected -> MaterialTheme.colorScheme.secondaryContainer
@@ -463,7 +750,7 @@ private fun SongRow(
                 // Albums show the track number (or a note when untagged) instead of art.
                 albumMode -> AlbumTrackLeading(song.trackNumber, position)
                 else -> AlbumArt(
-                    uri = song.albumArtUri,
+                    model = song.coverArtModel(),
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.size(48.dp),
                 )
@@ -496,6 +783,7 @@ private fun SongRow(
                     )
                 }
                 Text(formatDuration(song.durationMs), style = MaterialTheme.typography.labelMedium)
+                dragHandle?.invoke()
             }
         },
         modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -519,6 +807,95 @@ private fun AlbumTrackLeading(trackNumber: Int, position: Int) {
             )
         }
     }
+}
+
+/** Horizontal carousel of the albums a performer authored, newest first. */
+@Composable
+private fun AuthoredAlbumsSection(
+    albums: List<Album>,
+    cornerShape: androidx.compose.ui.graphics.Shape,
+    onAlbumClick: (Long) -> Unit,
+) {
+    Column {
+        SectionSubheader(stringResource(R.string.albums_authored_section))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(albums, key = { it.id }) { album ->
+                Column(
+                    modifier = Modifier
+                        .width(132.dp)
+                        .clickableRow { onAlbumClick(album.id) }
+                        .padding(4.dp),
+                ) {
+                    AlbumArt(
+                        model = album.artworkUri,
+                        shape = cornerShape,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    )
+                    Text(
+                        text = album.title.ifBlank { stringResource(R.string.unknown_album) },
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                    if (album.year > 0) {
+                        Text(
+                            text = album.year.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionSubheader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp, end = 16.dp),
+    )
+}
+
+@Composable
+private fun ConfirmRetagDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.retag_confirm_title)) },
+        text = { Text(pluralStringResource(R.plurals.retag_confirm_message, count, count)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun AlbumCoverArtTargetDialog(
+    onAllSongs: () -> Unit,
+    onFirstSong: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.cover_art_target_title)) },
+        text = { Text(stringResource(R.string.cover_art_target_message)) },
+        confirmButton = {
+            TextButton(onClick = onAllSongs) { Text(stringResource(R.string.cover_art_target_all)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onFirstSong) { Text(stringResource(R.string.cover_art_target_first)) }
+        },
+    )
 }
 
 @Composable

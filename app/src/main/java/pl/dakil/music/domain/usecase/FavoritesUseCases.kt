@@ -20,3 +20,7 @@ class SetFavoritesUseCase(private val repository: FavoritesRepository) {
     suspend operator fun invoke(songIds: Collection<Long>, favorite: Boolean) =
         repository.setFavorite(songIds, favorite)
 }
+
+class ReorderFavoritesUseCase(private val repository: FavoritesRepository) {
+    suspend operator fun invoke(from: Int, to: Int) = repository.reorder(from, to)
+}

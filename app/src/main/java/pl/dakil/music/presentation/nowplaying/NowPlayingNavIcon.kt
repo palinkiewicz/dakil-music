@@ -56,7 +56,7 @@ fun NowPlayingNavIcon(
             strokeCap = StrokeCap.Round,
         )
         AlbumArt(
-            uri = albumArtUri,
+            model = albumArtUri,
             shape = CircleShape,
             modifier = Modifier.size(16.dp),
         )

@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -65,5 +67,21 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setQueueRemoveMode(mode: QueueRemoveMode) = viewModelScope.launch {
         container.updateSettings.setQueueRemoveMode(mode)
+    }
+
+    fun setAlbumCoverArtMode(mode: AlbumCoverArtMode) = viewModelScope.launch {
+        container.updateSettings.setAlbumCoverArtMode(mode)
+    }
+
+    fun setAlbumAuthorMode(mode: AlbumAuthorMode) = viewModelScope.launch {
+        container.updateSettings.setAlbumAuthorMode(mode)
+    }
+
+    fun setAlbumCornerRoundnessDp(dp: Int) = viewModelScope.launch {
+        container.updateSettings.setAlbumCornerRoundnessDp(dp)
+    }
+
+    fun setNowPlayingCornerRoundnessDp(dp: Int) = viewModelScope.launch {
+        container.updateSettings.setNowPlayingCornerRoundnessDp(dp)
     }
 }

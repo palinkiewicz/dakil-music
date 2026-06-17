@@ -87,7 +87,7 @@ class ListeningHistoryViewModel(private val container: AppContainer) : ViewModel
 
     val uiState: StateFlow<HistoryUiState> = combine(
         page,
-        container.musicRepository.songs,
+        container.musicRepository.annotatedSongs,
         container.observeFavorites(),
         currentSongId,
         selectedIds,

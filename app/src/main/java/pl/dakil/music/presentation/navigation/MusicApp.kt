@@ -40,6 +40,7 @@ import pl.dakil.music.presentation.statistics.StatisticsScreen
 import pl.dakil.music.presentation.nowplaying.NowPlayingNavIcon
 import pl.dakil.music.presentation.nowplaying.NowPlayingScreen
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
+import pl.dakil.music.presentation.settings.AlbumRulesScreen
 import pl.dakil.music.presentation.settings.SettingsScreen
 import pl.dakil.music.presentation.songlist.SongListScreen
 
@@ -61,7 +62,7 @@ fun MusicApp() {
 
     // Detail screens map back to their parent tab so a tab always looks selected.
     val activeRoute = when (currentRoute) {
-        Routes.SETTINGS, Routes.LISTENING_HISTORY, Routes.STATISTICS -> Routes.MORE
+        Routes.SETTINGS, Routes.ALBUM_RULES, Routes.LISTENING_HISTORY, Routes.STATISTICS -> Routes.MORE
         else -> if (currentRoute?.startsWith(Routes.SONG_LIST) == true) Routes.LIBRARY else currentRoute
     }
 
@@ -156,7 +157,13 @@ fun MusicApp() {
                 )
             }
             composable(Routes.SETTINGS) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAlbumRules = { navController.navigate(Routes.ALBUM_RULES) },
+                )
+            }
+            composable(Routes.ALBUM_RULES) {
+                AlbumRulesScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.LISTENING_HISTORY) {
                 ListeningHistoryScreen(onBack = { navController.popBackStack() })
@@ -171,7 +178,10 @@ fun MusicApp() {
                     navArgument(Routes.ARG_SOURCE_ARG) { type = NavType.StringType },
                 ),
             ) {
-                SongListScreen(onBack = { navController.popBackStack() })
+                SongListScreen(
+                    onBack = { navController.popBackStack() },
+                    onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
+                )
             }
         }
     }

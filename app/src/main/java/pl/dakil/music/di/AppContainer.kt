@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import pl.dakil.music.data.coverart.CoverArtRefresher
+import pl.dakil.music.data.datastore.albumRulesDataStore
 import pl.dakil.music.data.datastore.favoritesDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
 import pl.dakil.music.data.datastore.settingsDataStore
@@ -15,6 +17,7 @@ import pl.dakil.music.data.db.MusicDatabase
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
 import pl.dakil.music.data.playback.PlaybackHistoryTracker
+import pl.dakil.music.data.repository.AlbumRuleRepositoryImpl
 import pl.dakil.music.data.repository.FavoritesRepositoryImpl
 import pl.dakil.music.data.repository.ListeningHistoryRepositoryImpl
 import pl.dakil.music.data.repository.MusicRepositoryImpl
@@ -22,6 +25,7 @@ import pl.dakil.music.data.repository.SettingsRepositoryImpl
 import pl.dakil.music.data.repository.SortStateRepositoryImpl
 import pl.dakil.music.data.repository.TagEditorRepositoryImpl
 import pl.dakil.music.data.repository.UserPlaylistRepositoryImpl
+import pl.dakil.music.domain.repository.AlbumRuleRepository
 import pl.dakil.music.domain.repository.FavoritesRepository
 import pl.dakil.music.domain.repository.ListeningHistoryRepository
 import pl.dakil.music.domain.repository.MusicRepository
@@ -45,7 +49,12 @@ import pl.dakil.music.domain.usecase.SearchLibraryUseCase
 import pl.dakil.music.domain.usecase.AddSongsToPlaylistUseCase
 import pl.dakil.music.domain.usecase.AddToQueueUseCase
 import pl.dakil.music.domain.usecase.CreatePlaylistUseCase
+import pl.dakil.music.domain.usecase.DeleteAlbumRuleUseCase
 import pl.dakil.music.domain.usecase.DeletePlaylistUseCase
+import pl.dakil.music.domain.usecase.ObserveAlbumRulesUseCase
+import pl.dakil.music.domain.usecase.RemoveSongsFromPlaylistUseCase
+import pl.dakil.music.domain.usecase.ReorderPlaylistUseCase
+import pl.dakil.music.domain.usecase.UpsertAlbumRuleUseCase
 import pl.dakil.music.domain.usecase.EditTagsUseCase
 import pl.dakil.music.domain.usecase.GetAlbumsUseCase
 import pl.dakil.music.domain.usecase.GetPerformersUseCase
@@ -63,6 +72,7 @@ import pl.dakil.music.domain.usecase.PlaybackControlUseCase
 import pl.dakil.music.domain.usecase.PlaySongsUseCase
 import pl.dakil.music.domain.usecase.RefreshLibraryUseCase
 import pl.dakil.music.domain.usecase.RenamePlaylistUseCase
+import pl.dakil.music.domain.usecase.ReorderFavoritesUseCase
 import pl.dakil.music.domain.usecase.SetFavoritesUseCase
 import pl.dakil.music.domain.usecase.ShufflePlayUseCase
 import pl.dakil.music.domain.usecase.ToggleFavoriteUseCase
@@ -82,16 +92,22 @@ class AppContainer(context: Context) {
 
     private val mediaStoreDataSource = MediaStoreDataSource(appContext)
 
-    val musicRepository: MusicRepository = MusicRepositoryImpl(mediaStoreDataSource)
+    val settingsRepository: SettingsRepository =
+        SettingsRepositoryImpl(appContext.settingsDataStore)
+
+    val albumRuleRepository: AlbumRuleRepository =
+        AlbumRuleRepositoryImpl(appContext.albumRulesDataStore)
+
+    val musicRepository: MusicRepository =
+        MusicRepositoryImpl(mediaStoreDataSource, settingsRepository, albumRuleRepository)
 
     val favoritesRepository: FavoritesRepository =
         FavoritesRepositoryImpl(appContext.favoritesDataStore)
 
-    val settingsRepository: SettingsRepository =
-        SettingsRepositoryImpl(appContext.settingsDataStore)
-
     val userPlaylistRepository: UserPlaylistRepository =
         UserPlaylistRepositoryImpl(appContext.playlistsDataStore)
+
+    val coverArtRefresher = CoverArtRefresher(appContext)
 
     val sortStateRepository: SortStateRepository = SortStateRepositoryImpl(appContext.sortDataStore)
 
@@ -130,11 +146,18 @@ class AppContainer(context: Context) {
     val renamePlaylist = RenamePlaylistUseCase(userPlaylistRepository)
     val deletePlaylist = DeletePlaylistUseCase(userPlaylistRepository)
     val addSongsToPlaylist = AddSongsToPlaylistUseCase(userPlaylistRepository)
+    val removeSongsFromPlaylist = RemoveSongsFromPlaylistUseCase(userPlaylistRepository)
+    val reorderPlaylist = ReorderPlaylistUseCase(userPlaylistRepository)
+
+    val observeAlbumRules = ObserveAlbumRulesUseCase(albumRuleRepository)
+    val upsertAlbumRule = UpsertAlbumRuleUseCase(albumRuleRepository)
+    val deleteAlbumRule = DeleteAlbumRuleUseCase(albumRuleRepository)
 
     val observeFavorites = ObserveFavoritesUseCase(favoritesRepository)
     val isFavorite = IsFavoriteUseCase(favoritesRepository)
     val toggleFavorite = ToggleFavoriteUseCase(favoritesRepository)
     val setFavorites = SetFavoritesUseCase(favoritesRepository)
+    val reorderFavorites = ReorderFavoritesUseCase(favoritesRepository)
 
     val observePlayback = ObservePlaybackUseCase(playerRepository)
     val playSongs = PlaySongsUseCase(playerRepository)

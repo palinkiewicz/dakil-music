@@ -11,6 +11,7 @@ import pl.dakil.music.presentation.history.ListeningHistoryViewModel
 import pl.dakil.music.presentation.library.LibraryViewModel
 import pl.dakil.music.presentation.more.MoreViewModel
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
+import pl.dakil.music.presentation.settings.AlbumRulesViewModel
 import pl.dakil.music.presentation.settings.SettingsViewModel
 import pl.dakil.music.presentation.songlist.SongListViewModel
 import pl.dakil.music.presentation.statistics.StatisticsViewModel
@@ -23,6 +24,7 @@ object AppViewModelProvider {
         initializer { LibraryViewModel(container()) }
         initializer { MoreViewModel(container()) }
         initializer { SettingsViewModel(container()) }
+        initializer { AlbumRulesViewModel(container()) }
         initializer { SongListViewModel(container(), this.createSavedStateHandle()) }
         initializer { ListeningHistoryViewModel(container()) }
         initializer { StatisticsViewModel(container()) }

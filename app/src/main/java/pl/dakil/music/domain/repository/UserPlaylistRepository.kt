@@ -17,4 +17,10 @@ interface UserPlaylistRepository {
 
     /** Appends [songIds] to the playlist, ignoring ids already present. */
     suspend fun addSongs(id: String, songIds: List<Long>)
+
+    /** Removes [songIds] from the playlist. */
+    suspend fun removeSongs(id: String, songIds: List<Long>)
+
+    /** Moves the song at index [from] to index [to], preserving the rest of the order. */
+    suspend fun reorder(id: String, from: Int, to: Int)
 }

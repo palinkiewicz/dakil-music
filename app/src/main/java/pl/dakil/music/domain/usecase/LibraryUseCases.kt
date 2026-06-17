@@ -81,11 +81,14 @@ class GetSongsForPlaylistUseCase(
     private val favoritesRepository: FavoritesRepository,
 ) {
     operator fun invoke(playlist: SystemPlaylist): Flow<List<Song>> = when (playlist) {
-        SystemPlaylist.ALL_SONGS -> musicRepository.songs
+        SystemPlaylist.ALL_SONGS -> musicRepository.annotatedSongs
         SystemPlaylist.FAVORITES -> combine(
-            musicRepository.songs,
-            favoritesRepository.favoriteIds,
-        ) { songs, favorites -> songs.filter { it.id in favorites } }
+            musicRepository.annotatedSongs,
+            favoritesRepository.favoriteOrder,
+        ) { songs, order ->
+            val byId = songs.associateBy { it.id }
+            order.mapNotNull { byId[it] }
+        }
     }
 }
 
@@ -95,7 +98,7 @@ class GetUserPlaylistSongsUseCase(
     private val userPlaylistRepository: UserPlaylistRepository,
 ) {
     operator fun invoke(playlistId: String): Flow<List<Song>> = combine(
-        musicRepository.songs,
+        musicRepository.annotatedSongs,
         userPlaylistRepository.playlists,
     ) { songs, playlists ->
         val playlist = playlists.firstOrNull { it.id == playlistId } ?: return@combine emptyList()

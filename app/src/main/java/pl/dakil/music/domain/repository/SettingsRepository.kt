@@ -1,6 +1,8 @@
 package pl.dakil.music.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -33,6 +35,14 @@ interface SettingsRepository {
     suspend fun setStatsDefaultMetric(metric: StatMetric)
 
     suspend fun setQueueRemoveMode(mode: QueueRemoveMode)
+
+    suspend fun setAlbumCoverArtMode(mode: AlbumCoverArtMode)
+
+    suspend fun setAlbumAuthorMode(mode: AlbumAuthorMode)
+
+    suspend fun setAlbumCornerRoundnessDp(dp: Int)
+
+    suspend fun setNowPlayingCornerRoundnessDp(dp: Int)
 }
 
 data class AppSettings(
@@ -53,4 +63,12 @@ data class AppSettings(
     val statsDefaultMetric: StatMetric = StatMetric.SECONDS,
     /** How a song is removed from the play queue. */
     val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
+    /** Whether album tracks share one cover art or show their own embedded art. */
+    val albumCoverArtMode: AlbumCoverArtMode = AlbumCoverArtMode.SHARED,
+    /** How an album's displayed author is derived from its songs. */
+    val albumAuthorMode: AlbumAuthorMode = AlbumAuthorMode.FIRST_SONG_ARTISTS,
+    /** Corner roundness (dp) of album cover art, 0..64. */
+    val albumCornerRoundnessDp: Int = 16,
+    /** Corner roundness (dp) of the Now Playing cover art, 0..64. */
+    val nowPlayingCornerRoundnessDp: Int = 32,
 )

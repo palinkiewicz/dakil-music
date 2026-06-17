@@ -9,11 +9,16 @@ enum class AlbumSortOption(val labelRes: Int) {
     ARTIST_NAME(R.string.sort_artist_name),
     SONG_COUNT(R.string.sort_song_count),
     DURATION(R.string.sort_duration),
+    RELEASE_YEAR(R.string.sort_release_year),
+    LISTENING_DURATION(R.string.sort_listening_duration),
+    TRACKS_PLAYED(R.string.sort_tracks_played),
 }
 
 enum class ArtistSortOption(val labelRes: Int) {
     ARTIST_NAME(R.string.sort_artist_name),
     SONG_COUNT(R.string.sort_song_count),
+    LISTENING_DURATION(R.string.sort_listening_duration),
+    TRACKS_PLAYED(R.string.sort_tracks_played),
 }
 
 enum class PlaylistSortOption(val labelRes: Int) {

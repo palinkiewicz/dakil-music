@@ -33,9 +33,20 @@ data class TagEdit(
     val album: String? = null,
     val trackNumber: String? = null,
     val year: String? = null,
+    /** When non-null, replaces the embedded cover art with these image bytes. */
+    val artwork: ArtworkData? = null,
 ) {
     val isEmpty: Boolean
-        get() = listOf(title, artist, genre, album, trackNumber, year).all { it == null }
+        get() = title == null && artist == null && genre == null &&
+            album == null && trackNumber == null && year == null && artwork == null
+}
+
+/** Raw image bytes plus their MIME type, to be embedded as cover art. */
+data class ArtworkData(val bytes: ByteArray, val mimeType: String) {
+    override fun equals(other: Any?): Boolean =
+        this === other || (other is ArtworkData && mimeType == other.mimeType && bytes.contentEquals(other.bytes))
+
+    override fun hashCode(): Int = 31 * bytes.contentHashCode() + mimeType.hashCode()
 }
 
 sealed interface TagWriteResult {

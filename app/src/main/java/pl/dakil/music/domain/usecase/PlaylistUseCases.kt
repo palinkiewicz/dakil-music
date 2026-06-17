@@ -24,3 +24,11 @@ class DeletePlaylistUseCase(private val repository: UserPlaylistRepository) {
 class AddSongsToPlaylistUseCase(private val repository: UserPlaylistRepository) {
     suspend operator fun invoke(id: String, songIds: List<Long>) = repository.addSongs(id, songIds)
 }
+
+class RemoveSongsFromPlaylistUseCase(private val repository: UserPlaylistRepository) {
+    suspend operator fun invoke(id: String, songIds: List<Long>) = repository.removeSongs(id, songIds)
+}
+
+class ReorderPlaylistUseCase(private val repository: UserPlaylistRepository) {
+    suspend operator fun invoke(id: String, from: Int, to: Int) = repository.reorder(id, from, to)
+}

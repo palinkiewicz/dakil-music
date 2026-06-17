@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -38,6 +40,14 @@ class SettingsRepositoryImpl(
             queueRemoveMode = prefs[KEY_QUEUE_REMOVE_MODE]
                 ?.let { name -> QueueRemoveMode.entries.firstOrNull { it.name == name } }
                 ?: QueueRemoveMode.SWIPE,
+            albumCoverArtMode = prefs[KEY_ALBUM_COVER_ART_MODE]
+                ?.let { name -> AlbumCoverArtMode.entries.firstOrNull { it.name == name } }
+                ?: AlbumCoverArtMode.SHARED,
+            albumAuthorMode = prefs[KEY_ALBUM_AUTHOR_MODE]
+                ?.let { name -> AlbumAuthorMode.entries.firstOrNull { it.name == name } }
+                ?: AlbumAuthorMode.FIRST_SONG_ARTISTS,
+            albumCornerRoundnessDp = prefs[KEY_ALBUM_CORNER_DP] ?: 16,
+            nowPlayingCornerRoundnessDp = prefs[KEY_NOW_PLAYING_CORNER_DP] ?: 32,
         )
     }
 
@@ -84,6 +94,22 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[KEY_QUEUE_REMOVE_MODE] = mode.name }
     }
 
+    override suspend fun setAlbumCoverArtMode(mode: AlbumCoverArtMode) {
+        dataStore.edit { it[KEY_ALBUM_COVER_ART_MODE] = mode.name }
+    }
+
+    override suspend fun setAlbumAuthorMode(mode: AlbumAuthorMode) {
+        dataStore.edit { it[KEY_ALBUM_AUTHOR_MODE] = mode.name }
+    }
+
+    override suspend fun setAlbumCornerRoundnessDp(dp: Int) {
+        dataStore.edit { it[KEY_ALBUM_CORNER_DP] = dp }
+    }
+
+    override suspend fun setNowPlayingCornerRoundnessDp(dp: Int) {
+        dataStore.edit { it[KEY_NOW_PLAYING_CORNER_DP] = dp }
+    }
+
     private suspend fun edit(key: Preferences.Key<Boolean>, value: Boolean) {
         dataStore.edit { it[key] = value }
     }
@@ -101,5 +127,9 @@ class SettingsRepositoryImpl(
         val KEY_STATS_RANGE = stringPreferencesKey("stats_default_range")
         val KEY_STATS_METRIC = stringPreferencesKey("stats_default_metric")
         val KEY_QUEUE_REMOVE_MODE = stringPreferencesKey("queue_remove_mode")
+        val KEY_ALBUM_COVER_ART_MODE = stringPreferencesKey("album_cover_art_mode")
+        val KEY_ALBUM_AUTHOR_MODE = stringPreferencesKey("album_author_mode")
+        val KEY_ALBUM_CORNER_DP = intPreferencesKey("album_corner_roundness_dp")
+        val KEY_NOW_PLAYING_CORNER_DP = intPreferencesKey("now_playing_corner_roundness_dp")
     }
 }

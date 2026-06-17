@@ -15,6 +15,13 @@ interface MusicRepository {
     /** All songs, sorted by title. Emits a new list whenever the library is refreshed. */
     val songs: Flow<List<Song>>
 
+    /**
+     * Same as [songs] but with each song's [Song.individualCoverArt] resolved from the
+     * cover-art settings/rule for its album. Use this for any UI that renders per-song
+     * cover art; [songs] stays raw for history/statistics reconciliation.
+     */
+    val annotatedSongs: Flow<List<Song>>
+
     val albums: Flow<List<Album>>
 
     /** Distinct performers derived from the split artist metadata. */

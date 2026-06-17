@@ -67,6 +67,7 @@ import pl.dakil.music.R
 import pl.dakil.music.domain.model.ListeningRecord
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.formatDuration
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
@@ -344,7 +345,7 @@ private fun HistoryRow(
                     Icon(Icons.Rounded.MusicOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> AlbumArt(
-                    uri = record.albumArtUri,
+                    model = state.songsById[record.songId]?.coverArtModel() ?: record.albumArtUri,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.size(48.dp),
                 )

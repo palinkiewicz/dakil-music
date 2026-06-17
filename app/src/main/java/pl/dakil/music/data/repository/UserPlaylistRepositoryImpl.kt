@@ -55,6 +55,32 @@ class UserPlaylistRepositoryImpl(
         }
     }
 
+    override suspend fun removeSongs(id: String, songIds: List<Long>) {
+        if (songIds.isEmpty()) return
+        val drop = songIds.toHashSet()
+        update { current ->
+            current.map { playlist ->
+                if (playlist.id != id) playlist
+                else playlist.copy(songIds = playlist.songIds.filterNot { it in drop })
+            }
+        }
+    }
+
+    override suspend fun reorder(id: String, from: Int, to: Int) {
+        if (from == to) return
+        update { current ->
+            current.map { playlist ->
+                if (playlist.id != id || from !in playlist.songIds.indices || to !in playlist.songIds.indices) {
+                    playlist
+                } else {
+                    playlist.copy(
+                        songIds = playlist.songIds.toMutableList().apply { add(to, removeAt(from)) },
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun update(transform: (List<UserPlaylist>) -> List<UserPlaylist>) {
         dataStore.edit { prefs ->
             prefs[KEY] = encode(transform(decode(prefs[KEY])))

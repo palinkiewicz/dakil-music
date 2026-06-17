@@ -1,4 +1,4 @@
-package pl.dakil.music.presentation.history
+package pl.dakil.music.presentation.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,23 +24,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Song
-import pl.dakil.music.presentation.components.AlbumArt
-import pl.dakil.music.presentation.components.clickableRow
-import pl.dakil.music.presentation.components.coverArtModel
 
 /**
- * Lets the user pick a live song to fold a deleted record's plays into. Selecting a
- * song asks for confirmation before the merge is committed.
+ * Searches the library by title/artist and invokes [onPick] for the chosen song.
+ * Mirrors the merge-with-existing search used by listening history, reused here to
+ * add a song to a playlist (or favorites).
  */
 @Composable
-fun MergeWithExistingDialog(
-    label: String,
+fun SongPickerDialog(
+    title: String,
     songs: List<Song>,
     onDismiss: () -> Unit,
-    onMerge: (Song) -> Unit,
+    onPick: (Song) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    var pendingTarget by remember { mutableStateOf<Song?>(null) }
 
     val filtered = remember(query, songs) {
         val q = query.trim().lowercase()
@@ -51,36 +48,16 @@ fun MergeWithExistingDialog(
         }
     }
 
-    val target = pendingTarget
-    if (target != null) {
-        AlertDialog(
-            onDismissRequest = { pendingTarget = null },
-            title = { Text(stringResource(R.string.history_merge_confirm_title)) },
-            text = { Text(stringResource(R.string.history_merge_confirm_message, label, target.title)) },
-            confirmButton = {
-                TextButton(onClick = { onMerge(target) }) {
-                    Text(stringResource(R.string.history_merge_confirm_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingTarget = null }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-        )
-        return
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.history_merge_title)) },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.history_merge_search_hint)) },
+                    placeholder = { Text(stringResource(R.string.song_search_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 LazyColumn(modifier = Modifier.heightIn(max = 320.dp).padding(top = 8.dp)) {
@@ -104,7 +81,7 @@ fun MergeWithExistingDialog(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             },
-                            modifier = Modifier.clickableRow { pendingTarget = song },
+                            modifier = Modifier.clickableRow { onPick(song) },
                         )
                     }
                 }

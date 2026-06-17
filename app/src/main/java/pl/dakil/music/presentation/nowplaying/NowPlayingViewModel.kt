@@ -29,6 +29,7 @@ data class NowPlayingUiState(
     val queue: List<Song> = emptyList(),
     val currentIndex: Int = -1,
     val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
+    val coverArtRoundnessDp: Int = 32,
 )
 
 class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
@@ -37,9 +38,17 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
         container.observePlayback(),
         container.observeFavorites(),
         container.observeSettings(),
-    ) { playback: PlaybackState, favorites, settings ->
+        container.musicRepository.annotatedSongs,
+    ) { playback: PlaybackState, favorites, settings, annotated ->
+        // Carry each song's individual-cover-art flag over from the library so the
+        // big art and queue rows honor the per-album cover-art setting/rule.
+        val individualById = annotated.asSequence()
+            .filter { it.individualCoverArt }
+            .map { it.id }
+            .toHashSet()
+        fun annotate(s: Song?) = s?.copy(individualCoverArt = s.id in individualById)
         NowPlayingUiState(
-            song = playback.currentSong,
+            song = annotate(playback.currentSong),
             isPlaying = playback.isPlaying,
             positionMs = playback.positionMs,
             durationMs = playback.durationMs,
@@ -48,9 +57,10 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             shuffleEnabled = playback.shuffleEnabled,
             repeatMode = playback.repeatMode,
             isCurrentFavorite = playback.currentSong?.id in favorites,
-            queue = playback.queue,
+            queue = playback.queue.map { it.copy(individualCoverArt = it.id in individualById) },
             currentIndex = playback.currentIndex,
             queueRemoveMode = settings.queueRemoveMode,
+            coverArtRoundnessDp = settings.nowPlayingCornerRoundnessDp,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 

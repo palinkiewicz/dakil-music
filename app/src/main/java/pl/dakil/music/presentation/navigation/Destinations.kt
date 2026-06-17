@@ -9,6 +9,7 @@ object Routes {
     const val LIBRARY = "library"
     const val MORE = "more"
     const val SETTINGS = "settings"
+    const val ALBUM_RULES = "album_rules"
     const val LISTENING_HISTORY = "listening_history"
     const val STATISTICS = "statistics"
 
