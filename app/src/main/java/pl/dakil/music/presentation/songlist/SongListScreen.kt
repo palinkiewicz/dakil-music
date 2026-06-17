@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -74,6 +75,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -224,12 +226,30 @@ fun SongListScreen(
 
                 if (reorderable) {
                     itemsIndexed(localEntries, key = { _, entry -> entry.key }) { index, entry ->
-                        ReorderableItem(reorderState, key = entry.key) { _ ->
+                        ReorderableItem(reorderState, key = entry.key) { dragging ->
                             val itemScope = this
+                            // Mirror the Now Playing queue: the held row lifts (shadow) and
+                            // gets a surfaceVariant tint that spans the whole row, including
+                            // the drag handle, so it reads as a single picked-up element.
+                            val elevation by animateDpAsState(
+                                if (dragging) 6.dp else 0.dp,
+                                label = "playlistElevation",
+                            )
                             // The drag handle sits *outside* the row's clickable area so a
                             // long-press on it starts a drag (queue-style) without ever
                             // triggering the row's long-press selection.
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .shadow(elevation)
+                                    .background(
+                                        if (dragging) {
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        },
+                                    ),
+                            ) {
                                 Box(modifier = Modifier.weight(1f)) {
                                     SongRow(
                                         song = entry.song,
@@ -239,6 +259,7 @@ fun SongListScreen(
                                         selected = false,
                                         favorite = state.isFavorite(entry.song.id),
                                         current = state.isCurrent(entry.song.id),
+                                        dragging = dragging,
                                         onClick = { viewModel.onSongClick(index) },
                                         onLongClick = { viewModel.onSongLongClick(entry.song.id) },
                                     )
@@ -729,8 +750,11 @@ private fun SongRow(
     current: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    dragging: Boolean = false,
 ) {
     val containerColor = when {
+        // While picked up for reordering the row is tinted like the Now Playing queue.
+        dragging -> MaterialTheme.colorScheme.surfaceVariant
         selected -> MaterialTheme.colorScheme.secondaryContainer
         // The currently-playing row gets a subtle primary tint.
         current -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
