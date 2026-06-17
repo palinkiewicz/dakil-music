@@ -2,6 +2,7 @@ package pl.dakil.music.data.mediastore
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -45,6 +46,10 @@ class MediaStoreDataSource(private val context: Context) {
         val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
 
         val songs = ArrayList<Song>()
+        // MediaStore's YEAR column is unreliable on some devices/formats (often 0 even
+        // when the file is tagged). We fall back to reading the embedded tag, but only
+        // for rows MediaStore left at 0, reusing one retriever to bound the cost.
+        var retriever: MediaMetadataRetriever? = null
 
         context.contentResolver.query(collection, projection, selection, null, sortOrder)
             ?.use { cursor ->
@@ -70,10 +75,17 @@ class MediaStoreDataSource(private val context: Context) {
                     val id = cursor.getLong(idCol)
                     val albumId = cursor.getLong(albumIdCol)
                     val rawArtist = cursor.getString(artistCol).orEmptyArtist()
+                    val uri = ContentUris.withAppendedId(collection, id)
+
+                    var year = cursor.getInt(yearCol)
+                    if (year <= 0) {
+                        if (retriever == null) retriever = MediaMetadataRetriever()
+                        year = readEmbeddedYear(retriever, uri)
+                    }
 
                     songs += Song(
                         id = id,
-                        uri = ContentUris.withAppendedId(collection, id),
+                        uri = uri,
                         title = cursor.getString(titleCol) ?: "",
                         artists = ArtistSplitter.split(rawArtist),
                         rawArtist = rawArtist,
@@ -83,7 +95,7 @@ class MediaStoreDataSource(private val context: Context) {
                         durationMs = cursor.getLong(durationCol),
                         // TRACK is encoded as DDDTTT (disc*1000 + track); keep just the track part.
                         trackNumber = (cursor.getInt(trackCol) % 1000),
-                        year = cursor.getInt(yearCol),
+                        year = year,
                         genre = if (genreCol >= 0) cursor.getString(genreCol).orEmpty() else "",
                         mimeType = cursor.getString(mimeCol) ?: "audio/*",
                         dateAddedSeconds = cursor.getLong(dateCol),
@@ -91,7 +103,24 @@ class MediaStoreDataSource(private val context: Context) {
                 }
             }
 
+        retriever?.release()
         songs
+    }
+
+    /** Reads the embedded year/date tag from a file; 0 when absent or unreadable. */
+    private fun readEmbeddedYear(retriever: MediaMetadataRetriever, uri: Uri): Int = try {
+        retriever.setDataSource(context, uri)
+        val year = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)
+        val date = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE)
+        parseYear(year) ?: parseYear(date) ?: 0
+    } catch (_: Throwable) {
+        0
+    }
+
+    /** Extracts the first 4-digit year from a tag value like "2019" or "2019-05-01". */
+    private fun parseYear(value: String?): Int? {
+        if (value.isNullOrBlank()) return null
+        return YEAR_REGEX.find(value)?.value?.toIntOrNull()
     }
 
     private fun albumArtUri(albumId: Long): Uri =
@@ -115,6 +144,7 @@ class MediaStoreDataSource(private val context: Context) {
     }
 
     private companion object {
+        val YEAR_REGEX = Regex("""\d{4}""")
         val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         val UNKNOWN_MARKERS = setOf(
             "<unknown>",

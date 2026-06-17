@@ -226,44 +226,49 @@ fun SongListScreen(
                     itemsIndexed(localEntries, key = { _, entry -> entry.key }) { index, entry ->
                         ReorderableItem(reorderState, key = entry.key) { _ ->
                             val itemScope = this
-                            SongRow(
-                                song = entry.song,
-                                position = index + 1,
-                                albumMode = false,
-                                selectionMode = false,
-                                selected = false,
-                                favorite = state.isFavorite(entry.song.id),
-                                current = state.isCurrent(entry.song.id),
-                                onClick = { viewModel.onSongClick(index) },
-                                onLongClick = { viewModel.onSongLongClick(entry.song.id) },
-                                dragHandle = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.DragHandle,
-                                        contentDescription = stringResource(R.string.cd_reorder),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        // Immediate drag on the handle (not long-press) so it never
-                                        // competes with the row's long-press selection gesture.
-                                        modifier = with(itemScope) {
-                                            Modifier.draggableHandle(
-                                                onDragStarted = {
-                                                    isDragging = true
-                                                    dragStartIndex = index
-                                                },
-                                                onDragStopped = {
-                                                    isDragging = false
-                                                    val to = localEntries.indexOfFirst { it.key == entry.key }
-                                                    if (dragStartIndex in localEntries.indices &&
-                                                        to >= 0 && dragStartIndex != to
-                                                    ) {
-                                                        viewModel.movePlaylistSong(dragStartIndex, to)
-                                                    }
-                                                    dragStartIndex = -1
-                                                },
-                                            )
-                                        }.size(24.dp),
+                            // The drag handle sits *outside* the row's clickable area so a
+                            // long-press on it starts a drag (queue-style) without ever
+                            // triggering the row's long-press selection.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SongRow(
+                                        song = entry.song,
+                                        position = index + 1,
+                                        albumMode = false,
+                                        selectionMode = false,
+                                        selected = false,
+                                        favorite = state.isFavorite(entry.song.id),
+                                        current = state.isCurrent(entry.song.id),
+                                        onClick = { viewModel.onSongClick(index) },
+                                        onLongClick = { viewModel.onSongLongClick(entry.song.id) },
                                     )
-                                },
-                            )
+                                }
+                                Icon(
+                                    imageVector = Icons.Rounded.DragHandle,
+                                    contentDescription = stringResource(R.string.cd_reorder),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = with(itemScope) {
+                                        Modifier.longPressDraggableHandle(
+                                            onDragStarted = {
+                                                isDragging = true
+                                                dragStartIndex = index
+                                            },
+                                            onDragStopped = {
+                                                isDragging = false
+                                                val to = localEntries.indexOfFirst { it.key == entry.key }
+                                                if (dragStartIndex in localEntries.indices &&
+                                                    to >= 0 && dragStartIndex != to
+                                                ) {
+                                                    viewModel.movePlaylistSong(dragStartIndex, to)
+                                                }
+                                                dragStartIndex = -1
+                                            },
+                                        )
+                                    }
+                                        .padding(end = 12.dp)
+                                        .size(24.dp),
+                                )
+                            }
                         }
                     }
                 } else {
@@ -724,7 +729,6 @@ private fun SongRow(
     current: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    dragHandle: (@Composable () -> Unit)? = null,
 ) {
     val containerColor = when {
         selected -> MaterialTheme.colorScheme.secondaryContainer
@@ -783,7 +787,6 @@ private fun SongRow(
                     )
                 }
                 Text(formatDuration(song.durationMs), style = MaterialTheme.typography.labelMedium)
-                dragHandle?.invoke()
             }
         },
         modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
