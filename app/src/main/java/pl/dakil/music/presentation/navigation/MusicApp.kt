@@ -14,6 +14,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -22,7 +23,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import androidx.navigation.NavType
@@ -55,7 +58,7 @@ private enum class TopLevelDestination(
 }
 
 @Composable
-fun MusicApp() {
+fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -69,6 +72,17 @@ fun MusicApp() {
     // Emits the route of a tab that was tapped while already on its main screen, so that
     // screen can react (scroll to top / exit search). Subscreen reselects pop instead.
     val reselectFlow = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
+
+    // A notification tap requests the Now Playing tab; navigate like a bottom-bar switch.
+    LaunchedEffect(navigateToNowPlaying) {
+        navigateToNowPlaying.collect {
+            navController.navigate(Routes.NOW_PLAYING) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
     // Shared playback state drives the live Now Playing tab icon.
     val nowPlayingViewModel: NowPlayingViewModel = viewModel(factory = AppViewModelProvider.Factory)

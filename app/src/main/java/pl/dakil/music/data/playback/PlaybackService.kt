@@ -1,5 +1,6 @@
 package pl.dakil.music.data.playback
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.database.ContentObserver
 import android.media.AudioManager
@@ -26,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import pl.dakil.music.MainActivity
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
 
@@ -78,6 +80,8 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setCustomLayout(ImmutableList.of(closeButton))
             .setCallback(SessionCallback())
+            // Tapping the notification body opens the app on the Now Playing screen.
+            .setSessionActivity(buildNowPlayingActivityIntent())
             .build()
 
         // Keep the auto-pause preferences fresh (works even with no UI connected).
@@ -125,6 +129,19 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
+
+    /** PendingIntent that brings the app to the foreground on the Now Playing screen. */
+    private fun buildNowPlayingActivityIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra(MainActivity.EXTRA_OPEN_NOW_PLAYING, true)
+        }
+        return PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
 
     /**
      * Handles the custom "close" notification action: it isn't one of the standard
