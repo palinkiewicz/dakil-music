@@ -142,7 +142,6 @@ class TagEditorRepositoryImpl(
     private fun writeOne(song: Song, edit: TagEdit) {
         val resolver = context.contentResolver
         var temp = File.createTempFile("tag_", ".${fileExtension(song)}", workDir)
-        val placeholders = ArrayList<File>()
         try {
             // 1. Pull the file into a private working copy JAudiotagger can read by path.
             resolver.openInputStream(song.uri)?.use { input ->
@@ -163,8 +162,8 @@ class TagEditorRepositoryImpl(
                 }
             }
 
-            // 1b. Repair stale MP4 data references left by earlier edits (see helper).
-            placeholders.addAll(materializeStaleDataRefs(temp))
+            // 1b. Heal stale MP4 data references frozen in by earlier edits (see helper).
+            healStaleDataRefs(temp)
 
             // 1c. JCodec's MP4 rewrite keeps only the last track, so editing an
             // audio+text/video M4A would silently drop its audio. Reduce such files to
@@ -218,28 +217,10 @@ class TagEditorRepositoryImpl(
             // 4. Mirror the changes into the MediaStore index for instant UI consistency.
             updateIndex(song.uri, edit)
         } finally {
-            placeholders.forEach { it.delete() }
             temp.delete()
         }
     }
 
-    /**
-     * Heals stale MP4/M4A data references before a rewrite.
-     *
-     * When a cover/metadata edit grows the `moov` atom, JAudiotagger rewrites the file
-     * by *flattening* it, re-reading the audio samples through each track's data
-     * reference (`dref`). The flatten embeds the working file's absolute path into that
-     * reference and clears its "self-contained" flag — and JCodec's [TrakBox.setDataRef]
-     * then refuses to update a non-self-contained reference on later edits. So once a
-     * file has been edited, it permanently points its samples at a since-deleted cache
-     * temp, and every subsequent edit fails with `FileNotFoundException` (ENOENT).
-     *
-     * We can't cheaply rewrite the broken reference, but the frozen path is stable and
-     * the chunk offsets still describe *this* file's byte layout. So for each referenced
-     * file that is missing we drop a byte-identical copy of [working] at that path; the
-     * flatten then reads valid sample bytes. Returns the placeholder files to delete
-     * after the write. Non-MP4 inputs (and pristine self-contained MP4s) yield nothing.
-     */
     /** Number of tracks in [file] if it is an MP4/M4A; 1 for non-MP4 (nothing to reduce). */
     private fun trackCount(file: File): Int = runCatching {
         RandomAccessFile(file, "r").use { raf ->
@@ -289,30 +270,55 @@ class TagEditorRepositoryImpl(
         }
     }
 
-    private fun materializeStaleDataRefs(working: File): List<File> {
-        val created = ArrayList<File>()
-        runCatching {
-            RandomAccessFile(working, "r").use { raf ->
-                val movie = MP4Util.parseFullMovieChannel(raf.channel)
-                val drefPath = Box.path("mdia.minf.dinf.dref")
-                movie?.moov?.tracks?.forEach { trak ->
-                    val dref = NodeBox.findFirstPath(trak, DataRefBox::class.java, drefPath)
-                        ?: return@forEach
-                    dref.boxes.forEach inner@{ box ->
-                        val url = (box as? UrlBox)?.url ?: return@inner
-                        if (!url.startsWith(FILE_URL_PREFIX)) return@inner
-                        val target = File(url.substring(FILE_URL_PREFIX.length))
-                        if (!target.exists()) {
-                            runCatching {
-                                working.copyTo(target, overwrite = true)
-                                created.add(target)
-                            }
-                        }
-                    }
-                }
+    /**
+     * Heals stale MP4/M4A data references frozen in by an earlier edit.
+     *
+     * When a cover/metadata edit grows the `moov` atom, JAudiotagger rewrites the file by
+     * *flattening* it, re-reading the audio samples through each track's data reference
+     * (`dref`). The flatten embeds the working file's absolute cache path into that
+     * reference and clears its "self-contained" flag. So once a file has been edited it
+     * permanently points its samples at a since-deleted cache temp, and every later edit
+     * fails with ENOENT when the flatten tries to re-read from that path. Worse, the
+     * frozen path can belong to a *different* app (e.g. the `.debug` build), which the
+     * release build has no permission to even create a file at — so dropping a placeholder
+     * copy there is impossible.
+     *
+     * The chunk offsets still describe *this* file's byte layout, so we instead repoint
+     * each stale `dref` back at [working] itself and re-flatten; the flatten then re-reads
+     * valid sample bytes from the working copy. `setDataRef()` refuses to overwrite an
+     * already-external ref, so the entries are reset directly. Healthy self-contained MP4s
+     * (and non-MP4 inputs) have no stale `file://` ref and are left untouched.
+     */
+    private fun healStaleDataRefs(working: File) {
+        val movie = RandomAccessFile(working, "r").use { raf ->
+            MP4Util.parseFullMovieChannel(raf.channel)
+        } ?: return
+        val moov = movie.moov ?: return
+        val drefPath = Box.path("mdia.minf.dinf.dref")
+        var healed = false
+        moov.tracks.forEach { trak ->
+            val dref = NodeBox.findFirstPath(trak, DataRefBox::class.java, drefPath)
+                ?: return@forEach
+            val stale = dref.boxes.any { box ->
+                val url = (box as? UrlBox)?.url ?: return@any false
+                url.startsWith(FILE_URL_PREFIX) &&
+                    !File(url.substring(FILE_URL_PREFIX.length)).exists()
+            }
+            if (stale) {
+                dref.removeChildren(arrayOf("url ", "alis"))
+                dref.add(UrlBox.createUrlBox(FILE_URL_PREFIX + working.canonicalPath))
+                healed = true
             }
         }
-        return created
+        if (!healed) return
+
+        val flattened = File.createTempFile("heal_", ".m4a", workDir)
+        try {
+            Flatten().flatten(movie, flattened)
+            flattened.copyTo(working, overwrite = true)
+        } finally {
+            flattened.delete()
+        }
     }
 
     private fun updateIndex(uri: Uri, edit: TagEdit) {

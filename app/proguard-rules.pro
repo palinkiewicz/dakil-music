@@ -27,6 +27,14 @@
 # NPE. Keeping the package preserves both the class names and the package structure.
 -keep class org.jaudiotagger.** { *; }
 
+# JCodec ships *inside* the Adonai JAudiotagger jar (package org.jcodec) and backs the
+# MP4/M4A read+rewrite path. It instantiates every MP4 box class reflectively by its
+# fourcc (constructor(Header).newInstance(...)), so R8 renaming those constructors makes
+# editing an M4A fail at runtime with NoSuchMethodException — but only on release builds
+# and only for libraries that are actually MP4. Keep the whole package intact.
+-keep class org.jcodec.** { *; }
+-dontwarn org.jcodec.**
+
 # The library references desktop/Java SE classes (javax.imageio, java.awt, etc.)
 # that don't exist on Android; silence the resulting R8 warnings.
 -dontwarn org.jaudiotagger.**
