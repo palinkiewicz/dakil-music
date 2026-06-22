@@ -18,6 +18,10 @@ interface SettingsRepository {
 
     suspend fun setGaplessPlayback(enabled: Boolean)
 
+    suspend fun setAutoPauseOnZeroVolume(enabled: Boolean)
+
+    suspend fun setAutoResumeOnVolumeRestored(enabled: Boolean)
+
     suspend fun setRememberSortState(enabled: Boolean)
 
     suspend fun setAlbumColumns(count: Int)
@@ -49,6 +53,10 @@ data class AppSettings(
     val dynamicColor: Boolean = true,
     val forceDarkTheme: Boolean = false,
     val gaplessPlayback: Boolean = true,
+    /** Pause playback when the device media volume reaches 0%. */
+    val autoPauseOnZeroVolume: Boolean = true,
+    /** Resume playback when the media volume is raised above 0% again (only if auto-paused). */
+    val autoResumeOnVolumeRestored: Boolean = true,
     val rememberSortState: Boolean = false,
     val albumColumns: Int = 2,
     /** When false, no listening history is recorded. */

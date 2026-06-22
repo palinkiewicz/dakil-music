@@ -166,6 +166,19 @@ fun SettingsScreen(
                 checked = settings.gaplessPlayback,
                 onCheckedChange = viewModel::setGaplessPlayback,
             )
+            SwitchRow(
+                title = stringResource(R.string.settings_auto_pause_zero_volume),
+                summary = stringResource(R.string.settings_auto_pause_zero_volume_summary),
+                checked = settings.autoPauseOnZeroVolume,
+                onCheckedChange = viewModel::setAutoPauseOnZeroVolume,
+            )
+            SwitchRow(
+                title = stringResource(R.string.settings_auto_resume_volume),
+                summary = stringResource(R.string.settings_auto_resume_volume_summary),
+                checked = settings.autoResumeOnVolumeRestored,
+                onCheckedChange = viewModel::setAutoResumeOnVolumeRestored,
+                enabled = settings.autoPauseOnZeroVolume,
+            )
             SelectRow(
                 title = stringResource(R.string.settings_queue_remove_mode),
                 summary = stringResource(R.string.settings_queue_remove_mode_summary),
@@ -375,11 +388,13 @@ private fun SwitchRow(
     summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     SettingRow(
         title = title,
         summary = summary,
-        trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
+        enabled = enabled,
+        trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled) },
     )
 }
 

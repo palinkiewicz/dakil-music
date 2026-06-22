@@ -118,6 +118,10 @@
     <string name="settings_theme_summary">Używaj systemowych ustawień ciemnego motywu</string>
     <string name="settings_gapless">Odtwarzanie bez przerw</string>
     <string name="settings_gapless_summary">Usuwa ciszę między kolejnymi utworami</string>
+    <string name="settings_auto_pause_zero_volume">Wstrzymaj przy zerowej głośności</string>
+    <string name="settings_auto_pause_zero_volume_summary">Wstrzymuje odtwarzanie, gdy głośność osiągnie 0%</string>
+    <string name="settings_auto_resume_volume">Wznów po przywróceniu głośności</string>
+    <string name="settings_auto_resume_volume_summary">Wznawia odtwarzanie, gdy głośność zostanie ponownie zwiększona powyżej 0%</string>
     <string name="settings_remember_sort">Zapamiętaj kolejność sortowania</string>
     <string name="settings_remember_sort_summary">Przywraca ostatnio używaną opcję sortowania po ponownym otwarciu biblioteki</string>
     <string name="settings_album_columns">Kolumny siatki albumów</string>

@@ -25,6 +25,8 @@ class SettingsRepositoryImpl(
             dynamicColor = prefs[KEY_DYNAMIC_COLOR] ?: true,
             forceDarkTheme = prefs[KEY_FORCE_DARK] ?: false,
             gaplessPlayback = prefs[KEY_GAPLESS] ?: true,
+            autoPauseOnZeroVolume = prefs[KEY_AUTO_PAUSE_ZERO_VOLUME] ?: true,
+            autoResumeOnVolumeRestored = prefs[KEY_AUTO_RESUME_VOLUME] ?: true,
             rememberSortState = prefs[KEY_REMEMBER_SORT] ?: false,
             albumColumns = prefs[KEY_ALBUM_COLUMNS] ?: 2,
             statisticsEnabled = prefs[KEY_STATS_ENABLED] ?: true,
@@ -59,6 +61,12 @@ class SettingsRepositoryImpl(
 
     override suspend fun setGaplessPlayback(enabled: Boolean) =
         edit(KEY_GAPLESS, enabled)
+
+    override suspend fun setAutoPauseOnZeroVolume(enabled: Boolean) =
+        edit(KEY_AUTO_PAUSE_ZERO_VOLUME, enabled)
+
+    override suspend fun setAutoResumeOnVolumeRestored(enabled: Boolean) =
+        edit(KEY_AUTO_RESUME_VOLUME, enabled)
 
     override suspend fun setRememberSortState(enabled: Boolean) =
         edit(KEY_REMEMBER_SORT, enabled)
@@ -118,6 +126,8 @@ class SettingsRepositoryImpl(
         val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val KEY_FORCE_DARK = booleanPreferencesKey("force_dark")
         val KEY_GAPLESS = booleanPreferencesKey("gapless_playback")
+        val KEY_AUTO_PAUSE_ZERO_VOLUME = booleanPreferencesKey("auto_pause_zero_volume")
+        val KEY_AUTO_RESUME_VOLUME = booleanPreferencesKey("auto_resume_volume")
         val KEY_REMEMBER_SORT = booleanPreferencesKey("remember_sort_state")
         val KEY_ALBUM_COLUMNS = intPreferencesKey("album_columns")
         val KEY_STATS_ENABLED = booleanPreferencesKey("statistics_enabled")

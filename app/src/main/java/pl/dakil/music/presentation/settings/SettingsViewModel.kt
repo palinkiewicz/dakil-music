@@ -31,6 +31,14 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.updateSettings.setGaplessPlayback(enabled)
     }
 
+    fun setAutoPauseOnZeroVolume(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setAutoPauseOnZeroVolume(enabled)
+    }
+
+    fun setAutoResumeOnVolumeRestored(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setAutoResumeOnVolumeRestored(enabled)
+    }
+
     fun setRememberSortState(enabled: Boolean) = viewModelScope.launch {
         container.updateSettings.setRememberSortState(enabled)
     }

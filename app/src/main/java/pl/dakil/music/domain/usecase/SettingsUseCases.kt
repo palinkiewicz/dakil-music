@@ -17,6 +17,8 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setDynamicColor(enabled: Boolean) = repository.setDynamicColor(enabled)
     suspend fun setForceDarkTheme(enabled: Boolean) = repository.setForceDarkTheme(enabled)
     suspend fun setGaplessPlayback(enabled: Boolean) = repository.setGaplessPlayback(enabled)
+    suspend fun setAutoPauseOnZeroVolume(enabled: Boolean) = repository.setAutoPauseOnZeroVolume(enabled)
+    suspend fun setAutoResumeOnVolumeRestored(enabled: Boolean) = repository.setAutoResumeOnVolumeRestored(enabled)
     suspend fun setRememberSortState(enabled: Boolean) = repository.setRememberSortState(enabled)
     suspend fun setAlbumColumns(count: Int) = repository.setAlbumColumns(count)
     suspend fun setStatisticsEnabled(enabled: Boolean) = repository.setStatisticsEnabled(enabled)
