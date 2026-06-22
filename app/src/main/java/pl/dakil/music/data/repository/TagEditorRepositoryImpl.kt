@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.audio.exceptions.CannotReadException
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.TagOptionSingleton
 import org.jaudiotagger.tag.images.AndroidArtwork
@@ -142,13 +141,27 @@ class TagEditorRepositoryImpl(
 
     private fun writeOne(song: Song, edit: TagEdit) {
         val resolver = context.contentResolver
-        val temp = File.createTempFile("tag_", ".${fileExtension(song)}", workDir)
+        var temp = File.createTempFile("tag_", ".${fileExtension(song)}", workDir)
         val placeholders = ArrayList<File>()
         try {
             // 1. Pull the file into a private working copy JAudiotagger can read by path.
             resolver.openInputStream(song.uri)?.use { input ->
                 temp.outputStream().use { input.copyTo(it) }
             } ?: error("Cannot open ${song.uri}")
+
+            // 1a. The display name can lie about the container — e.g. a real MP4/M4A file
+            // saved with a ".mp3" name. JAudiotagger picks its reader purely from the file
+            // extension, so a misnamed file gets the wrong reader and fails (an MP4 read as
+            // MP3 throws "No audio header found"). Re-detect from the actual magic bytes and
+            // re-point the working copy at the right extension when the two disagree.
+            sniffExtension(temp)?.let { real ->
+                if (!temp.name.endsWith(".$real", ignoreCase = true)) {
+                    val retyped = File.createTempFile("tag_", ".$real", workDir)
+                    temp.copyTo(retyped, overwrite = true)
+                    temp.delete()
+                    temp = retyped
+                }
+            }
 
             // 1b. Repair stale MP4 data references left by earlier edits (see helper).
             placeholders.addAll(materializeStaleDataRefs(temp))
@@ -169,8 +182,12 @@ class TagEditorRepositoryImpl(
             // 2. Rewrite the embedded tags in place on the copy.
             val audioFile = try {
                 AudioFileIO.read(temp)
-            } catch (e: CannotReadException) {
-                // Already-corrupted file (e.g. a previous edit dropped its audio track).
+            } catch (e: Exception) {
+                // A file JAudiotagger cannot parse: an already-corrupted file (e.g. a
+                // previous edit dropped its audio track) or an unsupported container.
+                // Skip it rather than failing the whole batch — note the read can throw
+                // exceptions outside the CannotReadException hierarchy (e.g.
+                // InvalidAudioFrameException extends Exception directly).
                 throw UnsupportedFileException("Unreadable audio file: ${e.message}")
             }
             val tag = audioFile.tagOrCreateAndSetDefault
@@ -310,6 +327,27 @@ class TagEditorRepositoryImpl(
             runCatching { context.contentResolver.update(uri, values, null, null) }
         }
     }
+
+    /**
+     * Detects the real container from [file]'s leading magic bytes, independent of its
+     * (possibly wrong) name, returning the extension JAudiotagger should use to pick a
+     * reader. Returns null for unrecognized bytes so the name-based guess stands.
+     */
+    private fun sniffExtension(file: File): String? = runCatching {
+        val head = ByteArray(12)
+        val read = file.inputStream().use { it.read(head) }
+        if (read < 8) return@runCatching null
+        fun matches(offset: Int, magic: String) =
+            magic.indices.all { offset + it < read && head[offset + it] == magic[it].code.toByte() }
+        when {
+            matches(4, "ftyp") -> "m4a"  // ISO base media: MP4 / M4A (incl. fragmented/DASH)
+            matches(0, "fLaC") -> "flac"
+            matches(0, "OggS") -> "ogg"
+            matches(0, "ID3") -> "mp3"
+            head[0] == 0xFF.toByte() && (head[1].toInt() and 0xE0) == 0xE0 -> "mp3"  // MPEG sync
+            else -> null
+        }
+    }.getOrNull()
 
     /** Best-effort extension lookup so JAudiotagger can detect the container format. */
     private fun fileExtension(song: Song): String {
