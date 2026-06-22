@@ -307,4 +307,5 @@
     <string name="settings_now_playing_corner_roundness_summary">Promień zaokrąglenia okładki na ekranie odtwarzania</string>
     <string name="settings_album_rules">Albumy z własnymi regułami</string>
     <string name="settings_album_rules_summary">Zarządzaj nadpisaniami okładek i autorów albumów</string>
+    <string name="notification_action_close">Zamknij</string>
 </resources>

@@ -316,4 +316,5 @@
     <string name="settings_now_playing_corner_roundness_summary">Corner radius of the Now Playing cover art</string>
     <string name="settings_album_rules">Albums with custom rules</string>
     <string name="settings_album_rules_summary">Manage per-album cover art and author overrides</string>
+    <string name="notification_action_close">Close</string>
 </resources>

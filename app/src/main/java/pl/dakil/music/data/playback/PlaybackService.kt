@@ -3,15 +3,23 @@ package pl.dakil.music.data.playback
 import android.content.Intent
 import android.database.ContentObserver
 import android.media.AudioManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,12 +27,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import pl.dakil.music.MusicApplication
+import pl.dakil.music.R
 
 /**
  * Hosts the ExoPlayer and its [MediaSession]. As a [MediaSessionService] it owns
  * background playback, the system Now Playing notification and lock-screen/Bluetooth
  * transport controls for free — the app's UI connects as a MediaController client.
  */
+@UnstableApi
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
@@ -59,7 +69,16 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        mediaSession = MediaSession.Builder(this, player).build()
+        val closeButton = CommandButton.Builder()
+            .setDisplayName(getString(R.string.notification_action_close))
+            .setIconResId(R.drawable.ic_close)
+            .setSessionCommand(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
+            .build()
+
+        mediaSession = MediaSession.Builder(this, player)
+            .setCustomLayout(ImmutableList.of(closeButton))
+            .setCallback(SessionCallback())
+            .build()
 
         // Keep the auto-pause preferences fresh (works even with no UI connected).
         val settingsRepository = (application as MusicApplication).container.settingsRepository
@@ -108,6 +127,52 @@ class PlaybackService : MediaSessionService() {
         mediaSession
 
     /**
+     * Handles the custom "close" notification action: it isn't one of the standard
+     * transport commands, so the session must advertise it on connect and act on it
+     * when invoked.
+     */
+    private inner class SessionCallback : MediaSession.Callback {
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): MediaSession.ConnectionResult {
+            val connectionResult = super.onConnect(session, controller)
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(
+                    connectionResult.availableSessionCommands.buildUpon()
+                        .add(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
+                        .build()
+                )
+                .build()
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == ACTION_CLOSE) {
+                stopEverything()
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return super.onCustomCommand(session, controller, customCommand, args)
+        }
+    }
+
+    /**
+     * Stops the current song, tears the player's queue down and shuts the service
+     * down so the foreground notification is dismissed.
+     */
+    private fun stopEverything() {
+        mediaSession?.player?.run {
+            stop()
+            clearMediaItems()
+        }
+        stopSelf()
+    }
+
+    /**
      * While auto-paused for zero volume, keep the service in the foreground. Media3
      * normally demotes the service when playback pauses; resuming would then require
      * *starting* a foreground service from the background, which Android 12+ forbids
@@ -136,5 +201,10 @@ class PlaybackService : MediaSessionService() {
         }
         mediaSession = null
         super.onDestroy()
+    }
+
+    private companion object {
+        /** Custom session command id for the notification's close action. */
+        const val ACTION_CLOSE = "pl.dakil.music.action.CLOSE"
     }
 }
