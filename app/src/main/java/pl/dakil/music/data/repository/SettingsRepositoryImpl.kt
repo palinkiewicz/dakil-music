@@ -50,6 +50,8 @@ class SettingsRepositoryImpl(
                 ?: AlbumAuthorMode.FIRST_SONG_ARTISTS,
             albumCornerRoundnessDp = prefs[KEY_ALBUM_CORNER_DP] ?: 16,
             nowPlayingCornerRoundnessDp = prefs[KEY_NOW_PLAYING_CORNER_DP] ?: 32,
+            displayLyrics = prefs[KEY_DISPLAY_LYRICS] ?: true,
+            fetchMissingLyricsFromLrclib = prefs[KEY_FETCH_MISSING_LYRICS] ?: true,
         )
     }
 
@@ -118,6 +120,12 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[KEY_NOW_PLAYING_CORNER_DP] = dp }
     }
 
+    override suspend fun setDisplayLyrics(enabled: Boolean) =
+        edit(KEY_DISPLAY_LYRICS, enabled)
+
+    override suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean) =
+        edit(KEY_FETCH_MISSING_LYRICS, enabled)
+
     private suspend fun edit(key: Preferences.Key<Boolean>, value: Boolean) {
         dataStore.edit { it[key] = value }
     }
@@ -141,5 +149,7 @@ class SettingsRepositoryImpl(
         val KEY_ALBUM_AUTHOR_MODE = stringPreferencesKey("album_author_mode")
         val KEY_ALBUM_CORNER_DP = intPreferencesKey("album_corner_roundness_dp")
         val KEY_NOW_PLAYING_CORNER_DP = intPreferencesKey("now_playing_corner_roundness_dp")
+        val KEY_DISPLAY_LYRICS = booleanPreferencesKey("display_lyrics")
+        val KEY_FETCH_MISSING_LYRICS = booleanPreferencesKey("fetch_missing_lyrics_lrclib")
     }
 }

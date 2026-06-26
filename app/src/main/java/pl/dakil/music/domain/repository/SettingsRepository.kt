@@ -47,6 +47,10 @@ interface SettingsRepository {
     suspend fun setAlbumCornerRoundnessDp(dp: Int)
 
     suspend fun setNowPlayingCornerRoundnessDp(dp: Int)
+
+    suspend fun setDisplayLyrics(enabled: Boolean)
+
+    suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean)
 }
 
 data class AppSettings(
@@ -79,4 +83,8 @@ data class AppSettings(
     val albumCornerRoundnessDp: Int = 16,
     /** Corner roundness (dp) of the Now Playing cover art, 0..64. */
     val nowPlayingCornerRoundnessDp: Int = 32,
+    /** Show a lyrics card on Now Playing and fetch lyrics when a song starts. */
+    val displayLyrics: Boolean = true,
+    /** Fall back to the lrclib.net API when a song has no embedded lyrics. */
+    val fetchMissingLyricsFromLrclib: Boolean = true,
 )

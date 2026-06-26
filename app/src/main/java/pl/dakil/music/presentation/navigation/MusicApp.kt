@@ -38,6 +38,7 @@ import pl.dakil.music.R
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.history.ListeningHistoryScreen
 import pl.dakil.music.presentation.library.LibraryScreen
+import pl.dakil.music.presentation.lyrics.LyricsScreen
 import pl.dakil.music.presentation.more.MoreScreen
 import pl.dakil.music.presentation.statistics.StatisticsScreen
 import pl.dakil.music.presentation.nowplaying.NowPlayingNavIcon
@@ -66,6 +67,7 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
     // Detail screens map back to their parent tab so a tab always looks selected.
     val activeRoute = when (currentRoute) {
         Routes.SETTINGS, Routes.ALBUM_RULES, Routes.LISTENING_HISTORY, Routes.STATISTICS -> Routes.MORE
+        Routes.LYRICS -> Routes.NOW_PLAYING
         else -> if (currentRoute?.startsWith(Routes.SONG_LIST) == true) Routes.LIBRARY else currentRoute
     }
 
@@ -150,6 +152,7 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                 NowPlayingScreen(
                     modifier = Modifier.statusBarsPadding(),
                     onReselect = remember { reselectFlow.filter { it == Routes.NOW_PLAYING }.map {} },
+                    onOpenLyrics = { navController.navigate(Routes.LYRICS) },
                 )
             }
             composable(Routes.LIBRARY) {
@@ -184,6 +187,9 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
             }
             composable(Routes.STATISTICS) {
                 StatisticsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.LYRICS) {
+                LyricsScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.SONG_LIST_PATTERN,

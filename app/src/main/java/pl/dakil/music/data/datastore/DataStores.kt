@@ -11,3 +11,4 @@ val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(na
 val Context.playlistsDataStore: DataStore<Preferences> by preferencesDataStore(name = "playlists")
 val Context.sortDataStore: DataStore<Preferences> by preferencesDataStore(name = "sort")
 val Context.albumRulesDataStore: DataStore<Preferences> by preferencesDataStore(name = "album_rules")
+val Context.lyricsAlignmentDataStore: DataStore<Preferences> by preferencesDataStore(name = "lyrics_alignment")

@@ -90,9 +90,11 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun NowPlayingScreen(
     modifier: Modifier = Modifier,
     onReselect: Flow<Unit> = emptyFlow(),
+    onOpenLyrics: () -> Unit = {},
     viewModel: NowPlayingViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
     val showAddToPlaylist by viewModel.showAddToPlaylist.collectAsStateWithLifecycle()
 
@@ -103,7 +105,9 @@ fun NowPlayingScreen(
 
     NowPlayingContent(
         state = state,
+        lyrics = lyrics,
         onReselect = onReselect,
+        onOpenLyrics = onOpenLyrics,
         onPlayPause = viewModel::onPlayPause,
         onNext = viewModel::onNext,
         onPrevious = viewModel::onPrevious,
@@ -132,6 +136,7 @@ fun NowPlayingScreen(
 @Composable
 private fun NowPlayingContent(
     state: NowPlayingUiState,
+    lyrics: LyricsCardState,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -140,6 +145,7 @@ private fun NowPlayingContent(
     onCycleRepeat: () -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
+    onOpenLyrics: () -> Unit,
     onQueueItemClick: (Int) -> Unit,
     onMoveQueueItem: (Int, Int) -> Unit,
     onRemoveQueueItem: (Int) -> Unit,
@@ -149,8 +155,9 @@ private fun NowPlayingContent(
 ) {
     val song = state.song ?: return
 
-    // The list contains the player + queue header before the queue items.
-    val headerCount = 2
+    // The list contains the player, an optional lyrics card, and the queue header
+    // before the queue items; the reorder math keys off this count.
+    val headerCount = 2 + if (lyrics.visible) 1 else 0
     val lazyListState = rememberLazyListState()
 
     // Re-tapping the Now Playing tab scrolls back to the top.
@@ -282,6 +289,21 @@ private fun NowPlayingContent(
                     onToggleShuffle = onToggleShuffle,
                     onCycleRepeat = onCycleRepeat,
                 )
+            }
+        }
+
+        if (lyrics.visible) {
+            item(key = "lyrics") {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.lyrics_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    LyricsCard(state = lyrics, onClick = onOpenLyrics)
+                }
             }
         }
 

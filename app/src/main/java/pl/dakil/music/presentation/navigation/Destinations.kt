@@ -12,6 +12,7 @@ object Routes {
     const val ALBUM_RULES = "album_rules"
     const val LISTENING_HISTORY = "listening_history"
     const val STATISTICS = "statistics"
+    const val LYRICS = "lyrics"
 
     // Shared song-list detail screen, parameterised by its source.
     const val SONG_LIST = "song_list"

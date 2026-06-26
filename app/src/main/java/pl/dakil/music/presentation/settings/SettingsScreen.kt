@@ -186,6 +186,19 @@ fun SettingsScreen(
                 options = QueueRemoveMode.entries.map { it to stringResource(queueRemoveModeNameRes(it)) },
                 onSelect = viewModel::setQueueRemoveMode,
             )
+            SwitchRow(
+                title = stringResource(R.string.settings_display_lyrics),
+                summary = stringResource(R.string.settings_display_lyrics_summary),
+                checked = settings.displayLyrics,
+                onCheckedChange = viewModel::setDisplayLyrics,
+            )
+            SwitchRow(
+                title = stringResource(R.string.settings_fetch_missing_lyrics),
+                summary = stringResource(R.string.settings_fetch_missing_lyrics_summary),
+                checked = settings.fetchMissingLyricsFromLrclib,
+                onCheckedChange = viewModel::setFetchMissingLyricsFromLrclib,
+                enabled = settings.displayLyrics,
+            )
 
             SectionHeader(stringResource(R.string.settings_section_statistics))
 

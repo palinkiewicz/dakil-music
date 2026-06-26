@@ -2,19 +2,28 @@ package pl.dakil.music.presentation.nowplaying
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import pl.dakil.music.data.playback.LyricsStatus
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.domain.model.LyricLine
 import pl.dakil.music.domain.model.PlaybackState
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.RepeatMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
+import pl.dakil.music.domain.util.ContentKey
+import pl.dakil.music.domain.util.LrcParser
 
 data class NowPlayingUiState(
     val song: Song? = null,
@@ -30,6 +39,15 @@ data class NowPlayingUiState(
     val currentIndex: Int = -1,
     val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
     val coverArtRoundnessDp: Int = 32,
+)
+
+/** Compact lyrics state for the Now Playing card. */
+data class LyricsCardState(
+    val visible: Boolean = false,
+    val status: LyricsStatus = LyricsStatus.SEARCHING,
+    val synced: Boolean = false,
+    val lines: List<LyricLine> = emptyList(),
+    val activeLineIndex: Int = -1,
 )
 
 class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
@@ -63,6 +81,36 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             coverArtRoundnessDp = settings.nowPlayingCornerRoundnessDp,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val currentOffsetMs = container.lyricsController.state
+        .map { it.song }
+        .distinctUntilChanged { a, b -> a?.id == b?.id }
+        .flatMapLatest { song ->
+            if (song == null) flowOf(0L)
+            else container.lyricsAlignmentRepository.offsetMs(ContentKey.of(song))
+        }
+
+    /** Lyrics shown in the Now Playing card; the active line tracks the playhead + offset. */
+    val lyrics: StateFlow<LyricsCardState> = combine(
+        container.lyricsController.state,
+        container.observePlayback(),
+        currentOffsetMs,
+    ) { lyricsState, playback, offset ->
+        val lyrics = lyricsState.lyrics
+        val synced = lyrics?.synced == true
+        LyricsCardState(
+            visible = lyricsState.visible,
+            status = lyricsState.status,
+            synced = synced,
+            lines = lyrics?.lines.orEmpty(),
+            activeLineIndex = if (synced) {
+                LrcParser.activeIndex(lyrics!!.lines, playback.positionMs - offset)
+            } else {
+                -1
+            },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LyricsCardState())
 
     val userPlaylists: StateFlow<List<UserPlaylist>> = container.observeUserPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

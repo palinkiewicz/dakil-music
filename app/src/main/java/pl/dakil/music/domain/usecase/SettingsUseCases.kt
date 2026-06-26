@@ -32,4 +32,6 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setAlbumAuthorMode(mode: AlbumAuthorMode) = repository.setAlbumAuthorMode(mode)
     suspend fun setAlbumCornerRoundnessDp(dp: Int) = repository.setAlbumCornerRoundnessDp(dp)
     suspend fun setNowPlayingCornerRoundnessDp(dp: Int) = repository.setNowPlayingCornerRoundnessDp(dp)
+    suspend fun setDisplayLyrics(enabled: Boolean) = repository.setDisplayLyrics(enabled)
+    suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = repository.setFetchMissingLyricsFromLrclib(enabled)
 }

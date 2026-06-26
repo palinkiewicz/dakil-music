@@ -9,6 +9,7 @@ import pl.dakil.music.MusicApplication
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.presentation.history.ListeningHistoryViewModel
 import pl.dakil.music.presentation.library.LibraryViewModel
+import pl.dakil.music.presentation.lyrics.LyricsViewModel
 import pl.dakil.music.presentation.more.MoreViewModel
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
 import pl.dakil.music.presentation.settings.AlbumRulesViewModel
@@ -28,6 +29,7 @@ object AppViewModelProvider {
         initializer { SongListViewModel(container(), this.createSavedStateHandle()) }
         initializer { ListeningHistoryViewModel(container()) }
         initializer { StatisticsViewModel(container()) }
+        initializer { LyricsViewModel(container()) }
     }
 }
 

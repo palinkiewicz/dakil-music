@@ -10,16 +10,21 @@ import kotlinx.coroutines.launch
 import pl.dakil.music.data.coverart.CoverArtRefresher
 import pl.dakil.music.data.datastore.albumRulesDataStore
 import pl.dakil.music.data.datastore.favoritesDataStore
+import pl.dakil.music.data.datastore.lyricsAlignmentDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
 import pl.dakil.music.data.datastore.settingsDataStore
 import pl.dakil.music.data.datastore.sortDataStore
 import pl.dakil.music.data.db.MusicDatabase
+import pl.dakil.music.data.lyrics.LrclibDataSource
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
+import pl.dakil.music.data.playback.LyricsController
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
 import pl.dakil.music.data.playback.PlaybackHistoryTracker
 import pl.dakil.music.data.repository.AlbumRuleRepositoryImpl
 import pl.dakil.music.data.repository.FavoritesRepositoryImpl
 import pl.dakil.music.data.repository.ListeningHistoryRepositoryImpl
+import pl.dakil.music.data.repository.LyricsAlignmentRepositoryImpl
+import pl.dakil.music.data.repository.LyricsRepositoryImpl
 import pl.dakil.music.data.repository.MusicRepositoryImpl
 import pl.dakil.music.data.repository.SettingsRepositoryImpl
 import pl.dakil.music.data.repository.SortStateRepositoryImpl
@@ -28,6 +33,8 @@ import pl.dakil.music.data.repository.UserPlaylistRepositoryImpl
 import pl.dakil.music.domain.repository.AlbumRuleRepository
 import pl.dakil.music.domain.repository.FavoritesRepository
 import pl.dakil.music.domain.repository.ListeningHistoryRepository
+import pl.dakil.music.domain.repository.LyricsAlignmentRepository
+import pl.dakil.music.domain.repository.LyricsRepository
 import pl.dakil.music.domain.repository.MusicRepository
 import pl.dakil.music.domain.repository.PlayerRepository
 import pl.dakil.music.domain.repository.SettingsRepository
@@ -63,6 +70,8 @@ import pl.dakil.music.domain.usecase.GetSongsForAlbumUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPerformerUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPlaylistUseCase
 import pl.dakil.music.domain.usecase.GetUserPlaylistSongsUseCase
+import pl.dakil.music.domain.usecase.BurnLyricsToMetadataUseCase
+import pl.dakil.music.domain.usecase.GetLyricsForSongUseCase
 import pl.dakil.music.domain.usecase.IsFavoriteUseCase
 import pl.dakil.music.domain.usecase.ObserveFavoritesUseCase
 import pl.dakil.music.domain.usecase.ObservePlaybackUseCase
@@ -71,6 +80,7 @@ import pl.dakil.music.domain.usecase.ObserveUserPlaylistsUseCase
 import pl.dakil.music.domain.usecase.PlaybackControlUseCase
 import pl.dakil.music.domain.usecase.PlaySongsUseCase
 import pl.dakil.music.domain.usecase.RefreshLibraryUseCase
+import pl.dakil.music.domain.usecase.SearchLrclibUseCase
 import pl.dakil.music.domain.usecase.RenamePlaylistUseCase
 import pl.dakil.music.domain.usecase.ReorderFavoritesUseCase
 import pl.dakil.music.domain.usecase.SetFavoritesUseCase
@@ -112,6 +122,13 @@ class AppContainer(context: Context) {
     val sortStateRepository: SortStateRepository = SortStateRepositoryImpl(appContext.sortDataStore)
 
     val tagEditorRepository: TagEditorRepository = TagEditorRepositoryImpl(appContext)
+
+    private val lrclibDataSource = LrclibDataSource()
+
+    val lyricsRepository: LyricsRepository = LyricsRepositoryImpl(appContext, lrclibDataSource)
+
+    val lyricsAlignmentRepository: LyricsAlignmentRepository =
+        LyricsAlignmentRepositoryImpl(appContext.lyricsAlignmentDataStore)
 
     private val database = Room.databaseBuilder(appContext, MusicDatabase::class.java, "music.db").build()
 
@@ -170,6 +187,9 @@ class AppContainer(context: Context) {
     val refreshLibrary = RefreshLibraryUseCase(musicRepository)
     val editTags = EditTagsUseCase(tagEditorRepository)
 
+    val getLyricsForSong = GetLyricsForSongUseCase(lyricsRepository)
+    val searchLrclib = SearchLrclibUseCase(lyricsRepository)
+
     val observeSettings = ObserveSettingsUseCase(settingsRepository)
     val updateSettings = UpdateSettingsUseCase(settingsRepository)
 
@@ -184,6 +204,21 @@ class AppContainer(context: Context) {
     val reconcileHistory = ReconcileHistoryUseCase(listeningHistoryRepository)
     val propagateRetagToHistory = PropagateRetagToHistoryUseCase(listeningHistoryRepository)
     val mergeHistory = MergeHistoryUseCase(listeningHistoryRepository)
+
+    val burnLyricsToMetadata = BurnLyricsToMetadataUseCase(
+        editTags = editTags,
+        propagateRetagToHistory = propagateRetagToHistory,
+        alignmentRepository = lyricsAlignmentRepository,
+    )
+
+    /** Watches playback and resolves lyrics for the current song; UI observes [LyricsController.state]. */
+    val lyricsController = LyricsController(
+        playerRepository = playerRepository,
+        settingsRepository = settingsRepository,
+        getLyricsForSong = getLyricsForSong,
+        searchLrclib = searchLrclib,
+        scope = appScope,
+    )
 
     init {
         // Self-heal history whenever the library (re)loads: re-link records whose

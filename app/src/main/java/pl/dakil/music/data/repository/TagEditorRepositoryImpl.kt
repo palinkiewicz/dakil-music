@@ -196,6 +196,9 @@ class TagEditorRepositoryImpl(
             edit.genre?.let { tag.setField(FieldKey.GENRE, it) }
             edit.year?.let { tag.setField(FieldKey.YEAR, it) }
             edit.trackNumber?.let { tag.setField(FieldKey.TRACK, it) }
+            // A single LYRICS field per container; prefer the synced LRC (recognized as
+            // synced by most players, and still readable as plain) over plain text.
+            (edit.syncedLyrics ?: edit.plainLyrics)?.let { tag.setField(FieldKey.LYRICS, it) }
             edit.artwork?.let { art ->
                 tag.deleteArtworkField()
                 val artwork = AndroidArtwork().apply {

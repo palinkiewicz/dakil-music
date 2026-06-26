@@ -35,10 +35,15 @@ data class TagEdit(
     val year: String? = null,
     /** When non-null, replaces the embedded cover art with these image bytes. */
     val artwork: ArtworkData? = null,
+    /** LRC-timestamped lyrics to embed (takes precedence over [plainLyrics]). */
+    val syncedLyrics: String? = null,
+    /** Plain (untimed) lyrics to embed when no synced lyrics are provided. */
+    val plainLyrics: String? = null,
 ) {
     val isEmpty: Boolean
         get() = title == null && artist == null && genre == null &&
-            album == null && trackNumber == null && year == null && artwork == null
+            album == null && trackNumber == null && year == null && artwork == null &&
+            syncedLyrics == null && plainLyrics == null
 }
 
 /** Raw image bytes plus their MIME type, to be embedded as cover art. */

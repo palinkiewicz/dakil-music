@@ -317,4 +317,27 @@
     <string name="settings_album_rules">Albums with custom rules</string>
     <string name="settings_album_rules_summary">Manage per-album cover art and author overrides</string>
     <string name="notification_action_close">Close</string>
+
+    <!-- Lyrics -->
+    <string name="action_done">Done</string>
+    <string name="action_close">Close</string>
+    <string name="settings_display_lyrics">Display lyrics</string>
+    <string name="settings_display_lyrics_summary">Show a lyrics card on Now Playing and fetch lyrics when a song starts</string>
+    <string name="settings_fetch_missing_lyrics">Fetch missing lyrics from lrclib</string>
+    <string name="settings_fetch_missing_lyrics_summary">Look up lyrics online when a song has none embedded</string>
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_searching">Searching for lyrics…</string>
+    <string name="lyrics_not_found">No matching lyrics found</string>
+    <string name="lyrics_align">Align lyrics</string>
+    <string name="lyrics_align_summary">Shift the timing of every line for this song. Positive delays the lyrics.</string>
+    <string name="lyrics_align_field">Offset (ms)</string>
+    <string name="lyrics_select_lrclib">Select from lrclib</string>
+    <string name="lyrics_burn">Save into file</string>
+    <string name="lyrics_burn_success">Lyrics saved into the file</string>
+    <string name="lyrics_burn_failed">Could not save lyrics</string>
+    <string name="lyrics_search">Search</string>
+    <string name="lyrics_field_artist">Artist</string>
+    <string name="lyrics_field_track">Track</string>
+    <string name="lyrics_no_matches">No results</string>
+    <string name="lyrics_resync">Resync</string>
 </resources>

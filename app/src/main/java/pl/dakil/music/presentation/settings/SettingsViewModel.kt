@@ -92,4 +92,12 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setNowPlayingCornerRoundnessDp(dp: Int) = viewModelScope.launch {
         container.updateSettings.setNowPlayingCornerRoundnessDp(dp)
     }
+
+    fun setDisplayLyrics(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setDisplayLyrics(enabled)
+    }
+
+    fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setFetchMissingLyricsFromLrclib(enabled)
+    }
 }
