@@ -72,6 +72,7 @@ import pl.dakil.music.domain.usecase.GetSongsForPlaylistUseCase
 import pl.dakil.music.domain.usecase.GetUserPlaylistSongsUseCase
 import pl.dakil.music.domain.usecase.BurnLyricsToMetadataUseCase
 import pl.dakil.music.domain.usecase.GetLyricsForSongUseCase
+import pl.dakil.music.domain.usecase.ReadMetadataLyricsUseCase
 import pl.dakil.music.domain.usecase.IsFavoriteUseCase
 import pl.dakil.music.domain.usecase.ObserveFavoritesUseCase
 import pl.dakil.music.domain.usecase.ObservePlaybackUseCase
@@ -188,6 +189,7 @@ class AppContainer(context: Context) {
     val editTags = EditTagsUseCase(tagEditorRepository)
 
     val getLyricsForSong = GetLyricsForSongUseCase(lyricsRepository)
+    val readMetadataLyrics = ReadMetadataLyricsUseCase(lyricsRepository)
     val searchLrclib = SearchLrclibUseCase(lyricsRepository)
 
     val observeSettings = ObserveSettingsUseCase(settingsRepository)
@@ -215,7 +217,7 @@ class AppContainer(context: Context) {
     val lyricsController = LyricsController(
         playerRepository = playerRepository,
         settingsRepository = settingsRepository,
-        getLyricsForSong = getLyricsForSong,
+        readMetadataLyrics = readMetadataLyrics,
         searchLrclib = searchLrclib,
         scope = appScope,
     )

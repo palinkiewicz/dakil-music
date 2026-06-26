@@ -177,6 +177,7 @@ fun LyricsScreen(
             defaultArtist = state.defaultArtist,
             defaultTrack = state.defaultTrack,
             matches = state.matches,
+            searching = state.lrclibSearching,
             onSearch = viewModel::search,
             onSelect = {
                 viewModel.selectMatch(it)
@@ -320,12 +321,19 @@ private fun LrclibPickerDialog(
     defaultArtist: String,
     defaultTrack: String,
     matches: List<LrclibMatch>,
+    searching: Boolean,
     onSearch: (String, String) -> Unit,
     onSelect: (LrclibMatch) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var artist by remember { mutableStateOf(defaultArtist) }
     var track by remember { mutableStateOf(defaultTrack) }
+
+    // Auto-search on open when nothing was fetched yet (e.g. lyrics came from
+    // metadata, so lrclib was never queried for this song).
+    LaunchedEffect(Unit) {
+        if (matches.isEmpty() && !searching) onSearch(artist, track)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -351,7 +359,7 @@ private fun LrclibPickerDialog(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = { onSearch(artist, track) }) {
+                    IconButton(onClick = { onSearch(artist, track) }, enabled = !searching) {
                         Icon(
                             Icons.Rounded.Search,
                             contentDescription = stringResource(R.string.lyrics_search),
@@ -359,14 +367,21 @@ private fun LrclibPickerDialog(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                if (matches.isEmpty()) {
-                    Text(
+                when {
+                    searching -> Box(
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+
+                    matches.isEmpty() -> Text(
                         stringResource(R.string.lyrics_no_matches),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+
+                    else -> LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                         items(matches) { match ->
                             LrclibMatchRow(match = match, onClick = { onSelect(match) })
                         }

@@ -39,6 +39,7 @@ data class LyricsScreenState(
     val offsetMs: Long = 0L,
     val source: LyricsSource = LyricsSource.NONE,
     val matches: List<LrclibMatch> = emptyList(),
+    val lrclibSearching: Boolean = false,
     val lrclibEnabled: Boolean = true,
     val canBurn: Boolean = false,
     val defaultArtist: String = "",
@@ -84,6 +85,7 @@ class LyricsViewModel(private val container: AppContainer) : ViewModel() {
             offsetMs = offset,
             source = lyrics?.source ?: LyricsSource.NONE,
             matches = lyricsState.matches,
+            lrclibSearching = lyricsState.searching,
             lrclibEnabled = settings.fetchMissingLyricsFromLrclib,
             canBurn = lyrics?.source == LyricsSource.LRCLIB || offset != 0L,
             defaultArtist = song?.let {

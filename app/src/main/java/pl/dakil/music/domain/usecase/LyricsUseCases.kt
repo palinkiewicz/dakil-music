@@ -59,6 +59,12 @@ class GetLyricsForSongUseCase(private val lyricsRepository: LyricsRepository) {
     }
 }
 
+/** Reads embedded lyrics only (no network); null when the file has none. */
+class ReadMetadataLyricsUseCase(private val lyricsRepository: LyricsRepository) {
+    suspend operator fun invoke(song: Song): Lyrics? =
+        lyricsRepository.readFromMetadata(song)?.takeIf { it.lines.isNotEmpty() }
+}
+
 /** Manual lrclib search (from the picker dialog). */
 class SearchLrclibUseCase(private val lyricsRepository: LyricsRepository) {
     suspend operator fun invoke(artist: String, track: String): List<LrclibMatch> =

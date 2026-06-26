@@ -1,8 +1,10 @@
 package pl.dakil.music.data.lyrics
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import pl.dakil.music.domain.model.LrclibMatch
@@ -29,6 +31,8 @@ class LrclibDataSource {
             repeat(MAX_ATTEMPTS) { attempt ->
                 try {
                     return@withContext request(url)
+                } catch (e: CancellationException) {
+                    throw e // a newer request superseded this one — reject immediately
                 } catch (e: UnknownHostException) {
                     Log.w("Lrclib", "DNS failure (attempt ${attempt + 1}/$MAX_ATTEMPTS) for '$artist' / '$track'", e)
                     if (attempt < MAX_ATTEMPTS - 1) delay(RETRY_DELAY_MS)
@@ -40,7 +44,9 @@ class LrclibDataSource {
             emptyList()
         }
 
-    private fun request(url: URL): List<LrclibMatch> {
+    // runInterruptible so cancellation (a song switch) interrupts the blocking
+    // socket read promptly instead of waiting for the response/timeout.
+    private suspend fun request(url: URL): List<LrclibMatch> = runInterruptible {
         var connection: HttpURLConnection? = null
         try {
             connection = (url.openConnection() as HttpURLConnection).apply {
@@ -50,9 +56,9 @@ class LrclibDataSource {
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("User-Agent", USER_AGENT)
             }
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return emptyList()
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return@runInterruptible emptyList()
             val body = connection.inputStream.bufferedReader().use { it.readText() }
-            return parse(body)
+            parse(body)
         } finally {
             connection?.disconnect()
         }
