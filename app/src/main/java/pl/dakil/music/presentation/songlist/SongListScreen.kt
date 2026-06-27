@@ -93,6 +93,7 @@ import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.SongPickerDialog
 import pl.dakil.music.presentation.components.clickableRow
 import pl.dakil.music.presentation.components.coverArtModel
@@ -625,92 +626,6 @@ private fun CollapsingTopBar(
             titleContentColor = contentColor,
             actionIconContentColor = contentColor,
         ),
-        modifier = modifier,
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SelectionTopBar(
-    selectedCount: Int,
-    allSelectedFavorite: Boolean,
-    singleSelectionHasArt: Boolean,
-    showRemoveFromPlaylist: Boolean,
-    onClose: () -> Unit,
-    onSelectAll: () -> Unit,
-    onToggleFavorites: () -> Unit,
-    onAddToQueue: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-    onEditTags: () -> Unit,
-    onDecompose: () -> Unit,
-    onChangeCoverArt: () -> Unit,
-    onRemoveFromPlaylist: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var menuExpanded by remember { mutableStateOf(false) }
-
-    TopAppBar(
-        title = {
-            Text(pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount))
-        },
-        navigationIcon = {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, stringResource(R.string.action_close_selection))
-            }
-        },
-        actions = {
-            IconButton(onClick = onToggleFavorites) {
-                Icon(
-                    imageVector = if (allSelectedFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    contentDescription = stringResource(
-                        if (allSelectedFavorite) R.string.action_remove_from_favorites else R.string.action_add_to_favorites,
-                    ),
-                )
-            }
-            IconButton(onClick = onAddToQueue) {
-                Icon(Icons.Rounded.QueueMusic, stringResource(R.string.action_add_to_queue))
-            }
-            Box {
-                IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Rounded.MoreVert, stringResource(R.string.action_more))
-                }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_playlist)) },
-                        onClick = { menuExpanded = false; onAddToPlaylist() },
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    // "Add" when the lone selected song has no art, else "Change".
-                                    if (!singleSelectionHasArt) R.string.action_add_cover_art else R.string.action_change_cover_art,
-                                ),
-                            )
-                        },
-                        onClick = { menuExpanded = false; onChangeCoverArt() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_edit_tags)) },
-                        onClick = { menuExpanded = false; onEditTags() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_decompose_title)) },
-                        onClick = { menuExpanded = false; onDecompose() },
-                    )
-                    if (showRemoveFromPlaylist) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_remove_from_playlist)) },
-                            onClick = { menuExpanded = false; onRemoveFromPlaylist() },
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_select_all)) },
-                        onClick = { menuExpanded = false; onSelectAll() },
-                    )
-                }
-            }
-        },
         modifier = modifier,
     )
 }

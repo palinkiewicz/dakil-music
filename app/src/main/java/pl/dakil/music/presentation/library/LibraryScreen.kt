@@ -1,7 +1,11 @@
 package pl.dakil.music.presentation.library
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,6 +57,7 @@ import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -62,6 +67,8 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +80,8 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -106,8 +115,12 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.aspectRatioSquare
 import pl.dakil.music.presentation.components.coverArtModel
+import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
+import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
+import pl.dakil.music.presentation.songlist.EditTagsDialog
 
 private enum class LibraryTab(val titleRes: Int) {
     ALBUMS(R.string.tab_albums),
@@ -150,8 +163,40 @@ fun LibraryScreen(
     val playlistSort by viewModel.playlistSort.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val selectedSongIds by viewModel.selectedSongIds.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
+    val songDialog by viewModel.dialog.collectAsStateWithLifecycle()
+    val coverArtVersion by viewModel.coverArtVersion.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onWritePermissionGranted()
+        }
+    }
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) viewModel.onCoverArtPicked(context.contentResolver, uri)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is LibraryEvent.Message ->
+                    snackbarHostState.showSnackbar(context.getString(event.res))
+
+                is LibraryEvent.RequestWritePermission ->
+                    permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())
+            }
+        }
+    }
 
     var creatingPlaylist by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
@@ -172,7 +217,10 @@ fun LibraryScreen(
     // down. While the IME is up, back is left to the system so it closes the keyboard
     // first. Covers button, gesture and predictive back alike.
     val imeVisible = WindowInsets.isImeVisible
-    BackHandler(enabled = query.isNotEmpty() && !imeVisible) {
+    BackHandler(enabled = selectedSongIds.isNotEmpty()) {
+        viewModel.clearSelection()
+    }
+    BackHandler(enabled = selectedSongIds.isEmpty() && query.isNotEmpty() && !imeVisible) {
         viewModel.clearQuery()
     }
 
@@ -192,7 +240,8 @@ fun LibraryScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         TextField(
             value = query,
             onValueChange = viewModel::onQueryChange,
@@ -271,15 +320,67 @@ fun LibraryScreen(
         } else {
             SearchResultsList(
                 results = searchResults,
-                onSongClick = viewModel::playSong,
+                selectedSongIds = selectedSongIds,
+                onSongClick = viewModel::onSongClick,
+                onSongLongClick = viewModel::onSongLongClick,
                 onAlbumClick = onAlbumClick,
                 onPerformerClick = onPerformerClick,
                 onPlaylistClick = onPlaylistClick,
                 onUserPlaylistClick = onUserPlaylistClick,
                 query = query,
+                coverArtVersion = coverArtVersion,
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+
+        // Selection overlay covers the search bar while songs are picked for a bulk action.
+        if (selectedSongIds.isNotEmpty()) {
+            val selectedSongs = searchResults.songs.filter { it.id in selectedSongIds }
+            SelectionTopBar(
+                selectedCount = selectedSongIds.size,
+                allSelectedFavorite = selectedSongIds.isNotEmpty() &&
+                    selectedSongIds.all { it in favoriteIds },
+                singleSelectionHasArt = selectedSongs.size == 1 &&
+                    selectedSongs.first().albumArtUri != null,
+                showRemoveFromPlaylist = false,
+                onClose = viewModel::clearSelection,
+                onSelectAll = viewModel::selectAll,
+                onToggleFavorites = viewModel::toggleFavoritesForSelection,
+                onAddToQueue = viewModel::addSelectionToQueue,
+                onAddToPlaylist = viewModel::startAddToPlaylist,
+                onEditTags = viewModel::startEditTags,
+                onDecompose = viewModel::startDecompose,
+                onChangeCoverArt = { imagePicker.launch(arrayOf("image/png", "image/jpeg")) },
+                onRemoveFromPlaylist = {},
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+
+        SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
+    }
+
+    when (val current = songDialog) {
+        is LibrarySongDialog.EditTags -> EditTagsDialog(
+            songs = current.songs,
+            onDismiss = viewModel::dismissDialog,
+            onSave = { edit -> viewModel.saveTags(current.songs, edit) },
+        )
+
+        is LibrarySongDialog.Decompose -> DecomposeTitleDialog(
+            songs = current.songs,
+            onDismiss = viewModel::dismissDialog,
+            onApply = { options -> viewModel.applyDecomposition(current.songs, options) },
+        )
+
+        is LibrarySongDialog.AddToPlaylist -> AddToPlaylistDialog(
+            playlists = userPlaylists,
+            onDismiss = viewModel::dismissDialog,
+            onSelect = { id -> viewModel.addToExistingPlaylist(id, current.songs) },
+            onCreateNew = { name -> viewModel.createPlaylistAndAdd(name, current.songs) },
+        )
+
+        null -> Unit
     }
 
     if (creatingPlaylist) {
@@ -332,17 +433,22 @@ fun LibraryScreen(
 
 private const val PAGE_SIZE = 4
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SearchResultsList(
     results: SearchResults,
+    selectedSongIds: Set<Long>,
     onSongClick: (Song) -> Unit,
+    onSongLongClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
     onPerformerClick: (String) -> Unit,
     onPlaylistClick: (SystemPlaylist) -> Unit,
     onUserPlaylistClick: (String) -> Unit,
     query: String,
+    coverArtVersion: Int,
     modifier: Modifier = Modifier,
 ) {
+    val selectionMode = selectedSongIds.isNotEmpty()
     var songsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
     var albumsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
     var artistsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
@@ -359,7 +465,15 @@ private fun SearchResultsList(
                 SectionHeader(stringResource(R.string.search_section_songs))
             }
             items(results.songs.take(songsVisible), key = { "song_${it.id}" }) { song ->
+                val selected = song.id in selectedSongIds
                 ListItem(
+                    colors = ListItemDefaults.colors(
+                        containerColor = if (selected) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                    ),
                     headlineContent = {
                         Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     },
@@ -372,13 +486,20 @@ private fun SearchResultsList(
                         )
                     },
                     leadingContent = {
-                        AlbumArt(
-                            model = song.coverArtModel(),
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.size(48.dp),
-                        )
+                        if (selectionMode) {
+                            Checkbox(checked = selected, onCheckedChange = { onSongClick(song) })
+                        } else {
+                            AlbumArt(
+                                model = song.coverArtModel(coverArtVersion),
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.size(48.dp),
+                            )
+                        }
                     },
-                    modifier = Modifier.clickableRow { onSongClick(song) },
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onSongClick(song) },
+                        onLongClick = { onSongLongClick(song.id) },
+                    ),
                 )
             }
             if (results.songs.size > songsVisible) {

@@ -1,10 +1,17 @@
 package pl.dakil.music.presentation.library
 
+import android.content.ContentResolver
+import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,8 +21,12 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import pl.dakil.music.R
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
@@ -26,7 +37,27 @@ import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.model.Statistics
 import pl.dakil.music.domain.model.StatisticsWindow
 import pl.dakil.music.domain.model.SystemPlaylist
+import pl.dakil.music.domain.model.UserPlaylist
+import pl.dakil.music.domain.repository.ArtworkData
+import pl.dakil.music.domain.repository.SongTagEdit
+import pl.dakil.music.domain.repository.TagEdit
+import pl.dakil.music.domain.repository.TagWriteResult
+import pl.dakil.music.domain.util.DecomposeOptions
+import pl.dakil.music.domain.util.TitleDecomposer
 import java.time.DayOfWeek
+
+/** Which modal dialog (if any) is shown over the library for the song selection. */
+sealed interface LibrarySongDialog {
+    data class EditTags(val songs: List<Song>) : LibrarySongDialog
+    data class Decompose(val songs: List<Song>) : LibrarySongDialog
+    data class AddToPlaylist(val songs: List<Song>) : LibrarySongDialog
+}
+
+/** One-shot effects the library screen consumes (snackbars, Scoped-Storage consent). */
+sealed interface LibraryEvent {
+    data class Message(@param:StringRes val res: Int) : LibraryEvent
+    data class RequestWritePermission(val intentSender: android.content.IntentSender) : LibraryEvent
+}
 
 @OptIn(FlowPreview::class)
 class LibraryViewModel(private val container: AppContainer) : ViewModel() {
@@ -211,10 +242,12 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
 
     fun onQueryChange(q: String) {
         _query.value = q
+        clearSelection()
     }
 
     fun clearQuery() {
         _query.value = ""
+        clearSelection()
     }
 
     fun setSystemPlaylistNames(names: Map<SystemPlaylist, String>) {
@@ -223,6 +256,245 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
 
     fun playSong(song: Song) {
         container.playSongs(listOf(song))
+    }
+
+    // --- Song selection (search view) -----------------------------------------------
+
+    private val _selectedSongIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedSongIds: StateFlow<Set<Long>> = _selectedSongIds.asStateFlow()
+
+    val favoriteIds: StateFlow<Set<Long>> = container.observeFavorites()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val userPlaylists: StateFlow<List<UserPlaylist>> = container.observeUserPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _dialog = MutableStateFlow<LibrarySongDialog?>(null)
+    val dialog: StateFlow<LibrarySongDialog?> = _dialog.asStateFlow()
+
+    /** Bumped after a cover-art write so the UI re-fetches embedded art (busts Coil's cache). */
+    private val _coverArtVersion = MutableStateFlow(0)
+    val coverArtVersion: StateFlow<Int> = _coverArtVersion.asStateFlow()
+
+    private val _events = Channel<LibraryEvent>(Channel.BUFFERED)
+    val events: Flow<LibraryEvent> = _events.receiveAsFlow()
+
+    /** A tag-write retried verbatim after the user grants Scoped-Storage consent. */
+    private var pendingWrite: (suspend () -> TagWriteResult)? = null
+    private var pendingWriteIds: List<Long> = emptyList()
+    private var pendingPostSuccess: (suspend () -> Unit)? = null
+
+    /** Tap a search song: toggle it while selecting, otherwise play it. */
+    fun onSongClick(song: Song) {
+        if (_selectedSongIds.value.isNotEmpty()) toggleSelection(song.id) else playSong(song)
+    }
+
+    fun onSongLongClick(songId: Long) = toggleSelection(songId)
+
+    private fun toggleSelection(songId: Long) {
+        _selectedSongIds.update { current ->
+            if (songId in current) current - songId else current + songId
+        }
+    }
+
+    fun clearSelection() {
+        _selectedSongIds.value = emptySet()
+    }
+
+    /** Selects every song currently shown in the search results. */
+    fun selectAll() {
+        _selectedSongIds.value = searchResults.value.songs.mapTo(HashSet()) { it.id }
+    }
+
+    private fun selectedSongs(): List<Song> {
+        val selected = _selectedSongIds.value
+        return searchResults.value.songs.filter { it.id in selected }
+    }
+
+    fun addSelectionToQueue() {
+        val songs = selectedSongs()
+        if (songs.isEmpty()) return
+        container.addToQueue(songs)
+        viewModelScope.launch { _events.send(LibraryEvent.Message(R.string.snackbar_added_to_queue)) }
+        clearSelection()
+    }
+
+    /**
+     * Adds the selection to favorites, or — when every selected song is already a
+     * favorite — removes them all instead.
+     */
+    fun toggleFavoritesForSelection() {
+        val ids = _selectedSongIds.value
+        if (ids.isEmpty()) return
+        val makeFavorite = !ids.all { it in favoriteIds.value }
+        viewModelScope.launch {
+            container.setFavorites(ids, favorite = makeFavorite)
+            _events.send(
+                LibraryEvent.Message(
+                    if (makeFavorite) {
+                        R.string.snackbar_added_to_favorites
+                    } else {
+                        R.string.snackbar_removed_from_favorites
+                    },
+                ),
+            )
+            clearSelection()
+        }
+    }
+
+    fun startAddToPlaylist() {
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = LibrarySongDialog.AddToPlaylist(songs)
+    }
+
+    fun addToExistingPlaylist(playlistId: String, songs: List<Song>) {
+        viewModelScope.launch {
+            container.addSongsToPlaylist(playlistId, songs.map { it.id })
+            afterPlaylistAdd()
+        }
+    }
+
+    fun createPlaylistAndAdd(name: String, songs: List<Song>) {
+        viewModelScope.launch {
+            val id = container.createPlaylist(name)
+            container.addSongsToPlaylist(id, songs.map { it.id })
+            afterPlaylistAdd()
+        }
+    }
+
+    private suspend fun afterPlaylistAdd() {
+        _events.send(LibraryEvent.Message(R.string.snackbar_added_to_playlist))
+        _dialog.value = null
+        clearSelection()
+    }
+
+    fun startEditTags() {
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = LibrarySongDialog.EditTags(songs)
+    }
+
+    fun startDecompose() {
+        val songs = selectedSongs()
+        if (songs.isNotEmpty()) _dialog.value = LibrarySongDialog.Decompose(songs)
+    }
+
+    fun dismissDialog() {
+        _dialog.value = null
+    }
+
+    fun saveTags(songs: List<Song>, edit: TagEdit) {
+        if (edit.isEmpty || songs.isEmpty()) {
+            dismissDialog()
+            return
+        }
+        performWrite(songs.map { it.id }) { container.editTags(songs, edit) }
+    }
+
+    /**
+     * Runs [TitleDecomposer] over each selected song with the same [options] and writes
+     * the resulting per-song title + artists. Songs that yield no extracted performers
+     * are left untouched.
+     */
+    fun applyDecomposition(songs: List<Song>, options: DecomposeOptions) {
+        val edits = songs.mapNotNull { song ->
+            val result = TitleDecomposer.decompose(song.title, options)
+            if (result.artists.isEmpty()) {
+                null
+            } else {
+                SongTagEdit(
+                    song = song,
+                    edit = TagEdit(
+                        title = result.title.takeIf { it.isNotBlank() },
+                        artist = result.artists.joinToString(", ").takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+        }
+        if (edits.isEmpty()) {
+            dismissDialog()
+            return
+        }
+        performWrite(edits.map { it.song.id }) { container.editTags(edits) }
+    }
+
+    /**
+     * Validates a picked image and applies it to the current selection. The native
+     * picker is launched from the screen, which routes the chosen URI back here.
+     */
+    fun onCoverArtPicked(resolver: ContentResolver, uri: Uri) {
+        viewModelScope.launch {
+            val artwork = readArtwork(resolver, uri)
+            if (artwork == null) {
+                _events.send(LibraryEvent.Message(R.string.cover_art_invalid))
+                return@launch
+            }
+            val songs = selectedSongs()
+            if (songs.isNotEmpty()) writeArtwork(songs, artwork)
+        }
+    }
+
+    private fun writeArtwork(songs: List<Song>, artwork: ArtworkData) {
+        performWrite(
+            affectedIds = songs.map { it.id },
+            onSuccess = {
+                container.coverArtRefresher.invalidate(songs)
+                _coverArtVersion.update { it + 1 }
+            },
+        ) { container.editTags(songs, TagEdit(artwork = artwork)) }
+    }
+
+    private suspend fun readArtwork(resolver: ContentResolver, uri: Uri): ArtworkData? =
+        withContext(Dispatchers.IO) {
+            val mime = resolver.getType(uri)
+            if (mime != "image/png" && mime != "image/jpeg") return@withContext null
+            val bytes = runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            if (bytes == null || bytes.isEmpty()) null else ArtworkData(bytes, mime)
+        }
+
+    /** Called by the screen after the user grants Scoped-Storage write consent. */
+    fun onWritePermissionGranted() {
+        val retry = pendingWrite ?: return
+        val post = pendingPostSuccess
+        pendingWrite = null
+        pendingPostSuccess = null
+        performWrite(pendingWriteIds, post, retry)
+    }
+
+    /**
+     * Shared write pipeline: on success it refreshes the library so the results reflect
+     * the new tags immediately; on a permission denial it stashes the action to retry.
+     * [onSuccess] runs after a successful write (e.g. invalidating cached cover art).
+     */
+    private fun performWrite(
+        affectedIds: List<Long>,
+        onSuccess: (suspend () -> Unit)? = null,
+        write: suspend () -> TagWriteResult,
+    ) {
+        viewModelScope.launch {
+            when (val result = write()) {
+                is TagWriteResult.Success -> {
+                    container.refreshLibrary()
+                    // Keep listening history in sync with the new tags.
+                    val updated = container.musicRepository.songsByIds(affectedIds).first()
+                    if (updated.isNotEmpty()) container.propagateRetagToHistory(updated)
+                    onSuccess?.invoke()
+                    _events.send(LibraryEvent.Message(R.string.edit_tags_saved))
+                    _dialog.value = null
+                    clearSelection()
+                }
+
+                is TagWriteResult.RequiresPermission -> {
+                    pendingWrite = write
+                    pendingWriteIds = affectedIds
+                    pendingPostSuccess = onSuccess
+                    _events.send(LibraryEvent.RequestWritePermission(result.intentSender))
+                }
+
+                is TagWriteResult.Error -> {
+                    _events.send(LibraryEvent.Message(R.string.edit_tags_failed))
+                }
+            }
+        }
     }
 
     // --- Playlist management --------------------------------------------------------
