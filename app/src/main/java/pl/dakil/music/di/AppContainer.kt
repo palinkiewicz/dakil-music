@@ -68,6 +68,7 @@ import pl.dakil.music.domain.usecase.GetPerformersUseCase
 import pl.dakil.music.domain.usecase.GetPlaylistsUseCase
 import pl.dakil.music.domain.usecase.GetSongsForAlbumUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPerformerUseCase
+import pl.dakil.music.domain.usecase.GetSongFileInfoUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPlaylistUseCase
 import pl.dakil.music.domain.usecase.GetUserPlaylistSongsUseCase
 import pl.dakil.music.domain.usecase.BurnLyricsToMetadataUseCase
@@ -186,6 +187,7 @@ class AppContainer(context: Context) {
     val searchLibrary = SearchLibraryUseCase()
 
     val refreshLibrary = RefreshLibraryUseCase(musicRepository)
+    val getSongFileInfo = GetSongFileInfoUseCase(musicRepository)
     val editTags = EditTagsUseCase(tagEditorRepository)
 
     val getLyricsForSong = GetLyricsForSongUseCase(lyricsRepository)

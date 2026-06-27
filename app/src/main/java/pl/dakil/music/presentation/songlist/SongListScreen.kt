@@ -93,8 +93,10 @@ import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.presentation.components.FileInfoDialog
 import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.SongPickerDialog
+import pl.dakil.music.presentation.components.shareSongs
 import pl.dakil.music.presentation.components.clickableRow
 import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.components.formatDuration
@@ -331,6 +333,11 @@ fun SongListScreen(
                 onDecompose = viewModel::startDecompose,
                 onChangeCoverArt = { launchImagePicker(forAlbum = false) },
                 onRemoveFromPlaylist = viewModel::removeSelectionFromPlaylist,
+                onShare = {
+                    shareSongs(context, state.songs.filter { it.id in state.selectedIds })
+                    viewModel.clearSelection()
+                },
+                onShowInfo = viewModel::startFileInfo,
                 modifier = Modifier.align(Alignment.TopStart),
             )
         } else {
@@ -447,6 +454,11 @@ fun SongListScreen(
         is SongDialog.AlbumCoverArtTarget -> AlbumCoverArtTargetDialog(
             onAllSongs = { viewModel.applyAlbumCoverArt(current.artwork, toAllSongs = true) },
             onFirstSong = { viewModel.applyAlbumCoverArt(current.artwork, toAllSongs = false) },
+            onDismiss = viewModel::dismissDialog,
+        )
+
+        is SongDialog.FileInfo -> FileInfoDialog(
+            infos = current.infos,
             onDismiss = viewModel::dismissDialog,
         )
 

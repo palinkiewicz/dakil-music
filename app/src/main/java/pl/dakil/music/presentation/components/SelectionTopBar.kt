@@ -47,6 +47,8 @@ fun SelectionTopBar(
     onDecompose: () -> Unit,
     onChangeCoverArt: () -> Unit,
     onRemoveFromPlaylist: () -> Unit,
+    onShare: () -> Unit,
+    onShowInfo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -109,6 +111,27 @@ fun SelectionTopBar(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_select_all)) },
                         onClick = { menuExpanded = false; onSelectAll() },
+                    )
+                    val multi = selectedCount > 1
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (multi) R.string.action_share_files else R.string.action_share_file,
+                                ),
+                            )
+                        },
+                        onClick = { menuExpanded = false; onShare() },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (multi) R.string.action_files_info else R.string.action_file_info,
+                                ),
+                            )
+                        },
+                        onClick = { menuExpanded = false; onShowInfo() },
                     )
                 }
             }

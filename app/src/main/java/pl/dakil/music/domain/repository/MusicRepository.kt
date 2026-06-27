@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.model.SongFileInfo
 
 /**
  * Read access to the on-device music library backed by MediaStore. Implementations
@@ -35,4 +36,10 @@ interface MusicRepository {
 
     /** Re-queries MediaStore. Suspends until the scan completes. */
     suspend fun refresh()
+
+    /**
+     * Resolves filesystem details (path, size, bitrate, format) for [songs] from
+     * MediaStore. Songs whose row can't be found are skipped. Order is not guaranteed.
+     */
+    suspend fun fileInfo(songs: List<Song>): List<SongFileInfo>
 }

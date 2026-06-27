@@ -29,6 +29,7 @@ import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.AlbumRule
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.model.SongFileInfo
 import pl.dakil.music.domain.model.SystemPlaylist
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.domain.repository.AppSettings
@@ -99,6 +100,9 @@ sealed interface SongDialog {
 
     /** After picking album art, choose whether to apply it to all songs or just the first. */
     data class AlbumCoverArtTarget(val artwork: ArtworkData) : SongDialog
+
+    /** Read-only filesystem details for the selected song(s). */
+    data class FileInfo(val infos: List<SongFileInfo>) : SongDialog
 }
 
 /** One-shot effects the screen consumes (snackbars, Scoped-Storage consent). */
@@ -293,6 +297,16 @@ class SongListViewModel(
     fun startDecompose() {
         val songs = selectedSongs()
         if (songs.isNotEmpty()) _dialog.value = SongDialog.Decompose(songs)
+    }
+
+    /** Resolves filesystem details for the selection and shows the info dialog. */
+    fun startFileInfo() {
+        val songs = selectedSongs()
+        if (songs.isEmpty()) return
+        viewModelScope.launch {
+            val infos = container.getSongFileInfo(songs)
+            if (infos.isNotEmpty()) _dialog.value = SongDialog.FileInfo(infos)
+        }
     }
 
     fun dismissDialog() {

@@ -15,6 +15,7 @@ import pl.dakil.music.domain.model.AlbumRule
 import pl.dakil.music.domain.model.NO_ALBUM_ID
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.model.SongFileInfo
 import pl.dakil.music.domain.repository.AlbumRuleRepository
 import pl.dakil.music.domain.repository.AppSettings
 import pl.dakil.music.domain.repository.MusicRepository
@@ -124,6 +125,8 @@ class MusicRepositoryImpl(
             _songs.value = dataSource.queryAudio()
         }
     }
+
+    override suspend fun fileInfo(songs: List<Song>): List<SongFileInfo> = dataSource.fileInfo(songs)
 
     /** Sets [Song.individualCoverArt] per the effective cover-art mode of each song's album. */
     private fun annotate(songs: List<Song>, settings: AppSettings, rules: List<AlbumRule>): List<Song> {

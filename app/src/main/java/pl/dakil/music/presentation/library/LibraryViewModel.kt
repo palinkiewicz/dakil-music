@@ -36,6 +36,7 @@ import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.model.Statistics
 import pl.dakil.music.domain.model.StatisticsWindow
+import pl.dakil.music.domain.model.SongFileInfo
 import pl.dakil.music.domain.model.SystemPlaylist
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.domain.repository.ArtworkData
@@ -51,6 +52,9 @@ sealed interface LibrarySongDialog {
     data class EditTags(val songs: List<Song>) : LibrarySongDialog
     data class Decompose(val songs: List<Song>) : LibrarySongDialog
     data class AddToPlaylist(val songs: List<Song>) : LibrarySongDialog
+
+    /** Read-only filesystem details for the selected song(s). */
+    data class FileInfo(val infos: List<SongFileInfo>) : LibrarySongDialog
 }
 
 /** One-shot effects the library screen consumes (snackbars, Scoped-Storage consent). */
@@ -376,6 +380,16 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     fun startDecompose() {
         val songs = selectedSongs()
         if (songs.isNotEmpty()) _dialog.value = LibrarySongDialog.Decompose(songs)
+    }
+
+    /** Resolves filesystem details for the selection and shows the info dialog. */
+    fun startFileInfo() {
+        val songs = selectedSongs()
+        if (songs.isEmpty()) return
+        viewModelScope.launch {
+            val infos = container.getSongFileInfo(songs)
+            if (infos.isNotEmpty()) _dialog.value = LibrarySongDialog.FileInfo(infos)
+        }
     }
 
     fun dismissDialog() {

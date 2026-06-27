@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.model.SongFileInfo
 import pl.dakil.music.domain.util.ArtistSplitter
 import androidx.core.net.toUri
 
@@ -95,6 +96,78 @@ class MediaStoreDataSource(private val context: Context) {
             }
 
         songs
+    }
+
+    /**
+     * Queries MediaStore for the filesystem details of [songs]. [MediaStore.Audio.Media.BITRATE]
+     * only exists from API 30 (R); below that — or when MediaStore reports no value — the
+     * bitrate is estimated from the file size and duration.
+     */
+    suspend fun fileInfo(songs: List<Song>): List<SongFileInfo> = withContext(Dispatchers.IO) {
+        if (songs.isEmpty()) return@withContext emptyList()
+
+        val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val hasBitrateColumn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
+        val projection = buildList {
+            add(MediaStore.Audio.Media._ID)
+            @Suppress("DEPRECATION")
+            add(MediaStore.Audio.Media.DATA)
+            add(MediaStore.Audio.Media.SIZE)
+            if (hasBitrateColumn) add(MediaStore.Audio.Media.BITRATE)
+        }.toTypedArray()
+
+        val songById = songs.associateBy { it.id }
+        val ids = songById.keys
+        val placeholders = ids.joinToString(",") { "?" }
+        val selection = "${MediaStore.Audio.Media._ID} IN ($placeholders)"
+        val args = ids.map { it.toString() }.toTypedArray()
+
+        val result = ArrayList<SongFileInfo>(songs.size)
+
+        context.contentResolver.query(collection, projection, selection, args, null)
+            ?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                @Suppress("DEPRECATION")
+                val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+                val sizeCol = cursor.getColumnIndex(MediaStore.Audio.Media.SIZE)
+                val bitrateCol = if (hasBitrateColumn) {
+                    cursor.getColumnIndex(MediaStore.Audio.Media.BITRATE)
+                } else {
+                    -1
+                }
+
+                while (cursor.moveToNext()) {
+                    val song = songById[cursor.getLong(idCol)] ?: continue
+                    val path = if (dataCol >= 0) cursor.getString(dataCol) else null
+                    val size = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L
+                    val durationSeconds = song.durationMs / 1000.0
+                    val bitrate = when {
+                        bitrateCol >= 0 && !cursor.isNull(bitrateCol) -> cursor.getInt(bitrateCol)
+                        durationSeconds > 0 -> (size * 8 / durationSeconds).toInt()
+                        else -> 0
+                    }
+                    result += SongFileInfo(
+                        song = song,
+                        path = path,
+                        sizeBytes = size,
+                        durationMs = song.durationMs,
+                        bitrateBps = bitrate,
+                        format = formatLabel(path, song.mimeType),
+                    )
+                }
+            }
+
+        result
+    }
+
+    /** Short, user-facing format label, preferring the file extension over the MIME subtype. */
+    private fun formatLabel(path: String?, mimeType: String): String {
+        val ext = path?.substringAfterLast('.', "")?.takeIf { it.isNotBlank() && it.length <= 5 }
+        if (ext != null) return ext.uppercase()
+        return mimeType.substringAfterLast('/', "").substringAfterLast('.')
+            .ifBlank { mimeType }
+            .uppercase()
     }
 
     private fun albumArtUri(albumId: Long): Uri =

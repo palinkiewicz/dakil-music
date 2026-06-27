@@ -349,8 +349,6 @@ private fun NowPlayingContent(
                                 imageVector = Icons.Rounded.DragHandle,
                                 contentDescription = stringResource(R.string.cd_reorder),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                // Long-press the handle to "pop out" the row and drag it.
-                                // The reorder is committed once, on release.
                                 modifier = with(itemScope) {
                                     Modifier.longPressDraggableHandle(
                                         onDragStarted = {

@@ -115,8 +115,10 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.aspectRatioSquare
 import pl.dakil.music.presentation.components.coverArtModel
+import pl.dakil.music.presentation.components.FileInfoDialog
 import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.components.shareSongs
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
@@ -353,6 +355,11 @@ fun LibraryScreen(
                 onDecompose = viewModel::startDecompose,
                 onChangeCoverArt = { imagePicker.launch(arrayOf("image/png", "image/jpeg")) },
                 onRemoveFromPlaylist = {},
+                onShare = {
+                    shareSongs(context, selectedSongs)
+                    viewModel.clearSelection()
+                },
+                onShowInfo = viewModel::startFileInfo,
                 modifier = Modifier.align(Alignment.TopStart),
             )
         }
@@ -378,6 +385,11 @@ fun LibraryScreen(
             onDismiss = viewModel::dismissDialog,
             onSelect = { id -> viewModel.addToExistingPlaylist(id, current.songs) },
             onCreateNew = { name -> viewModel.createPlaylistAndAdd(name, current.songs) },
+        )
+
+        is LibrarySongDialog.FileInfo -> FileInfoDialog(
+            infos = current.infos,
+            onDismiss = viewModel::dismissDialog,
         )
 
         null -> Unit

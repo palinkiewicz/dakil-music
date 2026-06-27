@@ -74,8 +74,26 @@
     <string name="action_remove_from_favorites">Usuń z ulubionych</string>
     <string name="action_edit_tags">Edytuj tagi</string>
     <string name="action_decompose_title">Rozdziel tytuł</string>
+    <string name="action_share_file">Udostępnij plik</string>
+    <string name="action_share_files">Udostępnij pliki</string>
+    <string name="action_file_info">Informacje o pliku</string>
+    <string name="action_files_info">Informacje o plikach</string>
     <string name="snackbar_added_to_favorites">Dodano do ulubionych</string>
     <string name="snackbar_removed_from_favorites">Usunięto z ulubionych</string>
+
+    <!-- Okno informacji o pliku -->
+    <string name="file_info_title">Informacje o pliku</string>
+    <string name="file_info_title_multi">Informacje o plikach</string>
+    <string name="file_info_path">Ścieżka</string>
+    <string name="file_info_size">Rozmiar</string>
+    <string name="file_info_duration">Czas trwania</string>
+    <string name="file_info_bitrate">Przepływność</string>
+    <string name="file_info_format">Format</string>
+    <string name="file_info_count">Zaznaczone pliki</string>
+    <string name="file_info_total_size">Łączny rozmiar</string>
+    <string name="file_info_total_duration">Łączny czas trwania</string>
+    <string name="file_info_unknown">Nieznane</string>
+    <string name="share_chooser_title">Udostępnij</string>
 
     <string name="edit_tags_title">Edytuj tagi</string>
     <string name="edit_tags_field_title">Tytuł</string>

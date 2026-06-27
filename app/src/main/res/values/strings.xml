@@ -80,8 +80,26 @@
     <string name="action_remove_from_favorites">Remove from favorites</string>
     <string name="action_edit_tags">Edit tags</string>
     <string name="action_decompose_title">Decompose title</string>
+    <string name="action_share_file">Share file</string>
+    <string name="action_share_files">Share files</string>
+    <string name="action_file_info">File information</string>
+    <string name="action_files_info">Files information</string>
     <string name="snackbar_added_to_favorites">Added to favorites</string>
     <string name="snackbar_removed_from_favorites">Removed from favorites</string>
+
+    <!-- File information dialog -->
+    <string name="file_info_title">File information</string>
+    <string name="file_info_title_multi">Files information</string>
+    <string name="file_info_path">Path</string>
+    <string name="file_info_size">Size</string>
+    <string name="file_info_duration">Duration</string>
+    <string name="file_info_bitrate">Bitrate</string>
+    <string name="file_info_format">Format</string>
+    <string name="file_info_count">Files selected</string>
+    <string name="file_info_total_size">Total size</string>
+    <string name="file_info_total_duration">Total duration</string>
+    <string name="file_info_unknown">Unknown</string>
+    <string name="share_chooser_title">Share</string>
 
     <!-- Edit metadata -->
     <string name="edit_tags_title">Edit tags</string>
