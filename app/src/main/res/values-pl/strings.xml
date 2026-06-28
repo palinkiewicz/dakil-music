@@ -144,6 +144,8 @@
     <string name="widget_label">Odtwarzacz muzyki</string>
     <string name="widget_description">Steruj odtwarzaniem i zobacz bieżący utwór</string>
     <string name="widget_nothing_playing">Nic nie jest odtwarzane</string>
+    <string name="widget_preview_title">Tytuł utworu</string>
+    <string name="widget_preview_artist">Wykonawca</string>
 
     <!-- Kopia zapasowa -->
     <string name="backup_title">Kopia zapasowa</string>

@@ -153,6 +153,8 @@
     <string name="widget_label">Music player</string>
     <string name="widget_description">Control playback and see the current track</string>
     <string name="widget_nothing_playing">Nothing is playing</string>
+    <string name="widget_preview_title">Song title</string>
+    <string name="widget_preview_artist">Artist</string>
 
     <!-- Settings screen placeholders -->
     <string name="settings_title">Settings</string>

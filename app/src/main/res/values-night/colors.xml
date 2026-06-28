@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark variant of the widget-picker preview palette. -->
+    <color name="widget_preview_surface">#FF141218</color>
+    <color name="widget_preview_on_surface">#FFE6E0E9</color>
+    <color name="widget_preview_on_surface_variant">#FFCAC4D0</color>
+    <color name="widget_preview_container">#FF4A4458</color>
+    <color name="widget_preview_on_container">#FFE8DEF8</color>
+    <color name="widget_preview_primary">#FFD0BCFF</color>
+</resources>

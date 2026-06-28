@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Static preview shown in the launcher's widget picker (not used at runtime). -->
+<!-- Static preview shown in the launcher's widget picker (not used at runtime). Mirrors
+     the live "wide" layout: rounded card, cover, title/artist, progress and controls. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
+    android:background="@drawable/widget_preview_bg"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:padding="12dp">
 
-    <ImageView
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:background="#33808080"
-        android:padding="14dp"
-        android:src="@drawable/ic_widget_music_note"
-        android:contentDescription="@null"
-        android:tint="?android:attr/textColorPrimary" />
+    <FrameLayout
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/widget_preview_cover">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_widget_music_note"
+            android:tint="@color/widget_preview_on_container"
+            android:contentDescription="@null" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -24,22 +30,93 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/widget_preview_title"
+                android:textColor="@color/widget_preview_on_surface"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_widget_favorite_border"
+                android:tint="@color/widget_preview_on_surface_variant"
+                android:contentDescription="@null" />
+        </LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxLines="1"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
-            android:text="@string/widget_label"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textStyle="bold" />
+            android:maxLines="1"
+            android:text="@string/widget_preview_artist"
+            android:textColor="@color/widget_preview_on_surface_variant"
+            android:textSize="12sp" />
 
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:layout_marginTop="6dp"
-            android:src="@drawable/ic_widget_play"
-            android:contentDescription="@null"
-            android:tint="?android:attr/textColorPrimary" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:background="@drawable/widget_preview_progress_fill" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="match_parent" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="3"
+                android:background="@drawable/widget_preview_progress_track" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_widget_skip_previous"
+                android:tint="@color/widget_preview_on_surface"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:src="@drawable/ic_widget_play"
+                android:tint="@color/widget_preview_primary"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_widget_skip_next"
+                android:tint="@color/widget_preview_on_surface"
+                android:contentDescription="@null" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>
