@@ -42,6 +42,15 @@ interface PlayerRepository {
 
     fun cycleRepeatMode()
 
+    /** Sets the playback speed multiplier for the current session (not persisted). */
+    fun setPlaybackSpeed(speed: Float)
+
+    /** Starts (or replaces) an in-memory sleep timer that pauses playback after [durationMs]. */
+    fun startSleepTimer(durationMs: Long)
+
+    /** Cancels any running sleep timer. */
+    fun cancelSleepTimer()
+
     /** Releases the underlying MediaController. Call when the process-level scope ends. */
     fun release()
 }

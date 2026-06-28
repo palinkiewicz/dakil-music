@@ -2,6 +2,7 @@ package pl.dakil.music.data.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -55,6 +56,7 @@ class MediaControllerPlayerRepository(
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionJob: Job? = null
+    private var sleepTimerJob: Job? = null
 
     /** Maps mediaId -> Song so the current item resolves back to a rich domain model. */
     private val queueById = HashMap<String, Song>()
@@ -170,6 +172,42 @@ class MediaControllerPlayerRepository(
         }
     }
 
+    override fun setPlaybackSpeed(speed: Float) {
+        val c = controller ?: run {
+            pendingAction = { setPlaybackSpeed(speed) }
+            return
+        }
+        c.setPlaybackSpeed(speed.coerceIn(MIN_SPEED, MAX_SPEED))
+        syncState()
+    }
+
+    override fun startSleepTimer(durationMs: Long) {
+        sleepTimerJob?.cancel()
+        if (durationMs <= 0L) {
+            _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
+            return
+        }
+        val deadline = SystemClock.elapsedRealtime() + durationMs
+        sleepTimerJob = mainScope.launch {
+            while (isActive) {
+                val remaining = deadline - SystemClock.elapsedRealtime()
+                if (remaining <= 0L) {
+                    controller?.pause()
+                    _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
+                    return@launch
+                }
+                _playbackState.update { it.copy(sleepTimerRemainingMs = remaining) }
+                delay(SLEEP_TICK_MS)
+            }
+        }
+    }
+
+    override fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
+    }
+
     override fun currentSongSnapshot(): Song? =
         controller?.currentMediaItem?.mediaId?.let(queueById::get)
 
@@ -179,6 +217,7 @@ class MediaControllerPlayerRepository(
 
     override fun release() {
         positionJob?.cancel()
+        sleepTimerJob?.cancel()
         controllerFuture?.let(MediaController::releaseFuture)
         controller = null
     }
@@ -202,6 +241,7 @@ class MediaControllerPlayerRepository(
                 repeatMode = c.repeatMode.toRepeatMode(),
                 queue = queue,
                 currentIndex = c.currentMediaItemIndex,
+                playbackSpeed = c.playbackParameters.speed,
             )
         }
         startOrStopPositionUpdates(c.isPlaying)
@@ -233,5 +273,8 @@ class MediaControllerPlayerRepository(
 
     private companion object {
         const val POSITION_POLL_MS = 500L
+        const val SLEEP_TICK_MS = 1_000L
+        const val MIN_SPEED = 0.25f
+        const val MAX_SPEED = 3.0f
     }
 }

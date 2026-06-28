@@ -18,6 +18,15 @@
     <string name="now_playing_empty">Nothing is playing</string>
     <string name="now_playing_empty_hint">Pick a song from your library to start listening.</string>
     <string name="now_playing_queue">Queue</string>
+    <string name="sleep_timer">Off</string>
+    <string name="sleep_timer_title">Sleep</string>
+    <string name="sleep_timer_minutes">%1$d min</string>
+    <string name="sleep_timer_off">Turn off timer</string>
+    <string name="sleep_timer_custom">Custom time…</string>
+    <string name="speed_title">Speed</string>
+    <string name="speed_custom">Custom speed…</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_start">Start</string>
     <string name="action_clear_queue">Clear</string>
     <string name="action_remove_from_queue">Remove from queue</string>
     <string name="cd_reorder">Reorder</string>

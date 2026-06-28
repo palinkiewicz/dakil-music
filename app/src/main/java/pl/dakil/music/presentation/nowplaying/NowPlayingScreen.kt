@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Favorite
@@ -37,7 +39,11 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +78,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
@@ -114,6 +121,9 @@ fun NowPlayingScreen(
         onSeek = viewModel::onSeek,
         onToggleShuffle = viewModel::onToggleShuffle,
         onCycleRepeat = viewModel::onCycleRepeat,
+        onSetSpeed = viewModel::onSetSpeed,
+        onStartSleepTimer = viewModel::onStartSleepTimer,
+        onCancelSleepTimer = viewModel::onCancelSleepTimer,
         onToggleFavorite = viewModel::onToggleFavorite,
         onAddToPlaylist = viewModel::openAddToPlaylist,
         onQueueItemClick = viewModel::onQueueItemClick,
@@ -143,6 +153,9 @@ private fun NowPlayingContent(
     onSeek: (Long) -> Unit,
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
+    onSetSpeed: (Float) -> Unit,
+    onStartSleepTimer: (Long) -> Unit,
+    onCancelSleepTimer: () -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onOpenLyrics: () -> Unit,
@@ -288,6 +301,16 @@ private fun NowPlayingContent(
                     onPrevious = onPrevious,
                     onToggleShuffle = onToggleShuffle,
                     onCycleRepeat = onCycleRepeat,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                SecondaryControls(
+                    playbackSpeed = state.playbackSpeed,
+                    sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                    onSetSpeed = onSetSpeed,
+                    onStartSleepTimer = onStartSleepTimer,
+                    onCancelSleepTimer = onCancelSleepTimer,
                 )
             }
         }
@@ -657,6 +680,252 @@ private fun TransportControls(
             )
         }
     }
+}
+
+/** Speeds offered by the playback-speed menu. */
+private val SPEED_OPTIONS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
+
+/** Sleep-timer durations offered (minutes). */
+private val SLEEP_OPTIONS_MIN = listOf(5, 15, 30, 45, 60)
+
+/** Bounds for the custom-speed slider; mirror the clamp in the player repository. */
+private const val SPEED_MIN = 0.25f
+private const val SPEED_MAX = 3.0f
+
+/** Bounds for the custom sleep-timer slider (minutes). */
+private const val SLEEP_MIN_MINUTES = 1
+private const val SLEEP_MAX_MINUTES = 180
+
+/** Formats a speed as a compact multiplier label, e.g. "1×" or "1.5×". */
+private fun formatSpeed(speed: Float): String {
+    val text = if (speed == speed.toInt().toFloat()) {
+        speed.toInt().toString()
+    } else {
+        speed.toString().trimEnd('0').trimEnd('.')
+    }
+    return "${text}×"
+}
+
+/** A secondary row exposing playback speed and a session-only sleep timer. */
+@Composable
+private fun SecondaryControls(
+    playbackSpeed: Float,
+    sleepTimerRemainingMs: Long?,
+    onSetSpeed: (Float) -> Unit,
+    onStartSleepTimer: (Long) -> Unit,
+    onCancelSleepTimer: () -> Unit,
+) {
+    var speedMenu by remember { mutableStateOf(false) }
+    var sleepMenu by remember { mutableStateOf(false) }
+    var customSpeedDialog by remember { mutableStateOf(false) }
+    var customTimeDialog by remember { mutableStateOf(false) }
+    val timerActive = sleepTimerRemainingMs != null
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box {
+            TextButton(onClick = { speedMenu = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.Speed,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(formatSpeed(playbackSpeed))
+            }
+            DropdownMenu(expanded = speedMenu, onDismissRequest = { speedMenu = false }) {
+                SPEED_OPTIONS.forEach { speed ->
+                    DropdownMenuItem(
+                        text = { Text(formatSpeed(speed)) },
+                        trailingIcon = if (speed == playbackSpeed) {
+                            { Icon(Icons.Rounded.Check, contentDescription = null) }
+                        } else {
+                            null
+                        },
+                        onClick = {
+                            speedMenu = false
+                            onSetSpeed(speed)
+                        },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.speed_custom)) },
+                    leadingIcon = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                    onClick = {
+                        speedMenu = false
+                        customSpeedDialog = true
+                    },
+                )
+            }
+        }
+
+        Box {
+            TextButton(
+                onClick = { sleepMenu = true },
+                colors = if (timerActive) {
+                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                } else {
+                    ButtonDefaults.textButtonColors()
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Bedtime,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = sleepTimerRemainingMs?.let(::formatDuration)
+                        ?: stringResource(R.string.sleep_timer),
+                )
+            }
+            DropdownMenu(expanded = sleepMenu, onDismissRequest = { sleepMenu = false }) {
+                SLEEP_OPTIONS_MIN.forEach { minutes ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(stringResource(R.string.sleep_timer_minutes, minutes))
+                        },
+                        onClick = {
+                            sleepMenu = false
+                            onStartSleepTimer(minutes * 60_000L)
+                        },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.sleep_timer_custom)) },
+                    leadingIcon = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                    onClick = {
+                        sleepMenu = false
+                        customTimeDialog = true
+                    },
+                )
+                if (timerActive) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.sleep_timer_off)) },
+                        leadingIcon = { Icon(Icons.Rounded.Close, contentDescription = null) },
+                        onClick = {
+                            sleepMenu = false
+                            onCancelSleepTimer()
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    if (customSpeedDialog) {
+        CustomSpeedDialog(
+            initialSpeed = playbackSpeed,
+            onConfirm = {
+                customSpeedDialog = false
+                onSetSpeed(it)
+            },
+            onDismiss = { customSpeedDialog = false },
+        )
+    }
+
+    if (customTimeDialog) {
+        CustomTimeDialog(
+            initialMinutes = sleepTimerRemainingMs
+                ?.let { (it / 60_000L).toInt().coerceAtLeast(1) }
+                ?: 30,
+            onConfirm = {
+                customTimeDialog = false
+                onStartSleepTimer(it * 60_000L)
+            },
+            onDismiss = { customTimeDialog = false },
+        )
+    }
+}
+
+/** Dialog with a slider to pick an arbitrary playback speed (0.25×–3.0×, 0.05 steps). */
+@Composable
+private fun CustomSpeedDialog(
+    initialSpeed: Float,
+    onConfirm: (Float) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember { mutableStateOf(initialSpeed.coerceIn(SPEED_MIN, SPEED_MAX)) }
+    // Snap to 0.05 increments so the label stays clean.
+    val snapped = (value * 20f).roundToInt() / 20f
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.speed_title)) },
+        text = {
+            Column {
+                Text(
+                    text = formatSpeed(snapped),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = TextAlign.Center,
+                )
+                Slider(
+                    value = value,
+                    onValueChange = { value = it },
+                    valueRange = SPEED_MIN..SPEED_MAX,
+                    // (3.0 - 0.25) / 0.05 = 55 discrete stops.
+                    steps = 54,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(snapped) }) {
+                Text(stringResource(R.string.action_apply))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/** Dialog with a slider to start a sleep timer for an arbitrary number of minutes. */
+@Composable
+private fun CustomTimeDialog(
+    initialMinutes: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember {
+        mutableStateOf(initialMinutes.coerceIn(SLEEP_MIN_MINUTES, SLEEP_MAX_MINUTES).toFloat())
+    }
+    val minutes = value.roundToInt()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.sleep_timer_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.sleep_timer_minutes, minutes),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = TextAlign.Center,
+                )
+                Slider(
+                    value = value,
+                    onValueChange = { value = it },
+                    valueRange = SLEEP_MIN_MINUTES.toFloat()..SLEEP_MAX_MINUTES.toFloat(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(minutes) }) {
+                Text(stringResource(R.string.action_start))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 @Composable

@@ -39,6 +39,8 @@ data class NowPlayingUiState(
     val currentIndex: Int = -1,
     val queueRemoveMode: QueueRemoveMode = QueueRemoveMode.SWIPE,
     val coverArtRoundnessDp: Int = 32,
+    val playbackSpeed: Float = 1f,
+    val sleepTimerRemainingMs: Long? = null,
 )
 
 /** Compact lyrics state for the Now Playing card. */
@@ -79,6 +81,8 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             currentIndex = playback.currentIndex,
             queueRemoveMode = settings.queueRemoveMode,
             coverArtRoundnessDp = settings.nowPlayingCornerRoundnessDp,
+            playbackSpeed = playback.playbackSpeed,
+            sleepTimerRemainingMs = playback.sleepTimerRemainingMs,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 
@@ -125,6 +129,9 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     fun onSeek(positionMs: Long) = container.playbackControl.seekTo(positionMs)
     fun onToggleShuffle() = container.playbackControl.toggleShuffle()
     fun onCycleRepeat() = container.playbackControl.cycleRepeatMode()
+    fun onSetSpeed(speed: Float) = container.playbackControl.setPlaybackSpeed(speed)
+    fun onStartSleepTimer(durationMs: Long) = container.playbackControl.startSleepTimer(durationMs)
+    fun onCancelSleepTimer() = container.playbackControl.cancelSleepTimer()
     fun onQueueItemClick(index: Int) = container.playbackControl.skipToQueueItem(index)
     fun onMoveQueueItem(from: Int, to: Int) = container.playbackControl.moveQueueItem(from, to)
     fun onRemoveQueueItem(index: Int) = container.playbackControl.removeQueueItem(index)

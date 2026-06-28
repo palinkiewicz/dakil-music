@@ -13,6 +13,10 @@ data class PlaybackState(
     /** The full play queue in order, and the index of [currentSong] within it. */
     val queue: List<Song> = emptyList(),
     val currentIndex: Int = -1,
+    /** Playback speed multiplier (1.0 = normal). Session-only; never persisted. */
+    val playbackSpeed: Float = 1f,
+    /** Milliseconds left on the active sleep timer, or null when none is running. */
+    val sleepTimerRemainingMs: Long? = null,
 )
 
 enum class RepeatMode { OFF, ALL, ONE }

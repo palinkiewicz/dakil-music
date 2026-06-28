@@ -15,6 +15,15 @@
     <string name="now_playing_empty">Nic nie jest odtwarzane</string>
     <string name="now_playing_empty_hint">Wybierz utwór z biblioteki, aby zacząć słuchać.</string>
     <string name="now_playing_queue">Kolejka</string>
+    <string name="sleep_timer">Wył.</string>
+    <string name="sleep_timer_title">Wyłącznik</string>
+    <string name="sleep_timer_minutes">%1$d min</string>
+    <string name="sleep_timer_off">Wyłącz minutnik</string>
+    <string name="sleep_timer_custom">Własny czas…</string>
+    <string name="speed_title">Prędkość</string>
+    <string name="speed_custom">Własna prędkość…</string>
+    <string name="action_apply">Zastosuj</string>
+    <string name="action_start">Uruchom</string>
     <string name="action_clear_queue">Wyczyść</string>
     <string name="action_remove_from_queue">Usuń z kolejki</string>
     <string name="cd_reorder">Zmień kolejność</string>
