@@ -257,7 +257,7 @@ class AppContainer(context: Context) {
             }
         }
         // Refresh home-screen widgets when the track or play/pause state changes.
-        MusicWidgetUpdater.start(appContext, playerRepository, appScope)
+        MusicWidgetUpdater.start(appContext, this, appScope)
     }
 
     fun release() {

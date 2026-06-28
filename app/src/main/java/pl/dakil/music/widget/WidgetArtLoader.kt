@@ -4,54 +4,48 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import android.util.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import pl.dakil.music.domain.model.Song
 
 /**
- * Loads a small cover-art bitmap for the home-screen widget. Mirrors the in-app
- * cover-art resolution: a song flagged for individual art uses its embedded picture,
- * otherwise the album's shared MediaStore art; either falls back to the other.
+ * Loads a cover-art bitmap for the home-screen widget, mirroring the in-app
+ * resolution: a song flagged for individual art prefers its embedded picture,
+ * otherwise the album's shared art. Falls back across both sources.
  *
- * Bitmaps pushed into a widget travel through RemoteViews, which has a tight
- * transaction size limit, so the result is always downscaled to [TARGET_PX].
+ * The shared art is read with [android.content.ContentResolver.loadThumbnail] on the
+ * song's own MediaStore uri (reliable on API 29+, unlike opening the deprecated
+ * `albumart` uri). Results are capped at [TARGET_PX]: bitmaps travel through
+ * RemoteViews, which has a tight transaction size limit.
  */
 object WidgetArtLoader {
 
-    private const val TARGET_PX = 256
+    private const val TARGET_PX = 512
 
     suspend fun load(context: Context, song: Song): Bitmap? = withContext(Dispatchers.IO) {
-        val preferEmbedded = song.individualCoverArt
-        val first = if (preferEmbedded) embedded(context, song) else album(context, song)
-        first ?: if (preferEmbedded) album(context, song) else embedded(context, song)
+        val sources = if (song.individualCoverArt) {
+            listOf({ embedded(context, song) }, { thumbnail(context, song) })
+        } else {
+            listOf({ thumbnail(context, song) }, { embedded(context, song) })
+        }
+        sources.firstNotNullOfOrNull { it() }
     }
+
+    private fun thumbnail(context: Context, song: Song): Bitmap? = runCatching {
+        context.contentResolver.loadThumbnail(song.uri, Size(TARGET_PX, TARGET_PX), null)
+    }.getOrNull()
 
     private fun embedded(context: Context, song: Song): Bitmap? = runCatching {
         val bytes = MediaMetadataRetriever().use { retriever ->
             retriever.setDataSource(context, song.uri)
             retriever.embeddedPicture
         } ?: return null
-        decodeScaled { opts -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) }
-    }.getOrNull()
-
-    private fun album(context: Context, song: Song): Bitmap? {
-        val uri = song.albumArtUri ?: return null
-        return runCatching {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val bytes = stream.readBytes()
-                decodeScaled { opts -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) }
-            }
-        }.getOrNull()
-    }
-
-    /** Two-pass decode: measure bounds, pick an integer sample size, then decode downscaled. */
-    private inline fun decodeScaled(decode: (BitmapFactory.Options) -> Bitmap?): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        decode(bounds)
-        val largest = maxOf(bounds.outWidth, bounds.outHeight)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         var sample = 1
-        while (largest / sample > TARGET_PX * 2) sample *= 2
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > TARGET_PX) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        return decode(opts)
-    }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+    }.getOrNull()
 }
