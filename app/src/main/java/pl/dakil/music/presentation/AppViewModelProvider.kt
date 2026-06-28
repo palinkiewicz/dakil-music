@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.presentation.backup.BackupViewModel
 import pl.dakil.music.presentation.history.ListeningHistoryViewModel
 import pl.dakil.music.presentation.library.LibraryViewModel
 import pl.dakil.music.presentation.lyrics.LyricsViewModel
@@ -30,6 +31,7 @@ object AppViewModelProvider {
         initializer { ListeningHistoryViewModel(container()) }
         initializer { StatisticsViewModel(container()) }
         initializer { LyricsViewModel(container()) }
+        initializer { BackupViewModel(container()) }
     }
 }
 

@@ -140,6 +140,8 @@
     <string name="more_title">More</string>
     <string name="more_settings">Settings</string>
     <string name="more_settings_summary">App configuration and playback options</string>
+    <string name="more_backup">Backup &amp; restore</string>
+    <string name="more_backup_summary">Export or import your settings, playlists and data</string>
     <string name="more_refresh">Refresh library</string>
     <string name="more_refresh_summary">Rescan device storage for new music</string>
     <string name="more_about">About this app</string>
@@ -173,6 +175,24 @@
     <string name="queue_remove_mode_menu">Long-press menu</string>
     <string name="queue_remove_mode_button">Remove button</string>
     <string name="queue_remove_mode_swipe">Swipe to remove</string>
+
+    <!-- Backup & restore -->
+    <string name="backup_title">Backup &amp; restore</string>
+    <string name="backup_full_section">Full backup</string>
+    <string name="backup_full_title">All app data</string>
+    <string name="backup_full_summary">A single .zip with every item below</string>
+    <string name="backup_individual_section">Individual data</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_import">Import</string>
+    <string name="backup_export_done">Export complete</string>
+    <string name="backup_import_done">Import complete</string>
+    <string name="backup_failed">Operation failed</string>
+    <string name="backup_cat_settings">Settings</string>
+    <string name="backup_cat_favorites">Favorites</string>
+    <string name="backup_cat_playlists">Playlists</string>
+    <string name="backup_cat_album_rules">Album rules</string>
+    <string name="backup_cat_lyrics_alignment">Lyrics alignment</string>
+    <string name="backup_cat_sort">Sort preferences</string>
 
     <!-- About dialog -->
     <string name="about_title">About Music</string>

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +52,7 @@ fun MoreScreen(
     onOpenSettings: () -> Unit,
     onOpenListeningHistory: () -> Unit,
     onOpenStatistics: () -> Unit,
+    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier,
     onReselect: Flow<Unit> = emptyFlow(),
     viewModel: MoreViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -122,13 +124,21 @@ fun MoreScreen(
                 )
             }
             item { HorizontalDivider() }
-            // Group 3: settings
+            // Group 3: settings & backup
             item {
                 MoreItem(
                     icon = Icons.Rounded.Settings,
                     title = stringResource(R.string.more_settings),
                     summary = stringResource(R.string.more_settings_summary),
                     onClick = onOpenSettings,
+                )
+            }
+            item {
+                MoreItem(
+                    icon = Icons.Rounded.Inventory2,
+                    title = stringResource(R.string.more_backup),
+                    summary = stringResource(R.string.more_backup_summary),
+                    onClick = onOpenBackup,
                 )
             }
             item { HorizontalDivider() }

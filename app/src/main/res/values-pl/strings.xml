@@ -131,6 +131,8 @@
     <string name="more_title">Więcej</string>
     <string name="more_settings">Ustawienia</string>
     <string name="more_settings_summary">Konfiguracja aplikacji i opcje odtwarzania</string>
+    <string name="more_backup">Kopia zapasowa</string>
+    <string name="more_backup_summary">Eksportuj lub importuj ustawienia, playlisty i dane</string>
     <string name="more_refresh">Odśwież bibliotekę</string>
     <string name="more_refresh_summary">Ponownie przeskanuj pamięć urządzenia w poszukiwaniu muzyki</string>
     <string name="more_about">O aplikacji</string>
@@ -142,6 +144,24 @@
     <string name="widget_label">Odtwarzacz muzyki</string>
     <string name="widget_description">Steruj odtwarzaniem i zobacz bieżący utwór</string>
     <string name="widget_nothing_playing">Nic nie jest odtwarzane</string>
+
+    <!-- Kopia zapasowa -->
+    <string name="backup_title">Kopia zapasowa</string>
+    <string name="backup_full_section">Pełna kopia zapasowa</string>
+    <string name="backup_full_title">Wszystkie dane aplikacji</string>
+    <string name="backup_full_summary">Pojedynczy plik .zip ze wszystkimi pozycjami poniżej</string>
+    <string name="backup_individual_section">Poszczególne dane</string>
+    <string name="backup_export">Eksportuj</string>
+    <string name="backup_import">Importuj</string>
+    <string name="backup_export_done">Eksport zakończony</string>
+    <string name="backup_import_done">Import zakończony</string>
+    <string name="backup_failed">Operacja nie powiodła się</string>
+    <string name="backup_cat_settings">Ustawienia</string>
+    <string name="backup_cat_favorites">Ulubione</string>
+    <string name="backup_cat_playlists">Playlisty</string>
+    <string name="backup_cat_album_rules">Reguły albumów</string>
+    <string name="backup_cat_lyrics_alignment">Synchronizacja tekstów</string>
+    <string name="backup_cat_sort">Preferencje sortowania</string>
 
     <string name="settings_title">Ustawienia</string>
     <string name="settings_dynamic_color">Użyj koloru dynamicznego</string>

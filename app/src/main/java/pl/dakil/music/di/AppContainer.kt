@@ -16,6 +16,13 @@ import pl.dakil.music.data.datastore.settingsDataStore
 import pl.dakil.music.data.datastore.sortDataStore
 import pl.dakil.music.data.db.MusicDatabase
 import pl.dakil.music.data.lyrics.LrclibDataSource
+import pl.dakil.music.data.repository.BackupRepositoryImpl
+import pl.dakil.music.domain.model.BackupCategory
+import pl.dakil.music.domain.repository.BackupRepository
+import pl.dakil.music.domain.usecase.ExportBackupCategoryUseCase
+import pl.dakil.music.domain.usecase.ExportFullBackupUseCase
+import pl.dakil.music.domain.usecase.ImportBackupCategoryUseCase
+import pl.dakil.music.domain.usecase.ImportFullBackupUseCase
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.data.playback.LyricsController
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
@@ -138,6 +145,17 @@ class AppContainer(context: Context) {
     val listeningHistoryRepository: ListeningHistoryRepository =
         ListeningHistoryRepositoryImpl(database.listeningRecordDao())
 
+    val backupRepository: BackupRepository = BackupRepositoryImpl(
+        stores = mapOf(
+            BackupCategory.SETTINGS to appContext.settingsDataStore,
+            BackupCategory.FAVORITES to appContext.favoritesDataStore,
+            BackupCategory.PLAYLISTS to appContext.playlistsDataStore,
+            BackupCategory.ALBUM_RULES to appContext.albumRulesDataStore,
+            BackupCategory.LYRICS_ALIGNMENT to appContext.lyricsAlignmentDataStore,
+            BackupCategory.SORT to appContext.sortDataStore,
+        ),
+    )
+
     // Concrete type retained so the history tracker can use its raw-event seam.
     private val mediaControllerPlayer = MediaControllerPlayerRepository(appContext)
     val playerRepository: PlayerRepository = mediaControllerPlayer
@@ -209,6 +227,11 @@ class AppContainer(context: Context) {
     val reconcileHistory = ReconcileHistoryUseCase(listeningHistoryRepository)
     val propagateRetagToHistory = PropagateRetagToHistoryUseCase(listeningHistoryRepository)
     val mergeHistory = MergeHistoryUseCase(listeningHistoryRepository)
+
+    val exportBackupCategory = ExportBackupCategoryUseCase(backupRepository)
+    val importBackupCategory = ImportBackupCategoryUseCase(backupRepository)
+    val exportFullBackup = ExportFullBackupUseCase(backupRepository)
+    val importFullBackup = ImportFullBackupUseCase(backupRepository)
 
     val burnLyricsToMetadata = BurnLyricsToMetadataUseCase(
         editTags = editTags,
