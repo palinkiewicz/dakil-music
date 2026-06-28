@@ -147,6 +147,11 @@
     <string name="refresh_in_progress">Refreshing library…</string>
     <string name="refresh_done">Library up to date</string>
 
+    <!-- Home-screen widget -->
+    <string name="widget_label">Music player</string>
+    <string name="widget_description">Control playback and see the current track</string>
+    <string name="widget_nothing_playing">Nothing is playing</string>
+
     <!-- Settings screen placeholders -->
     <string name="settings_title">Settings</string>
     <string name="settings_dynamic_color">Use dynamic color</string>

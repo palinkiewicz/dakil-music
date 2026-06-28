@@ -89,6 +89,7 @@ import pl.dakil.music.domain.usecase.SetFavoritesUseCase
 import pl.dakil.music.domain.usecase.ShufflePlayUseCase
 import pl.dakil.music.domain.usecase.ToggleFavoriteUseCase
 import pl.dakil.music.domain.usecase.UpdateSettingsUseCase
+import pl.dakil.music.widget.MusicWidgetUpdater
 
 /**
  * Manual dependency-injection container. A single instance lives on the
@@ -232,6 +233,8 @@ class AppContainer(context: Context) {
                 if (songs.isNotEmpty()) reconcileHistory(songs)
             }
         }
+        // Refresh home-screen widgets when the track or play/pause state changes.
+        MusicWidgetUpdater.start(appContext, playerRepository, appScope)
     }
 
     fun release() {

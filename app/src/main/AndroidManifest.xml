@@ -54,6 +54,19 @@
             </intent-filter>
         </service>
 
+        <!-- Home-screen widget: current track, cover art and transport controls. -->
+        <receiver
+            android:name=".widget.MusicWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/music_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

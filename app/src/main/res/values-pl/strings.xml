@@ -138,6 +138,11 @@
     <string name="refresh_in_progress">Odświeżanie biblioteki…</string>
     <string name="refresh_done">Biblioteka jest aktualna</string>
 
+    <!-- Widget ekranu głównego -->
+    <string name="widget_label">Odtwarzacz muzyki</string>
+    <string name="widget_description">Steruj odtwarzaniem i zobacz bieżący utwór</string>
+    <string name="widget_nothing_playing">Nic nie jest odtwarzane</string>
+
     <string name="settings_title">Ustawienia</string>
     <string name="settings_dynamic_color">Użyj koloru dynamicznego</string>
     <string name="settings_dynamic_color_summary">Dopasuj kolorystykę aplikacji do Twojej tapety</string>
