@@ -271,7 +271,11 @@ class MediaControllerPlayerRepository(
     }
 
     override fun currentSongSnapshot(): Song? =
-        controller?.currentMediaItem?.mediaId?.let(queueById::get)
+        controller?.currentMediaItem?.let(::resolveSong)
+
+    /** Resolves a [MediaItem] to a rich [Song] (enqueued by the app) or a partial one. */
+    private fun resolveSong(item: MediaItem): Song? =
+        queueById[item.mediaId] ?: MediaItemMapper.toSong(item)
 
     override fun currentPositionMs(): Long = controller?.currentPosition?.coerceAtLeast(0L) ?: 0L
 
@@ -286,10 +290,10 @@ class MediaControllerPlayerRepository(
 
     private fun syncState() {
         val c = controller ?: return
-        val song = c.currentMediaItem?.mediaId?.let(queueById::get)
+        val song = c.currentMediaItem?.let(::resolveSong)
         val queue = ArrayList<Song>(c.mediaItemCount)
         for (i in 0 until c.mediaItemCount) {
-            queueById[c.getMediaItemAt(i).mediaId]?.let(queue::add)
+            resolveSong(c.getMediaItemAt(i))?.let(queue::add)
         }
         _playbackState.update {
             it.copy(

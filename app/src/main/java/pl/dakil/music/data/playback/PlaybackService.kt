@@ -10,13 +10,16 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -27,25 +30,32 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import pl.dakil.music.MainActivity
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.Song
 
 /**
- * Hosts the ExoPlayer and its [MediaSession]. As a [MediaSessionService] it owns
- * background playback, the system Now Playing notification and lock-screen/Bluetooth
- * transport controls for free — the app's UI connects as a MediaController client.
+ * Hosts the ExoPlayer and its [MediaLibrarySession]. As a [MediaLibraryService] it owns
+ * background playback, the system Now Playing notification, lock-screen/Bluetooth
+ * transport controls — and a browsable content tree consumed by media browsers such as
+ * Android Auto (see [MediaBrowseTree]). The app's UI connects as a MediaController client.
  */
 @UnstableApi
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
-    private var mediaSession: MediaSession? = null
+    private var mediaSession: MediaLibrarySession? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private lateinit var audioManager: AudioManager
 
     /** Owns the platform audio effects bound to the player's session. */
     private var audioEffects: AudioEffectsController? = null
+
+    /** Latest library snapshot, used to build the browse tree off the main library cache. */
+    @Volatile
+    private var librarySongs: List<Song> = emptyList()
 
     // Latest auto-pause/resume preferences, kept in sync from the settings store.
     private var autoPauseOnZeroVolume = true
@@ -88,15 +98,15 @@ class PlaybackService : MediaSessionService() {
             .setSessionCommand(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
             .build()
 
-        mediaSession = MediaSession.Builder(this, player)
+        mediaSession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
             .setCustomLayout(ImmutableList.of(closeButton))
-            .setCallback(SessionCallback())
             // Tapping the notification body opens the app on the Now Playing screen.
             .setSessionActivity(buildNowPlayingActivityIntent())
             .build()
 
-        // Keep the auto-pause preferences fresh (works even with no UI connected).
         val container = (application as MusicApplication).container
+
+        // Keep the auto-pause preferences fresh (works even with no UI connected).
         val settingsRepository = container.settingsRepository
         settingsRepository.settings
             .onEach {
@@ -109,6 +119,16 @@ class PlaybackService : MediaSessionService() {
         container.audioEffectsRepository.settings
             .onEach { audioEffects?.apply(it) }
             .launchIn(serviceScope)
+
+        // Cache the library for the browse tree and tell browsers when it changes.
+        container.musicRepository.songs
+            .onEach { songs ->
+                librarySongs = songs
+                notifyBrowseChildrenChanged()
+            }
+            .launchIn(serviceScope)
+        // Ensure the library is populated even on a cold start with no Activity (e.g. Auto).
+        serviceScope.launch { runCatching { container.musicRepository.refresh() } }
 
         registerVolumeObserver()
     }
@@ -144,8 +164,23 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
         mediaSession
+
+    /** Re-notify browsers of the dynamic browse nodes after the library changes. */
+    private fun notifyBrowseChildrenChanged() {
+        val session = mediaSession ?: return
+        for (parentId in MediaBrowseTree.dynamicParentIds) {
+            val count = MediaBrowseTree.children(parentId, librarySongs, categoryTitles()).size
+            session.notifyChildrenChanged(parentId, count, null)
+        }
+    }
+
+    private fun categoryTitles() = MediaBrowseTree.CategoryTitles(
+        albums = getString(R.string.tab_albums),
+        artists = getString(R.string.tab_performers),
+        genres = getString(R.string.tab_genres),
+    )
 
     /** PendingIntent that brings the app to the foreground on the Now Playing screen. */
     private fun buildNowPlayingActivityIntent(): PendingIntent {
@@ -161,11 +196,11 @@ class PlaybackService : MediaSessionService() {
     }
 
     /**
-     * Handles the custom "close" notification action: it isn't one of the standard
-     * transport commands, so the session must advertise it on connect and act on it
-     * when invoked.
+     * Handles the custom "close" notification action and serves the browsable library
+     * tree to media browsers (Android Auto). Browse data comes from the cached
+     * [librarySongs]; playback requests are resolved to URIs by media id.
      */
-    private inner class SessionCallback : MediaSession.Callback {
+    private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
@@ -191,6 +226,74 @@ class PlaybackService : MediaSessionService() {
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             return super.onCustomCommand(session, controller, customCommand, args)
+        }
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.rootItem(), params))
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val children = MediaBrowseTree.children(parentId, librarySongs, categoryTitles())
+            return Futures.immediateFuture(
+                LibraryResult.ofItemList(ImmutableList.copyOf(children), params),
+            )
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String,
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val item = MediaBrowseTree.item(mediaId, librarySongs, categoryTitles())
+            return Futures.immediateFuture(
+                if (item != null) {
+                    LibraryResult.ofItem(item, null)
+                } else {
+                    LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                },
+            )
+        }
+
+        override fun onSubscribe(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> {
+            val count = MediaBrowseTree.children(parentId, librarySongs, categoryTitles()).size
+            session.notifyChildrenChanged(browser, parentId, count, params)
+            return Futures.immediateFuture(LibraryResult.ofVoid())
+        }
+
+        /**
+         * Browsers send back items stripped to their media id (no uri); re-attach the
+         * playable [MediaItem] for each known song so playback can start.
+         */
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+        ): ListenableFuture<MutableList<MediaItem>> {
+            val resolved = mediaItems.mapTo(ArrayList(mediaItems.size)) { item ->
+                if (item.localConfiguration != null) {
+                    item
+                } else {
+                    librarySongs.firstOrNull { it.id.toString() == item.mediaId }
+                        ?.let(MediaItemMapper::toMediaItem)
+                        ?: item
+                }
+            }
+            return Futures.immediateFuture(resolved)
         }
     }
 

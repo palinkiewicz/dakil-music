@@ -42,20 +42,34 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Voice "play …" requests from Android Auto / Google Assistant. -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
-        <!-- Media3 playback engine: hosts the ExoPlayer + MediaSession so playback,
+        <!-- Media3 playback engine: hosts the ExoPlayer + MediaLibrarySession so playback,
              the system Now Playing notification and lock-screen controls survive
-             outside the Activity lifecycle. -->
+             outside the Activity lifecycle, and so media browsers (Android Auto) can
+             browse the library. The legacy MediaBrowserService action lets Android Auto
+             discover the app. -->
         <service
             android:name=".data.playback.PlaybackService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
             tools:ignore="ExportedService">
             <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService" />
                 <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <!-- Declares this app as an Android Auto media app. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
         <!-- Home-screen widget: current track, cover art and transport controls. -->
         <receiver

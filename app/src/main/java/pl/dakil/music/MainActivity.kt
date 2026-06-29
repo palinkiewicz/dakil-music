@@ -1,7 +1,9 @@
 package pl.dakil.music
 
+import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.repository.AppSettings
@@ -54,6 +57,34 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.getBooleanExtra(EXTRA_OPEN_NOW_PLAYING, false) == true) {
             openNowPlaying.tryEmit(Unit)
+        }
+        if (intent?.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
+            playFromSearch(intent.getStringExtra(SearchManager.QUERY))
+        }
+    }
+
+    /**
+     * Handles a voice "play …" request (Android Auto / Assistant): plays library songs
+     * whose title, artist, album or genre matches [query]; an empty query plays everything.
+     */
+    private fun playFromSearch(query: String?) {
+        lifecycleScope.launch {
+            val songs = container.musicRepository.songs.first()
+            val matches = if (query.isNullOrBlank()) {
+                songs
+            } else {
+                songs.filter { song ->
+                    song.title.contains(query, ignoreCase = true) ||
+                        song.album.contains(query, ignoreCase = true) ||
+                        song.genre.contains(query, ignoreCase = true) ||
+                        song.artists.any { it.contains(query, ignoreCase = true) }
+                }
+            }
+            val toPlay = matches.ifEmpty { songs }
+            if (toPlay.isNotEmpty()) {
+                container.playSongs(toPlay, 0)
+                openNowPlaying.tryEmit(Unit)
+            }
         }
     }
 
