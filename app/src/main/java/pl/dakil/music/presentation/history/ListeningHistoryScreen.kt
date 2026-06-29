@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,6 +90,7 @@ fun ListeningHistoryScreen(
     val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -105,9 +107,9 @@ fun ListeningHistoryScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
             when (event) {
-                is HistoryEvent.Message -> snackbarHostState.showSnackbar(context.getString(event.res))
+                is HistoryEvent.Message -> snackbarHostState.showSnackbar(resources.getString(event.res))
                 is HistoryEvent.ImportResult -> snackbarHostState.showSnackbar(
-                    context.getString(R.string.history_import_result, event.imported, event.skipped),
+                    resources.getString(R.string.history_import_result, event.imported, event.skipped),
                 )
                 is HistoryEvent.RequestWritePermission ->
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())

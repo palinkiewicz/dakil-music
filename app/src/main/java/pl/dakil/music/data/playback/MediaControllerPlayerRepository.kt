@@ -3,8 +3,10 @@ package pl.dakil.music.data.playback
 import android.content.ComponentName
 import android.content.Context
 import android.os.SystemClock
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -75,6 +77,7 @@ class MediaControllerPlayerRepository(
         connect()
     }
 
+    @OptIn(markerClass = [UnstableApi::class])
     private fun connect() {
         val token = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
         val future = MediaController.Builder(appContext, token).buildAsync()

@@ -78,7 +78,7 @@ fun LyricsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
 
     var showAlignDialog by remember { mutableStateOf(false) }
     var showLrclibDialog by remember { mutableStateOf(false) }
@@ -96,7 +96,7 @@ fun LyricsScreen(
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())
 
                 is LyricsEvent.Message ->
-                    snackbarHostState.showSnackbar(context.getString(event.resId))
+                    snackbarHostState.showSnackbar(resources.getString(event.resId))
             }
         }
     }

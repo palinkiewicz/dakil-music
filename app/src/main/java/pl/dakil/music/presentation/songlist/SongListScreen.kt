@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -126,6 +127,7 @@ fun SongListScreen(
     val coverArtVersion by viewModel.coverArtVersion.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -151,7 +153,7 @@ fun SongListScreen(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is SongListEvent.Message ->
-                    snackbarHostState.showSnackbar(context.getString(event.res))
+                    snackbarHostState.showSnackbar(resources.getString(event.res))
 
                 is SongListEvent.RequestWritePermission ->
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())

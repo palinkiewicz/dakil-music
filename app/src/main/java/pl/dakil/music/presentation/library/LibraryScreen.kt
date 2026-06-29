@@ -81,6 +81,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
@@ -173,6 +174,7 @@ fun LibraryScreen(
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -192,7 +194,7 @@ fun LibraryScreen(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is LibraryEvent.Message ->
-                    snackbarHostState.showSnackbar(context.getString(event.res))
+                    snackbarHostState.showSnackbar(resources.getString(event.res))
 
                 is LibraryEvent.RequestWritePermission ->
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())

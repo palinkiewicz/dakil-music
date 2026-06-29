@@ -174,7 +174,7 @@
     <string name="settings_auto_pause_zero_volume">Pause at zero volume</string>
     <string name="settings_auto_pause_zero_volume_summary">Pause playback when the volume reaches 0%</string>
     <string name="settings_auto_resume_volume">Resume when volume returns</string>
-    <string name="settings_auto_resume_volume_summary">Resume playback when the volume is raised above 0% again</string>
+    <string name="settings_auto_resume_volume_summary" formatted="false">Resume playback when the volume is raised above 0% again</string>
     <string name="settings_remember_sort">Remember sort order</string>
     <string name="settings_remember_sort_summary">Restore last used sort option when reopening the library</string>
     <string name="settings_album_columns">Album grid columns</string>

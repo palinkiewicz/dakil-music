@@ -34,7 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,13 +59,13 @@ fun MoreScreen(
 ) {
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val resources = LocalResources.current
     var showAbout by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         viewModel.messages.collectLatest { res ->
-            snackbarHostState.showSnackbar(context.getString(res))
+            snackbarHostState.showSnackbar(resources.getString(res))
         }
     }
 

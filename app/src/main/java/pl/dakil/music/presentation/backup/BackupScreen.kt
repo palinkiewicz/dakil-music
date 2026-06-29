@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.BackupCategory
 import pl.dakil.music.presentation.AppViewModelProvider
@@ -55,6 +56,7 @@ fun BackupScreen(
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // The category whose single-file import/export is in flight (set before launching SAF).
     var pendingCategory by remember { mutableStateOf<BackupCategory?>(null) }
@@ -81,7 +83,7 @@ fun BackupScreen(
 
     LaunchedEffect(Unit) {
         viewModel.messages.collectLatest { res ->
-            snackbarHostState.showSnackbar(context.getString(res))
+            snackbarHostState.showSnackbar(resources.getString(res))
         }
     }
 
