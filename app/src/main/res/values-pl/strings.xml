@@ -22,6 +22,13 @@
     <string name="sleep_timer_custom">Własny czas…</string>
     <string name="speed_title">Prędkość</string>
     <string name="speed_custom">Własna prędkość…</string>
+    <string name="eq_open">EQ</string>
+    <string name="equalizer_title">Korektor</string>
+    <string name="eq_preset_custom">Własny</string>
+    <string name="eq_bass_boost">Wzmocnienie basów</string>
+    <string name="eq_virtualizer">Wirtualizer</string>
+    <string name="eq_reset_flat">Resetuj</string>
+    <string name="eq_not_supported">Efekty dźwiękowe nie są obsługiwane na tym urządzeniu.</string>
     <string name="action_apply">Zastosuj</string>
     <string name="action_start">Uruchom</string>
     <string name="action_clear_queue">Wyczyść</string>

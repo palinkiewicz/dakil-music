@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -104,6 +105,8 @@ fun NowPlayingScreen(
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
     val showAddToPlaylist by viewModel.showAddToPlaylist.collectAsStateWithLifecycle()
+    val equalizer by viewModel.equalizer.collectAsStateWithLifecycle()
+    var showEqualizer by remember { mutableStateOf(false) }
 
     if (state.song == null) {
         EmptyNowPlaying(modifier)
@@ -124,6 +127,7 @@ fun NowPlayingScreen(
         onSetSpeed = viewModel::onSetSpeed,
         onStartSleepTimer = viewModel::onStartSleepTimer,
         onCancelSleepTimer = viewModel::onCancelSleepTimer,
+        onOpenEqualizer = { showEqualizer = true },
         onToggleFavorite = viewModel::onToggleFavorite,
         onAddToPlaylist = viewModel::openAddToPlaylist,
         onQueueItemClick = viewModel::onQueueItemClick,
@@ -141,6 +145,19 @@ fun NowPlayingScreen(
             onCreateNew = viewModel::createPlaylistAndAddCurrent,
         )
     }
+
+    if (showEqualizer) {
+        EqualizerSheet(
+            state = equalizer,
+            onDismiss = { showEqualizer = false },
+            onMasterEnabledChange = viewModel::onSetEqMasterEnabled,
+            onSelectPreset = viewModel::onSelectEqPreset,
+            onBandLevel = viewModel::onSetEqBandLevel,
+            onBassBoost = viewModel::onSetBassBoost,
+            onVirtualizer = viewModel::onSetVirtualizer,
+            onReset = viewModel::onResetEqualizer,
+        )
+    }
 }
 
 @Composable
@@ -156,6 +173,7 @@ private fun NowPlayingContent(
     onSetSpeed: (Float) -> Unit,
     onStartSleepTimer: (Long) -> Unit,
     onCancelSleepTimer: () -> Unit,
+    onOpenEqualizer: () -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onOpenLyrics: () -> Unit,
@@ -311,6 +329,7 @@ private fun NowPlayingContent(
                     onSetSpeed = onSetSpeed,
                     onStartSleepTimer = onStartSleepTimer,
                     onCancelSleepTimer = onCancelSleepTimer,
+                    onOpenEqualizer = onOpenEqualizer,
                 )
             }
         }
@@ -714,6 +733,7 @@ private fun SecondaryControls(
     onSetSpeed: (Float) -> Unit,
     onStartSleepTimer: (Long) -> Unit,
     onCancelSleepTimer: () -> Unit,
+    onOpenEqualizer: () -> Unit,
 ) {
     var speedMenu by remember { mutableStateOf(false) }
     var sleepMenu by remember { mutableStateOf(false) }
@@ -760,6 +780,16 @@ private fun SecondaryControls(
                     },
                 )
             }
+        }
+
+        TextButton(onClick = onOpenEqualizer) {
+            Icon(
+                imageVector = Icons.Rounded.GraphicEq,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.size(6.dp))
+            Text(stringResource(R.string.eq_open))
         }
 
         Box {

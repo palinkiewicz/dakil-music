@@ -44,6 +44,9 @@ class PlaybackService : MediaSessionService() {
     private val serviceScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private lateinit var audioManager: AudioManager
 
+    /** Owns the platform audio effects bound to the player's session. */
+    private var audioEffects: AudioEffectsController? = null
+
     // Latest auto-pause/resume preferences, kept in sync from the settings store.
     private var autoPauseOnZeroVolume = true
     private var autoResumeOnVolumeRestored = true
@@ -71,6 +74,14 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
+        // Pin a stable audio session id up front so the effects can attach immediately,
+        // rather than waiting for the id to materialize on first playback.
+        val audioSessionId = audioManager.generateAudioSessionId()
+        if (audioSessionId != AudioManager.ERROR) {
+            player.setAudioSessionId(audioSessionId)
+            audioEffects = AudioEffectsController(audioSessionId)
+        }
+
         val closeButton = CommandButton.Builder()
             .setDisplayName(getString(R.string.notification_action_close))
             .setIconResId(R.drawable.ic_close)
@@ -85,12 +96,18 @@ class PlaybackService : MediaSessionService() {
             .build()
 
         // Keep the auto-pause preferences fresh (works even with no UI connected).
-        val settingsRepository = (application as MusicApplication).container.settingsRepository
+        val container = (application as MusicApplication).container
+        val settingsRepository = container.settingsRepository
         settingsRepository.settings
             .onEach {
                 autoPauseOnZeroVolume = it.autoPauseOnZeroVolume
                 autoResumeOnVolumeRestored = it.autoResumeOnVolumeRestored
             }
+            .launchIn(serviceScope)
+
+        // Apply audio effects from the shared store; the UI writes, the service applies.
+        container.audioEffectsRepository.settings
+            .onEach { audioEffects?.apply(it) }
             .launchIn(serviceScope)
 
         registerVolumeObserver()
@@ -212,6 +229,8 @@ class PlaybackService : MediaSessionService() {
         volumeObserver?.let(contentResolver::unregisterContentObserver)
         volumeObserver = null
         serviceScope.cancel()
+        audioEffects?.release()
+        audioEffects = null
         mediaSession?.run {
             player.release()
             release()

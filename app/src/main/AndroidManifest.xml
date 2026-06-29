@@ -18,6 +18,9 @@
     <!-- Fetching lyrics from the lrclib.net API. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Controlling the equalizer / bass boost / virtualizer audio effects. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <application
         android:name=".MusicApplication"
         android:allowBackup="true"

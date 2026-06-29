@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.data.playback.LyricsStatus
 import pl.dakil.music.di.AppContainer
+import pl.dakil.music.domain.model.AudioEffectsCapabilities
+import pl.dakil.music.domain.model.AudioEffectsSettings
 import pl.dakil.music.domain.model.LyricLine
 import pl.dakil.music.domain.model.PlaybackState
 import pl.dakil.music.domain.model.QueueRemoveMode
@@ -42,6 +44,21 @@ data class NowPlayingUiState(
     val playbackSpeed: Float = 1f,
     val sleepTimerRemainingMs: Long? = null,
 )
+
+/** State for the equalizer bottom sheet: device capabilities + the persisted settings. */
+data class EqualizerUiState(
+    val capabilities: AudioEffectsCapabilities = AudioEffectsCapabilities(),
+    val settings: AudioEffectsSettings = AudioEffectsSettings(),
+) {
+    /** Band levels (millibels) to display, resolved from the active preset or manual values. */
+    val effectiveBandLevels: List<Int>
+        get() = when {
+            settings.preset in capabilities.presetBandLevelsMb.indices ->
+                capabilities.presetBandLevelsMb[settings.preset]
+            settings.bandLevelsMb.size == capabilities.numberOfBands -> settings.bandLevelsMb
+            else -> List(capabilities.numberOfBands) { 0 }
+        }
+}
 
 /** Compact lyrics state for the Now Playing card. */
 data class LyricsCardState(
@@ -119,6 +136,17 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     val userPlaylists: StateFlow<List<UserPlaylist>> = container.observeUserPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // Device effect capabilities are constant; read once and pair with the live settings.
+    private val audioEffectsCapabilities = container.audioEffectsCapabilitiesProvider.get()
+
+    val equalizer: StateFlow<EqualizerUiState> = container.observeAudioEffects()
+        .map { EqualizerUiState(audioEffectsCapabilities, it) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            EqualizerUiState(audioEffectsCapabilities),
+        )
+
     /** True while the "add current song to playlist" dialog is open. */
     private val _showAddToPlaylist = MutableStateFlow(false)
     val showAddToPlaylist: StateFlow<Boolean> = _showAddToPlaylist.asStateFlow()
@@ -136,6 +164,33 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     fun onMoveQueueItem(from: Int, to: Int) = container.playbackControl.moveQueueItem(from, to)
     fun onRemoveQueueItem(index: Int) = container.playbackControl.removeQueueItem(index)
     fun onClearQueue() = container.playbackControl.clearQueue()
+
+    fun onSetEqMasterEnabled(enabled: Boolean) = viewModelScope.launch {
+        container.updateAudioEffects.setMasterEnabled(enabled)
+    }
+
+    fun onSelectEqPreset(preset: Int) = viewModelScope.launch {
+        container.updateAudioEffects.setPreset(preset)
+    }
+
+    fun onSetEqBandLevel(index: Int, levelMb: Int) = viewModelScope.launch {
+        val levels = equalizer.value.effectiveBandLevels.toMutableList()
+        if (index !in levels.indices) return@launch
+        levels[index] = levelMb
+        container.updateAudioEffects.setBandLevels(levels)
+    }
+
+    fun onSetBassBoost(strength: Int) = viewModelScope.launch {
+        container.updateAudioEffects.setBassBoostStrength(strength)
+    }
+
+    fun onSetVirtualizer(strength: Int) = viewModelScope.launch {
+        container.updateAudioEffects.setVirtualizerStrength(strength)
+    }
+
+    fun onResetEqualizer() = viewModelScope.launch {
+        container.updateAudioEffects.resetToFlat()
+    }
 
     fun onToggleFavorite() {
         val id = uiState.value.song?.id ?: return

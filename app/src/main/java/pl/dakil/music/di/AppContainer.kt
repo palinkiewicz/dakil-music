@@ -9,6 +9,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import pl.dakil.music.data.coverart.CoverArtRefresher
 import pl.dakil.music.data.datastore.albumRulesDataStore
+import pl.dakil.music.data.datastore.audioEffectsDataStore
 import pl.dakil.music.data.datastore.favoritesDataStore
 import pl.dakil.music.data.datastore.lyricsAlignmentDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
@@ -24,10 +25,12 @@ import pl.dakil.music.domain.usecase.ExportFullBackupUseCase
 import pl.dakil.music.domain.usecase.ImportBackupCategoryUseCase
 import pl.dakil.music.domain.usecase.ImportFullBackupUseCase
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
+import pl.dakil.music.data.playback.AudioEffectsCapabilitiesProvider
 import pl.dakil.music.data.playback.LyricsController
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
 import pl.dakil.music.data.playback.PlaybackHistoryTracker
 import pl.dakil.music.data.repository.AlbumRuleRepositoryImpl
+import pl.dakil.music.data.repository.AudioEffectsRepositoryImpl
 import pl.dakil.music.data.repository.FavoritesRepositoryImpl
 import pl.dakil.music.data.repository.ListeningHistoryRepositoryImpl
 import pl.dakil.music.data.repository.LyricsAlignmentRepositoryImpl
@@ -38,6 +41,7 @@ import pl.dakil.music.data.repository.SortStateRepositoryImpl
 import pl.dakil.music.data.repository.TagEditorRepositoryImpl
 import pl.dakil.music.data.repository.UserPlaylistRepositoryImpl
 import pl.dakil.music.domain.repository.AlbumRuleRepository
+import pl.dakil.music.domain.repository.AudioEffectsRepository
 import pl.dakil.music.domain.repository.FavoritesRepository
 import pl.dakil.music.domain.repository.ListeningHistoryRepository
 import pl.dakil.music.domain.repository.LyricsAlignmentRepository
@@ -62,6 +66,8 @@ import pl.dakil.music.domain.usecase.ReconcileHistoryUseCase
 import pl.dakil.music.domain.usecase.SearchLibraryUseCase
 import pl.dakil.music.domain.usecase.AddSongsToPlaylistUseCase
 import pl.dakil.music.domain.usecase.AddToQueueUseCase
+import pl.dakil.music.domain.usecase.ObserveAudioEffectsUseCase
+import pl.dakil.music.domain.usecase.UpdateAudioEffectsUseCase
 import pl.dakil.music.domain.usecase.CreatePlaylistUseCase
 import pl.dakil.music.domain.usecase.DeleteAlbumRuleUseCase
 import pl.dakil.music.domain.usecase.DeletePlaylistUseCase
@@ -117,6 +123,11 @@ class AppContainer(context: Context) {
 
     val albumRuleRepository: AlbumRuleRepository =
         AlbumRuleRepositoryImpl(appContext.albumRulesDataStore)
+
+    val audioEffectsRepository: AudioEffectsRepository =
+        AudioEffectsRepositoryImpl(appContext.audioEffectsDataStore)
+
+    val audioEffectsCapabilitiesProvider = AudioEffectsCapabilitiesProvider(appContext)
 
     val musicRepository: MusicRepository =
         MusicRepositoryImpl(mediaStoreDataSource, settingsRepository, albumRuleRepository)
@@ -215,6 +226,9 @@ class AppContainer(context: Context) {
 
     val observeSettings = ObserveSettingsUseCase(settingsRepository)
     val updateSettings = UpdateSettingsUseCase(settingsRepository)
+
+    val observeAudioEffects = ObserveAudioEffectsUseCase(audioEffectsRepository)
+    val updateAudioEffects = UpdateAudioEffectsUseCase(audioEffectsRepository)
 
     val getHistoryPage = GetHistoryPageUseCase(listeningHistoryRepository)
     val getHistoryCount = GetHistoryCountUseCase(listeningHistoryRepository)
