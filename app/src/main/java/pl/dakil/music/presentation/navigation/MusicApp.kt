@@ -161,6 +161,7 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                     modifier = Modifier.statusBarsPadding(),
                     onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
                     onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
+                    onGenreClick = { navController.navigate(Routes.genreSongs(it)) },
                     onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
                     onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
                     onReselect = remember { reselectFlow.filter { it == Routes.LIBRARY }.map {} },

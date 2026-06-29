@@ -615,6 +615,7 @@ class SongListViewModel(
     private fun songsFlow(source: SongListSource): Flow<List<Song>> = when (source) {
         is SongListSource.AlbumSource -> container.getSongsForAlbum(source.albumId)
         is SongListSource.PerformerSource -> container.getSongsForPerformer(source.name)
+        is SongListSource.GenreSource -> container.getSongsForGenre(source.name)
         is SongListSource.PlaylistSource -> container.getSongsForPlaylist(source.playlist)
         is SongListSource.UserPlaylistSource -> container.getUserPlaylistSongs(source.playlistId)
     }
@@ -625,6 +626,7 @@ class SongListViewModel(
         return when (SourceType.valueOf(type)) {
             SourceType.ALBUM -> SongListSource.AlbumSource(arg.toLongOrNull() ?: -1L)
             SourceType.PERFORMER -> SongListSource.PerformerSource(arg)
+            SourceType.GENRE -> SongListSource.GenreSource(arg)
             // A PLAYLIST arg is either a SystemPlaylist enum name or a user-playlist id.
             SourceType.PLAYLIST -> {
                 val system = SystemPlaylist.entries.firstOrNull { it.name == arg }

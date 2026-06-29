@@ -77,9 +77,11 @@ import pl.dakil.music.domain.usecase.ReorderPlaylistUseCase
 import pl.dakil.music.domain.usecase.UpsertAlbumRuleUseCase
 import pl.dakil.music.domain.usecase.EditTagsUseCase
 import pl.dakil.music.domain.usecase.GetAlbumsUseCase
+import pl.dakil.music.domain.usecase.GetGenresUseCase
 import pl.dakil.music.domain.usecase.GetPerformersUseCase
 import pl.dakil.music.domain.usecase.GetPlaylistsUseCase
 import pl.dakil.music.domain.usecase.GetSongsForAlbumUseCase
+import pl.dakil.music.domain.usecase.GetSongsForGenreUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPerformerUseCase
 import pl.dakil.music.domain.usecase.GetSongFileInfoUseCase
 import pl.dakil.music.domain.usecase.GetSongsForPlaylistUseCase
@@ -184,9 +186,11 @@ class AppContainer(context: Context) {
 
     val getAlbums = GetAlbumsUseCase(musicRepository)
     val getPerformers = GetPerformersUseCase(musicRepository)
+    val getGenres = GetGenresUseCase(musicRepository)
     val getPlaylists = GetPlaylistsUseCase(musicRepository, favoritesRepository, userPlaylistRepository)
     val getSongsForAlbum = GetSongsForAlbumUseCase(musicRepository)
     val getSongsForPerformer = GetSongsForPerformerUseCase(musicRepository)
+    val getSongsForGenre = GetSongsForGenreUseCase(musicRepository)
     val getSongsForPlaylist = GetSongsForPlaylistUseCase(musicRepository, favoritesRepository)
     val getUserPlaylistSongs = GetUserPlaylistSongsUseCase(musicRepository, userPlaylistRepository)
 

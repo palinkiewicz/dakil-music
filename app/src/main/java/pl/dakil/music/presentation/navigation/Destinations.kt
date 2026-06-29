@@ -26,6 +26,9 @@ object Routes {
     fun performerSongs(name: String) =
         "$SONG_LIST/${SourceType.PERFORMER}/${Uri.encode(name)}"
 
+    fun genreSongs(name: String) =
+        "$SONG_LIST/${SourceType.GENRE}/${Uri.encode(name)}"
+
     fun playlistSongs(playlist: SystemPlaylist) =
         "$SONG_LIST/${SourceType.PLAYLIST}/${playlist.name}"
 
@@ -33,12 +36,13 @@ object Routes {
         "$SONG_LIST/${SourceType.PLAYLIST}/${Uri.encode(id)}"
 }
 
-enum class SourceType { ALBUM, PERFORMER, PLAYLIST }
+enum class SourceType { ALBUM, PERFORMER, GENRE, PLAYLIST }
 
 /** Decoded representation of a song-list source, reconstructed inside the ViewModel. */
 sealed interface SongListSource {
     data class AlbumSource(val albumId: Long) : SongListSource
     data class PerformerSource(val name: String) : SongListSource
+    data class GenreSource(val name: String) : SongListSource
     data class PlaylistSource(val playlist: SystemPlaylist) : SongListSource
     data class UserPlaylistSource(val playlistId: String) : SongListSource
 }

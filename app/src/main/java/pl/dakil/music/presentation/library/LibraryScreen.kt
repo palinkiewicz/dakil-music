@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -106,6 +107,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.Genre
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
@@ -128,6 +130,7 @@ import pl.dakil.music.presentation.songlist.EditTagsDialog
 private enum class LibraryTab(val titleRes: Int) {
     ALBUMS(R.string.tab_albums),
     PERFORMERS(R.string.tab_performers),
+    GENRES(R.string.tab_genres),
     PLAYLISTS(R.string.tab_playlists),
 }
 
@@ -142,6 +145,7 @@ fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
 fun LibraryScreen(
     onAlbumClick: (Long) -> Unit,
     onPerformerClick: (String) -> Unit,
+    onGenreClick: (String) -> Unit,
     onPlaylistClick: (SystemPlaylist) -> Unit,
     onUserPlaylistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -154,15 +158,18 @@ fun LibraryScreen(
     // Hoisted so re-tapping the Library tab can scroll the visible page to the top.
     val albumsGridState = rememberLazyGridState()
     val performersListState = rememberLazyListState()
+    val genresListState = rememberLazyListState()
     val playlistsListState = rememberLazyListState()
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
     val albumCornerDp by viewModel.albumCornerDp.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
+    val genres by viewModel.genres.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
     val artistSort by viewModel.artistSort.collectAsStateWithLifecycle()
+    val genreSort by viewModel.genreSort.collectAsStateWithLifecycle()
     val playlistSort by viewModel.playlistSort.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -238,6 +245,7 @@ fun LibraryScreen(
                 when (tabs[pagerState.currentPage]) {
                     LibraryTab.ALBUMS -> albumsGridState.animateScrollToItem(0)
                     LibraryTab.PERFORMERS -> performersListState.animateScrollToItem(0)
+                    LibraryTab.GENRES -> genresListState.animateScrollToItem(0)
                     LibraryTab.PLAYLISTS -> playlistsListState.animateScrollToItem(0)
                 }
             }
@@ -304,6 +312,13 @@ fun LibraryScreen(
                         listState = performersListState,
                         onSortSelect = viewModel::selectArtistSort,
                         onClick = onPerformerClick,
+                    )
+                    LibraryTab.GENRES -> GenresList(
+                        genres = genres,
+                        sort = genreSort,
+                        listState = genresListState,
+                        onSortSelect = viewModel::selectGenreSort,
+                        onClick = onGenreClick,
                     )
                     LibraryTab.PLAYLISTS -> PlaylistsList(
                         playlists = playlists,
@@ -780,6 +795,52 @@ private fun PerformersList(
                         Icon(Icons.Rounded.Person, contentDescription = null)
                     },
                     modifier = Modifier.clickableRow { onClick(performer.name) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenresList(
+    genres: List<Genre>,
+    sort: SortState<GenreSortOption>,
+    listState: LazyListState,
+    onSortSelect: (GenreSortOption) -> Unit,
+    onClick: (String) -> Unit,
+) {
+    if (genres.isEmpty()) {
+        EmptyState(stringResource(R.string.library_empty_genres), Icons.Rounded.Category)
+        return
+    }
+    LaunchedEffect(sort) { listState.scrollToItem(0) }
+
+    ScrollAwareSortHeader(
+        sortChips = {
+            SortChipRow(options = GenreSortOption.entries, sort = sort, onSelect = onSortSelect)
+        },
+    ) { topPadding ->
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(top = topPadding),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(genres, key = { it.name }) { genre ->
+                ListItem(
+                    headlineContent = { Text(genre.name) },
+                    supportingContent = {
+                        Text(
+                            pluralStringResource(
+                                R.plurals.song_count,
+                                genre.songCount,
+                                genre.songCount,
+                            ),
+                        )
+                    },
+                    leadingContent = {
+                        Icon(Icons.Rounded.Category, contentDescription = null)
+                    },
+                    modifier = Modifier.clickableRow { onClick(genre.name) },
                 )
             }
         }

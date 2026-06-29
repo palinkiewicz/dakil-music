@@ -3,6 +3,7 @@ package pl.dakil.music.domain.usecase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.Genre
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.Song
@@ -19,6 +20,11 @@ class GetAlbumsUseCase(private val musicRepository: MusicRepository) {
 /** Observe all performers (already split out of the artist metadata). */
 class GetPerformersUseCase(private val musicRepository: MusicRepository) {
     operator fun invoke(): Flow<List<Performer>> = musicRepository.performers
+}
+
+/** Observe all genres derived from the songs' genre tags. */
+class GetGenresUseCase(private val musicRepository: MusicRepository) {
+    operator fun invoke(): Flow<List<Genre>> = musicRepository.genres
 }
 
 /**
@@ -74,6 +80,11 @@ class GetSongsForAlbumUseCase(private val musicRepository: MusicRepository) {
 class GetSongsForPerformerUseCase(private val musicRepository: MusicRepository) {
     operator fun invoke(performerName: String): Flow<List<Song>> =
         musicRepository.songsForPerformer(performerName)
+}
+
+class GetSongsForGenreUseCase(private val musicRepository: MusicRepository) {
+    operator fun invoke(genreName: String): Flow<List<Song>> =
+        musicRepository.songsForGenre(genreName)
 }
 
 class GetSongsForPlaylistUseCase(

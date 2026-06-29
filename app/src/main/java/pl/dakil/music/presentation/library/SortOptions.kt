@@ -21,6 +21,11 @@ enum class ArtistSortOption(val labelRes: Int) {
     TRACKS_PLAYED(R.string.sort_tracks_played),
 }
 
+enum class GenreSortOption(val labelRes: Int) {
+    GENRE_NAME(R.string.sort_genre_name),
+    SONG_COUNT(R.string.sort_song_count),
+}
+
 enum class PlaylistSortOption(val labelRes: Int) {
     PLAYLIST_NAME(R.string.sort_playlist_name),
     SONG_COUNT(R.string.sort_song_count),

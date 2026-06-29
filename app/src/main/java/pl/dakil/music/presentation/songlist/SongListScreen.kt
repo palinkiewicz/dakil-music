@@ -883,6 +883,7 @@ private fun headerTitle(
         }
 
     is SongListSource.PerformerSource -> source.name
+    is SongListSource.GenreSource -> source.name
     is SongListSource.PlaylistSource -> stringResource(systemPlaylistNameRes(source.playlist))
     is SongListSource.UserPlaylistSource ->
         userPlaylists.firstOrNull { it.id == source.playlistId }?.name.orEmpty()

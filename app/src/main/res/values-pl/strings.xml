@@ -51,11 +51,13 @@
     <string name="library_title">Biblioteka</string>
     <string name="tab_albums">Albumy</string>
     <string name="tab_performers">Artyści</string>
+    <string name="tab_genres">Gatunki</string>
     <string name="tab_playlists">Playlisty</string>
     <string name="playlist_all_songs">Wszystkie utwory</string>
     <string name="playlist_favorites">Ulubione</string>
     <string name="library_empty_albums">Nie znaleziono albumów</string>
     <string name="library_empty_performers">Nie znaleziono artystów</string>
+    <string name="library_empty_genres">Nie znaleziono gatunków</string>
     <string name="library_empty_songs">Brak utworów w bibliotece</string>
     <string name="no_album">Brak albumu</string>
 
@@ -204,6 +206,7 @@
 
     <string name="sort_album_name">Nazwa albumu</string>
     <string name="sort_artist_name">Nazwa artysty</string>
+    <string name="sort_genre_name">Nazwa gatunku</string>
     <string name="sort_song_count">Liczba utworów</string>
     <string name="sort_duration">Czas trwania</string>
     <string name="sort_playlist_name">Nazwa playlisty</string>

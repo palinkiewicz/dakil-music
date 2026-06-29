@@ -2,6 +2,7 @@ package pl.dakil.music.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.Genre
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SongFileInfo
@@ -28,9 +29,14 @@ interface MusicRepository {
     /** Distinct performers derived from the split artist metadata. */
     val performers: Flow<List<Performer>>
 
+    /** Distinct genres derived from each song's genre tag (untagged songs are excluded). */
+    val genres: Flow<List<Genre>>
+
     fun songsForAlbum(albumId: Long): Flow<List<Song>>
 
     fun songsForPerformer(performerName: String): Flow<List<Song>>
+
+    fun songsForGenre(genreName: String): Flow<List<Song>>
 
     fun songsByIds(ids: Collection<Long>): Flow<List<Song>>
 

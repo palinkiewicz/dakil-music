@@ -12,6 +12,7 @@ import pl.dakil.music.data.mediastore.MediaStoreDataSource
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.AlbumRule
+import pl.dakil.music.domain.model.Genre
 import pl.dakil.music.domain.model.NO_ALBUM_ID
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Song
@@ -99,6 +100,21 @@ class MusicRepositoryImpl(
         }
         counts.map { (name, count) -> Performer(name, count) }
             .sortedBy { it.name.lowercase() }
+    }
+
+    override val genres: Flow<List<Genre>> = _songs.map { songs ->
+        val counts = HashMap<String, Int>()
+        for (song in songs) {
+            val genre = song.genre.trim()
+            if (genre.isNotEmpty()) counts[genre] = (counts[genre] ?: 0) + 1
+        }
+        counts.map { (name, count) -> Genre(name, count) }
+            .sortedBy { it.name.lowercase() }
+    }
+
+    override fun songsForGenre(genreName: String): Flow<List<Song>> = annotatedSongs.map { songs ->
+        songs.filter { it.genre.trim().equals(genreName, ignoreCase = true) }
+            .sortedBy { it.title.lowercase() }
     }
 
     override fun songsForAlbum(albumId: Long): Flow<List<Song>> = annotatedSongs.map { songs ->

@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import pl.dakil.music.R
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.Album
+import pl.dakil.music.domain.model.Genre
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
@@ -77,6 +78,10 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     private val _playlistSort = MutableStateFlow(SortState(PlaylistSortOption.PLAYLIST_NAME))
     val playlistSort: StateFlow<SortState<PlaylistSortOption>> = _playlistSort
 
+    // Genre sort is session-only (not persisted alongside the album/artist/playlist sorts).
+    private val _genreSort = MutableStateFlow(SortState(GenreSortOption.GENRE_NAME))
+    val genreSort: StateFlow<SortState<GenreSortOption>> = _genreSort
+
     init {
         viewModelScope.launch {
             val rememberSort = container.observeSettings().first().rememberSortState
@@ -96,6 +101,10 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     fun selectArtistSort(option: ArtistSortOption) {
         _artistSort.value = _artistSort.value.select(option)
         persistSortIfEnabled()
+    }
+
+    fun selectGenreSort(option: GenreSortOption) {
+        _genreSort.value = _genreSort.value.select(option)
     }
 
     fun selectPlaylistSort(option: PlaylistSortOption, systemPlaylistNames: Map<SystemPlaylist, String>) {
@@ -181,6 +190,17 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
             ArtistSortOption.SONG_COUNT -> compareBy { it.songCount }
             ArtistSortOption.LISTENING_DURATION -> compareBy { seconds(it) }
             ArtistSortOption.TRACKS_PLAYED -> compareBy { plays(it) }
+        }
+        list.sortedWith(if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val genres: StateFlow<List<Genre>> = combine(
+        container.getGenres(),
+        _genreSort,
+    ) { list, sort ->
+        val comparator: Comparator<Genre> = when (sort.option) {
+            GenreSortOption.GENRE_NAME -> compareBy { it.name.lowercase() }
+            GenreSortOption.SONG_COUNT -> compareBy { it.songCount }
         }
         list.sortedWith(if (sort.direction == SortDirection.DESC) comparator.reversed() else comparator)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
