@@ -48,6 +48,12 @@ interface PlayerRepository {
     /** Starts (or replaces) an in-memory sleep timer that pauses playback after [durationMs]. */
     fun startSleepTimer(durationMs: Long)
 
+    /** Arms a sleep timer that pauses playback when the current track finishes. */
+    fun startSleepTimerEndOfTrack()
+
+    /** Arms a sleep timer that pauses playback when the queue finishes playing. */
+    fun startSleepTimerEndOfQueue()
+
     /** Cancels any running sleep timer. */
     fun cancelSleepTimer()
 

@@ -85,6 +85,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.RepeatMode
+import pl.dakil.music.domain.model.SleepTimerMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
@@ -126,6 +127,8 @@ fun NowPlayingScreen(
         onCycleRepeat = viewModel::onCycleRepeat,
         onSetSpeed = viewModel::onSetSpeed,
         onStartSleepTimer = viewModel::onStartSleepTimer,
+        onSleepEndOfTrack = viewModel::onStartSleepTimerEndOfTrack,
+        onSleepEndOfQueue = viewModel::onStartSleepTimerEndOfQueue,
         onCancelSleepTimer = viewModel::onCancelSleepTimer,
         onOpenEqualizer = { showEqualizer = true },
         onToggleFavorite = viewModel::onToggleFavorite,
@@ -172,6 +175,8 @@ private fun NowPlayingContent(
     onCycleRepeat: () -> Unit,
     onSetSpeed: (Float) -> Unit,
     onStartSleepTimer: (Long) -> Unit,
+    onSleepEndOfTrack: () -> Unit,
+    onSleepEndOfQueue: () -> Unit,
     onCancelSleepTimer: () -> Unit,
     onOpenEqualizer: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -326,8 +331,11 @@ private fun NowPlayingContent(
                 SecondaryControls(
                     playbackSpeed = state.playbackSpeed,
                     sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                    sleepTimerMode = state.sleepTimerMode,
                     onSetSpeed = onSetSpeed,
                     onStartSleepTimer = onStartSleepTimer,
+                    onSleepEndOfTrack = onSleepEndOfTrack,
+                    onSleepEndOfQueue = onSleepEndOfQueue,
                     onCancelSleepTimer = onCancelSleepTimer,
                     onOpenEqualizer = onOpenEqualizer,
                 )
@@ -730,8 +738,11 @@ private fun formatSpeed(speed: Float): String {
 private fun SecondaryControls(
     playbackSpeed: Float,
     sleepTimerRemainingMs: Long?,
+    sleepTimerMode: SleepTimerMode?,
     onSetSpeed: (Float) -> Unit,
     onStartSleepTimer: (Long) -> Unit,
+    onSleepEndOfTrack: () -> Unit,
+    onSleepEndOfQueue: () -> Unit,
     onCancelSleepTimer: () -> Unit,
     onOpenEqualizer: () -> Unit,
 ) {
@@ -739,7 +750,7 @@ private fun SecondaryControls(
     var sleepMenu by remember { mutableStateOf(false) }
     var customSpeedDialog by remember { mutableStateOf(false) }
     var customTimeDialog by remember { mutableStateOf(false) }
-    val timerActive = sleepTimerRemainingMs != null
+    val timerActive = sleepTimerRemainingMs != null || sleepTimerMode != null
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -808,8 +819,14 @@ private fun SecondaryControls(
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = sleepTimerRemainingMs?.let(::formatDuration)
-                        ?: stringResource(R.string.sleep_timer),
+                    text = when {
+                        sleepTimerRemainingMs != null -> formatDuration(sleepTimerRemainingMs)
+                        sleepTimerMode == SleepTimerMode.END_OF_TRACK ->
+                            stringResource(R.string.sleep_end_of_track_short)
+                        sleepTimerMode == SleepTimerMode.END_OF_QUEUE ->
+                            stringResource(R.string.sleep_end_of_queue_short)
+                        else -> stringResource(R.string.sleep_timer)
+                    },
                 )
             }
             DropdownMenu(expanded = sleepMenu, onDismissRequest = { sleepMenu = false }) {
@@ -830,6 +847,30 @@ private fun SecondaryControls(
                     onClick = {
                         sleepMenu = false
                         customTimeDialog = true
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.sleep_end_of_track)) },
+                    trailingIcon = if (sleepTimerMode == SleepTimerMode.END_OF_TRACK) {
+                        { Icon(Icons.Rounded.Check, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                    onClick = {
+                        sleepMenu = false
+                        onSleepEndOfTrack()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.sleep_end_of_queue)) },
+                    trailingIcon = if (sleepTimerMode == SleepTimerMode.END_OF_QUEUE) {
+                        { Icon(Icons.Rounded.Check, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                    onClick = {
+                        sleepMenu = false
+                        onSleepEndOfQueue()
                     },
                 )
                 if (timerActive) {

@@ -23,6 +23,10 @@
     <string name="sleep_timer_minutes">%1$d min</string>
     <string name="sleep_timer_off">Turn off timer</string>
     <string name="sleep_timer_custom">Custom time…</string>
+    <string name="sleep_end_of_track">End of track</string>
+    <string name="sleep_end_of_queue">End of queue</string>
+    <string name="sleep_end_of_track_short">Track</string>
+    <string name="sleep_end_of_queue_short">Queue</string>
     <string name="speed_title">Speed</string>
     <string name="speed_custom">Custom speed…</string>
     <string name="eq_open">EQ</string>

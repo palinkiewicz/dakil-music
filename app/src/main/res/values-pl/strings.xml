@@ -20,6 +20,10 @@
     <string name="sleep_timer_minutes">%1$d min</string>
     <string name="sleep_timer_off">Wyłącz minutnik</string>
     <string name="sleep_timer_custom">Własny czas…</string>
+    <string name="sleep_end_of_track">Koniec utworu</string>
+    <string name="sleep_end_of_queue">Koniec kolejki</string>
+    <string name="sleep_end_of_track_short">Utwór</string>
+    <string name="sleep_end_of_queue_short">Kolejka</string>
     <string name="speed_title">Prędkość</string>
     <string name="speed_custom">Własna prędkość…</string>
     <string name="eq_open">EQ</string>

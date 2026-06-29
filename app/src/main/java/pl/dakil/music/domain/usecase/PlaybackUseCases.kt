@@ -43,6 +43,8 @@ class PlaybackControlUseCase(private val player: PlayerRepository) {
     fun cycleRepeatMode() = player.cycleRepeatMode()
     fun setPlaybackSpeed(speed: Float) = player.setPlaybackSpeed(speed)
     fun startSleepTimer(durationMs: Long) = player.startSleepTimer(durationMs)
+    fun startSleepTimerEndOfTrack() = player.startSleepTimerEndOfTrack()
+    fun startSleepTimerEndOfQueue() = player.startSleepTimerEndOfQueue()
     fun cancelSleepTimer() = player.cancelSleepTimer()
     fun skipToQueueItem(index: Int) = player.skipToQueueItem(index)
     fun moveQueueItem(from: Int, to: Int) = player.moveQueueItem(from, to)

@@ -22,6 +22,7 @@ import pl.dakil.music.domain.model.LyricLine
 import pl.dakil.music.domain.model.PlaybackState
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.RepeatMode
+import pl.dakil.music.domain.model.SleepTimerMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.domain.util.ContentKey
@@ -43,6 +44,7 @@ data class NowPlayingUiState(
     val coverArtRoundnessDp: Int = 32,
     val playbackSpeed: Float = 1f,
     val sleepTimerRemainingMs: Long? = null,
+    val sleepTimerMode: SleepTimerMode? = null,
 )
 
 /** State for the equalizer bottom sheet: device capabilities + the persisted settings. */
@@ -100,6 +102,7 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             coverArtRoundnessDp = settings.nowPlayingCornerRoundnessDp,
             playbackSpeed = playback.playbackSpeed,
             sleepTimerRemainingMs = playback.sleepTimerRemainingMs,
+            sleepTimerMode = playback.sleepTimerMode,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 
@@ -159,6 +162,8 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
     fun onCycleRepeat() = container.playbackControl.cycleRepeatMode()
     fun onSetSpeed(speed: Float) = container.playbackControl.setPlaybackSpeed(speed)
     fun onStartSleepTimer(durationMs: Long) = container.playbackControl.startSleepTimer(durationMs)
+    fun onStartSleepTimerEndOfTrack() = container.playbackControl.startSleepTimerEndOfTrack()
+    fun onStartSleepTimerEndOfQueue() = container.playbackControl.startSleepTimerEndOfQueue()
     fun onCancelSleepTimer() = container.playbackControl.cancelSleepTimer()
     fun onQueueItemClick(index: Int) = container.playbackControl.skipToQueueItem(index)
     fun onMoveQueueItem(from: Int, to: Int) = container.playbackControl.moveQueueItem(from, to)

@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
@@ -23,6 +24,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pl.dakil.music.domain.model.PlaybackState
 import pl.dakil.music.domain.model.RepeatMode
+import pl.dakil.music.domain.model.SleepTimerMode
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.repository.PlayerRepository
 
@@ -60,6 +62,12 @@ class MediaControllerPlayerRepository(
     private var positionJob: Job? = null
     private var sleepTimerJob: Job? = null
 
+    /** Armed end-of-track / end-of-queue sleep mode, or null when none is set. */
+    private var sleepMode: SleepTimerMode? = null
+
+    /** Queue index of the item current when [onMediaItemTransition] last fired (wrap detection). */
+    private var lastTransitionIndex = -1
+
     /** Maps mediaId -> Song so the current item resolves back to a rich domain model. */
     private val queueById = HashMap<String, Song>()
 
@@ -70,6 +78,15 @@ class MediaControllerPlayerRepository(
         override fun onEvents(player: Player, events: Player.Events) {
             // Coarse but correct: re-derive the whole snapshot on any relevant change.
             syncState()
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            onSleepBoundary(reason)
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            // Reaching the end with repeat off naturally stops; disarm an end-of-* timer.
+            if (playbackState == Player.STATE_ENDED && sleepMode != null) disarmSleepMode()
         }
     }
 
@@ -186,8 +203,9 @@ class MediaControllerPlayerRepository(
 
     override fun startSleepTimer(durationMs: Long) {
         sleepTimerJob?.cancel()
+        sleepMode = null
         if (durationMs <= 0L) {
-            _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
+            _playbackState.update { it.copy(sleepTimerRemainingMs = null, sleepTimerMode = null) }
             return
         }
         val deadline = SystemClock.elapsedRealtime() + durationMs
@@ -199,16 +217,57 @@ class MediaControllerPlayerRepository(
                     _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
                     return@launch
                 }
-                _playbackState.update { it.copy(sleepTimerRemainingMs = remaining) }
+                _playbackState.update { it.copy(sleepTimerRemainingMs = remaining, sleepTimerMode = null) }
                 delay(SLEEP_TICK_MS)
             }
         }
     }
 
+    override fun startSleepTimerEndOfTrack() = armSleepMode(SleepTimerMode.END_OF_TRACK)
+
+    override fun startSleepTimerEndOfQueue() = armSleepMode(SleepTimerMode.END_OF_QUEUE)
+
+    private fun armSleepMode(mode: SleepTimerMode) {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        sleepMode = mode
+        lastTransitionIndex = controller?.currentMediaItemIndex ?: -1
+        _playbackState.update { it.copy(sleepTimerRemainingMs = null, sleepTimerMode = mode) }
+    }
+
+    /** A media-item transition fired; pause if it crosses the armed sleep boundary. */
+    private fun onSleepBoundary(reason: Int) {
+        val mode = sleepMode ?: return
+        val c = controller ?: return
+        val newIndex = c.currentMediaItemIndex
+        // Only auto-advance / repeat transitions count as a boundary; seeks don't.
+        val autoAdvanced = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+            reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+        if (autoAdvanced) {
+            val crossed = when (mode) {
+                SleepTimerMode.END_OF_TRACK -> true
+                // Queue end is reached when auto-advance wraps back to an earlier item.
+                SleepTimerMode.END_OF_QUEUE -> newIndex <= lastTransitionIndex
+            }
+            if (crossed) {
+                c.pause()
+                c.seekTo(lastTransitionIndex.coerceAtLeast(0), 0L)
+                disarmSleepMode()
+            }
+        }
+        lastTransitionIndex = newIndex
+    }
+
+    private fun disarmSleepMode() {
+        sleepMode = null
+        _playbackState.update { it.copy(sleepTimerMode = null) }
+    }
+
     override fun cancelSleepTimer() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-        _playbackState.update { it.copy(sleepTimerRemainingMs = null) }
+        sleepMode = null
+        _playbackState.update { it.copy(sleepTimerRemainingMs = null, sleepTimerMode = null) }
     }
 
     override fun currentSongSnapshot(): Song? =
