@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -72,6 +73,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -103,6 +105,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -295,19 +298,12 @@ fun LibraryScreen(
             if (tabs.isEmpty()) {
                 EmptyState(stringResource(R.string.library_no_tabs), Icons.Rounded.LibraryMusic)
             } else {
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1),
-                    edgePadding = 0.dp,
+                LibraryTabRow(
+                    tabs = tabs,
+                    selectedIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1),
+                    onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
                     modifier = Modifier.zIndex(2f),
-                ) {
-                    tabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(stringResource(navItemUi(tab).labelRes)) },
-                        )
-                    }
-                }
+                )
 
                 HorizontalPager(
                     state = pagerState,
@@ -423,6 +419,51 @@ fun LibraryScreen(
         )
 
         null -> Unit
+    }
+}
+
+/**
+ * Library tabs that fill the width evenly when they fit, and fall back to a
+ * content-sized scrollable row only when there are too many to fit on screen.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryTabRow(
+    tabs: List<NavItem>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val titles = tabs.map { stringResource(navItemUi(it).labelRes) }
+    val textMeasurer = rememberTextMeasurer()
+    val textStyle = MaterialTheme.typography.titleSmall
+    val density = LocalDensity.current
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        // A fixed TabRow splits the width evenly; only fit the tabs there when their
+        // natural widths (text + the tab's horizontal padding) all add up within it.
+        val availablePx = with(density) { maxWidth.toPx() }
+        val tabPaddingPx = with(density) { 32.dp.toPx() }
+        val neededPx = titles.sumOf { textMeasurer.measure(it, textStyle).size.width + tabPaddingPx.toInt() }
+        val fits = neededPx <= availablePx
+
+        val tabsContent: @Composable () -> Unit = {
+            titles.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedIndex == index,
+                    onClick = { onSelect(index) },
+                    text = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                )
+            }
+        }
+
+        if (fits) {
+            PrimaryTabRow(selectedTabIndex = selectedIndex) { tabsContent() }
+        } else {
+            PrimaryScrollableTabRow(selectedTabIndex = selectedIndex, edgePadding = 0.dp) {
+                tabsContent()
+            }
+        }
     }
 }
 
