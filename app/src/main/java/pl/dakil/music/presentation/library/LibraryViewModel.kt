@@ -30,6 +30,9 @@ import pl.dakil.music.R
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Genre
+import pl.dakil.music.domain.model.NavComponent
+import pl.dakil.music.domain.model.NavConfig
+import pl.dakil.music.domain.model.NavItem
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
@@ -124,6 +127,16 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     // --- Data flows -----------------------------------------------------------------
+
+    /** The enabled Library tabs, in user-configured order. */
+    val libraryTabs: StateFlow<List<NavItem>> = container.observeNavigationConfig()
+        .map { it.enabled(NavComponent.LIBRARY_TABS) }
+        .distinctUntilChanged()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            NavConfig.DEFAULT.enabled(NavComponent.LIBRARY_TABS),
+        )
 
     val albumColumns: StateFlow<Int> = container.observeSettings()
         .map { it.albumColumns }

@@ -5,6 +5,24 @@
     <string name="nav_library">Biblioteka</string>
     <string name="nav_more">Więcej</string>
 
+    <!-- Dostosowanie nawigacji -->
+    <string name="settings_section_navigation">Nawigacja</string>
+    <string name="settings_navigation">Dostosuj nawigację</string>
+    <string name="settings_navigation_summary">Zmień kolejność oraz pokaż lub ukryj elementy dolnego paska, kart biblioteki i ekranu Więcej</string>
+    <string name="nav_tab_bottom_bar">Dolny pasek</string>
+    <string name="nav_tab_library">Karty biblioteki</string>
+    <string name="nav_tab_more">Więcej</string>
+    <string name="library_no_tabs">Brak włączonych kart biblioteki</string>
+    <string name="nav_now_playing_summary">Otwórz ekran Teraz odtwarzane</string>
+    <string name="nav_library_summary">Otwórz bibliotekę muzyki</string>
+    <string name="nav_more_summary">Otwórz ekran Więcej</string>
+    <string name="nav_albums_summary">Przeglądaj albumy</string>
+    <string name="nav_artists_summary">Przeglądaj wykonawców</string>
+    <string name="nav_genres_summary">Przeglądaj gatunki</string>
+    <string name="nav_playlists_summary">Przeglądaj playlisty</string>
+    <string name="nav_favourites_summary">Otwórz ulubione utwory</string>
+    <string name="nav_all_songs_summary">Otwórz wszystkie utwory</string>
+
     <string name="permission_title">Zezwól na dostęp do muzyki</string>
     <string name="permission_rationale">Aplikacja Muzyka potrzebuje uprawnień do odczytu plików audio na Twoim urządzeniu, aby zbudować bibliotekę.</string>
     <string name="permission_grant">Przyznaj dostęp</string>

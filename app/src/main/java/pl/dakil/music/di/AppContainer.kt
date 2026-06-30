@@ -12,6 +12,7 @@ import pl.dakil.music.data.datastore.albumRulesDataStore
 import pl.dakil.music.data.datastore.audioEffectsDataStore
 import pl.dakil.music.data.datastore.favoritesDataStore
 import pl.dakil.music.data.datastore.lyricsAlignmentDataStore
+import pl.dakil.music.data.datastore.navigationDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
 import pl.dakil.music.data.datastore.settingsDataStore
 import pl.dakil.music.data.datastore.sortDataStore
@@ -36,6 +37,7 @@ import pl.dakil.music.data.repository.ListeningHistoryRepositoryImpl
 import pl.dakil.music.data.repository.LyricsAlignmentRepositoryImpl
 import pl.dakil.music.data.repository.LyricsRepositoryImpl
 import pl.dakil.music.data.repository.MusicRepositoryImpl
+import pl.dakil.music.data.repository.NavigationConfigRepositoryImpl
 import pl.dakil.music.data.repository.SettingsRepositoryImpl
 import pl.dakil.music.data.repository.SortStateRepositoryImpl
 import pl.dakil.music.data.repository.TagEditorRepositoryImpl
@@ -47,6 +49,7 @@ import pl.dakil.music.domain.repository.ListeningHistoryRepository
 import pl.dakil.music.domain.repository.LyricsAlignmentRepository
 import pl.dakil.music.domain.repository.LyricsRepository
 import pl.dakil.music.domain.repository.MusicRepository
+import pl.dakil.music.domain.repository.NavigationConfigRepository
 import pl.dakil.music.domain.repository.PlayerRepository
 import pl.dakil.music.domain.repository.SettingsRepository
 import pl.dakil.music.domain.repository.SortStateRepository
@@ -61,6 +64,8 @@ import pl.dakil.music.domain.usecase.GetStatisticsUseCase
 import pl.dakil.music.domain.usecase.ImportHistoryUseCase
 import pl.dakil.music.domain.usecase.MergeHistoryUseCase
 import pl.dakil.music.domain.usecase.ObserveHistoryChangesUseCase
+import pl.dakil.music.domain.usecase.ObserveNavigationConfigUseCase
+import pl.dakil.music.domain.usecase.UpdateNavComponentUseCase
 import pl.dakil.music.domain.usecase.PropagateRetagToHistoryUseCase
 import pl.dakil.music.domain.usecase.ReconcileHistoryUseCase
 import pl.dakil.music.domain.usecase.SearchLibraryUseCase
@@ -153,6 +158,9 @@ class AppContainer(context: Context) {
     val lyricsAlignmentRepository: LyricsAlignmentRepository =
         LyricsAlignmentRepositoryImpl(appContext.lyricsAlignmentDataStore)
 
+    val navigationConfigRepository: NavigationConfigRepository =
+        NavigationConfigRepositoryImpl(appContext.navigationDataStore)
+
     private val database = Room.databaseBuilder(appContext, MusicDatabase::class.java, "music.db").build()
 
     val listeningHistoryRepository: ListeningHistoryRepository =
@@ -230,6 +238,9 @@ class AppContainer(context: Context) {
 
     val observeSettings = ObserveSettingsUseCase(settingsRepository)
     val updateSettings = UpdateSettingsUseCase(settingsRepository)
+
+    val observeNavigationConfig = ObserveNavigationConfigUseCase(navigationConfigRepository)
+    val updateNavComponent = UpdateNavComponentUseCase(navigationConfigRepository)
 
     val observeAudioEffects = ObserveAudioEffectsUseCase(audioEffectsRepository)
     val updateAudioEffects = UpdateAudioEffectsUseCase(audioEffectsRepository)

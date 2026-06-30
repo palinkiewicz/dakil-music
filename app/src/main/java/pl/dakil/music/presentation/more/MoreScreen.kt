@@ -8,17 +8,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
@@ -43,21 +36,22 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.NavItem
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.navigation.NavAction
+import pl.dakil.music.presentation.navigation.navItemUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
-    onOpenSettings: () -> Unit,
-    onOpenListeningHistory: () -> Unit,
-    onOpenStatistics: () -> Unit,
-    onOpenBackup: () -> Unit,
+    onOpen: (NavItem) -> Unit,
     modifier: Modifier = Modifier,
     onReselect: Flow<Unit> = emptyFlow(),
     viewModel: MoreViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val items by viewModel.items.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
     var showAbout by remember { mutableStateOf(false) }
@@ -89,66 +83,27 @@ fun MoreScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Group 1: history & statistics
-            item {
+            items(items, key = { it.name }) { item ->
+                val ui = navItemUi(item)
+                val isRefreshRow = ui.action is NavAction.Refresh
                 MoreItem(
-                    icon = Icons.Rounded.History,
-                    title = stringResource(R.string.more_listening_history),
-                    summary = stringResource(R.string.more_listening_history_summary),
-                    onClick = onOpenListeningHistory,
-                )
-            }
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.BarChart,
-                    title = stringResource(R.string.more_statistics),
-                    summary = stringResource(R.string.more_statistics_summary),
-                    onClick = onOpenStatistics,
-                )
-            }
-            item { HorizontalDivider() }
-            // Group 2: library refresh
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.Refresh,
-                    title = stringResource(R.string.more_refresh),
+                    icon = ui.icon,
+                    title = stringResource(ui.labelRes),
                     summary = stringResource(
-                        if (isRefreshing) R.string.refresh_in_progress else R.string.more_refresh_summary,
+                        if (isRefreshRow && isRefreshing) R.string.refresh_in_progress else ui.summaryRes,
                     ),
-                    onClick = viewModel::refreshLibrary,
+                    onClick = {
+                        when (ui.action) {
+                            NavAction.Refresh -> viewModel.refreshLibrary()
+                            NavAction.About -> showAbout = true
+                            is NavAction.Route -> onOpen(item)
+                        }
+                    },
                     trailing = {
-                        if (isRefreshing) {
+                        if (isRefreshRow && isRefreshing) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                         }
                     },
-                )
-            }
-            item { HorizontalDivider() }
-            // Group 3: settings & backup
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.Settings,
-                    title = stringResource(R.string.more_settings),
-                    summary = stringResource(R.string.more_settings_summary),
-                    onClick = onOpenSettings,
-                )
-            }
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.Inventory2,
-                    title = stringResource(R.string.more_backup),
-                    summary = stringResource(R.string.more_backup_summary),
-                    onClick = onOpenBackup,
-                )
-            }
-            item { HorizontalDivider() }
-            // Group 4: about
-            item {
-                MoreItem(
-                    icon = Icons.Rounded.Info,
-                    title = stringResource(R.string.more_about),
-                    summary = stringResource(R.string.more_about_summary),
-                    onClick = { showAbout = true },
                 )
             }
         }

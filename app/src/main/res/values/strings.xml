@@ -6,6 +6,24 @@
     <string name="nav_library">Library</string>
     <string name="nav_more">More</string>
 
+    <!-- Navigation customization -->
+    <string name="settings_section_navigation">Navigation</string>
+    <string name="settings_navigation">Customize navigation</string>
+    <string name="settings_navigation_summary">Reorder and show or hide the bottom bar, library tabs and More entries</string>
+    <string name="nav_tab_bottom_bar">Bottom bar</string>
+    <string name="nav_tab_library">Library tabs</string>
+    <string name="nav_tab_more">More</string>
+    <string name="library_no_tabs">No library tabs enabled</string>
+    <string name="nav_now_playing_summary">Open the Now Playing screen</string>
+    <string name="nav_library_summary">Open the music library</string>
+    <string name="nav_more_summary">Open the More screen</string>
+    <string name="nav_albums_summary">Browse albums</string>
+    <string name="nav_artists_summary">Browse artists</string>
+    <string name="nav_genres_summary">Browse genres</string>
+    <string name="nav_playlists_summary">Browse playlists</string>
+    <string name="nav_favourites_summary">Open your favourite songs</string>
+    <string name="nav_all_songs_summary">Open every song</string>
+
     <!-- Permissions -->
     <string name="permission_title">Allow access to your music</string>
     <string name="permission_rationale">Music needs permission to read the audio files on your device so it can build your library.</string>

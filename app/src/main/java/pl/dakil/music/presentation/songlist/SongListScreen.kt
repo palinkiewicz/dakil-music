@@ -115,6 +115,7 @@ fun SongListScreen(
     onBack: () -> Unit,
     onAlbumClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    embedded: Boolean = false,
     viewModel: SongListViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -346,6 +347,7 @@ fun SongListScreen(
             CollapsingTopBar(
                 title = title,
                 collapsed = collapsed,
+                showBack = !embedded,
                 onBack = onBack,
                 onAddToQueue = viewModel::addAllToQueue,
                 onAddToPlaylist = if (canAddToPlaylist) viewModel::startAddSongToPlaylist else null,
@@ -549,6 +551,7 @@ private fun SongListHeader(
 private fun CollapsingTopBar(
     title: String,
     collapsed: Boolean,
+    showBack: Boolean,
     onBack: () -> Unit,
     onAddToQueue: () -> Unit,
     onAddToPlaylist: (() -> Unit)?,
@@ -577,11 +580,13 @@ private fun CollapsingTopBar(
             }
         },
         navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
+            if (showBack) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                    )
+                }
             }
         },
         actions = {

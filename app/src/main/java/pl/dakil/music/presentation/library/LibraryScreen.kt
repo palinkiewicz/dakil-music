@@ -9,6 +9,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
@@ -66,8 +69,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
@@ -75,6 +80,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.annotation.StringRes
@@ -103,11 +109,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Genre
+import pl.dakil.music.domain.model.NavItem
 import pl.dakil.music.domain.model.Performer
 import pl.dakil.music.domain.model.Playlist
 import pl.dakil.music.domain.model.SearchResults
@@ -122,17 +133,15 @@ import pl.dakil.music.presentation.components.FileInfoDialog
 import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.clickableRow
 import pl.dakil.music.presentation.components.shareSongs
+import pl.dakil.music.presentation.navigation.Routes
+import pl.dakil.music.presentation.navigation.SourceType
+import pl.dakil.music.presentation.navigation.navItemUi
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
 import pl.dakil.music.presentation.songlist.EditTagsDialog
-
-private enum class LibraryTab(val titleRes: Int) {
-    ALBUMS(R.string.tab_albums),
-    PERFORMERS(R.string.tab_performers),
-    GENRES(R.string.tab_genres),
-    PLAYLISTS(R.string.tab_playlists),
-}
+import pl.dakil.music.presentation.songlist.SongListScreen
+import pl.dakil.music.presentation.songlist.SongListViewModel
 
 @StringRes
 fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
@@ -152,7 +161,7 @@ fun LibraryScreen(
     onReselect: Flow<Unit> = emptyFlow(),
     viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
-    val tabs = LibraryTab.entries
+    val tabs by viewModel.libraryTabs.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState { tabs.size }
 
     // Hoisted so re-tapping the Library tab can scroll the visible page to the top.
@@ -166,11 +175,9 @@ fun LibraryScreen(
     val albumCornerDp by viewModel.albumCornerDp.collectAsStateWithLifecycle()
     val performers by viewModel.performers.collectAsStateWithLifecycle()
     val genres by viewModel.genres.collectAsStateWithLifecycle()
-    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
     val artistSort by viewModel.artistSort.collectAsStateWithLifecycle()
     val genreSort by viewModel.genreSort.collectAsStateWithLifecycle()
-    val playlistSort by viewModel.playlistSort.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val selectedSongIds by viewModel.selectedSongIds.collectAsStateWithLifecycle()
@@ -209,10 +216,6 @@ fun LibraryScreen(
         }
     }
 
-    var creatingPlaylist by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
-    var deleting by remember { mutableStateOf<UserPlaylist?>(null) }
-
     val allSongsName = stringResource(R.string.playlist_all_songs)
     val favoritesName = stringResource(R.string.playlist_favorites)
     LaunchedEffect(allSongsName, favoritesName) {
@@ -242,11 +245,12 @@ fun LibraryScreen(
             if (viewModel.query.value.isNotEmpty()) {
                 viewModel.clearQuery()
             } else {
-                when (tabs[pagerState.currentPage]) {
-                    LibraryTab.ALBUMS -> albumsGridState.animateScrollToItem(0)
-                    LibraryTab.PERFORMERS -> performersListState.animateScrollToItem(0)
-                    LibraryTab.GENRES -> genresListState.animateScrollToItem(0)
-                    LibraryTab.PLAYLISTS -> playlistsListState.animateScrollToItem(0)
+                when (tabs.getOrNull(pagerState.currentPage)) {
+                    NavItem.ALBUMS -> albumsGridState.animateScrollToItem(0)
+                    NavItem.ARTISTS -> performersListState.animateScrollToItem(0)
+                    NavItem.GENRES -> genresListState.animateScrollToItem(0)
+                    NavItem.PLAYLISTS -> playlistsListState.animateScrollToItem(0)
+                    else -> Unit
                 }
             }
         }
@@ -282,58 +286,67 @@ fun LibraryScreen(
         )
 
         if (query.isBlank()) {
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage, modifier = Modifier.zIndex(2f)) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(stringResource(tab.titleRes)) },
-                    )
+            // Keep the selected page valid when the tab set shrinks via customization.
+            LaunchedEffect(tabs.size) {
+                if (pagerState.currentPage >= tabs.size && tabs.isNotEmpty()) {
+                    pagerState.scrollToPage(tabs.size - 1)
                 }
             }
+            if (tabs.isEmpty()) {
+                EmptyState(stringResource(R.string.library_no_tabs), Icons.Rounded.LibraryMusic)
+            } else {
+                PrimaryScrollableTabRow(
+                    selectedTabIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1),
+                    edgePadding = 0.dp,
+                    modifier = Modifier.zIndex(2f),
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                            text = { Text(stringResource(navItemUi(tab).labelRes)) },
+                        )
+                    }
+                }
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-            ) { page ->
-                when (tabs[page]) {
-                    LibraryTab.ALBUMS -> AlbumsGrid(
-                        albums = albums,
-                        columns = albumColumns,
-                        cornerDp = albumCornerDp,
-                        sort = albumSort,
-                        gridState = albumsGridState,
-                        onSortSelect = viewModel::selectAlbumSort,
-                        onClick = onAlbumClick,
-                    )
-                    LibraryTab.PERFORMERS -> PerformersList(
-                        performers = performers,
-                        sort = artistSort,
-                        listState = performersListState,
-                        onSortSelect = viewModel::selectArtistSort,
-                        onClick = onPerformerClick,
-                    )
-                    LibraryTab.GENRES -> GenresList(
-                        genres = genres,
-                        sort = genreSort,
-                        listState = genresListState,
-                        onSortSelect = viewModel::selectGenreSort,
-                        onClick = onGenreClick,
-                    )
-                    LibraryTab.PLAYLISTS -> PlaylistsList(
-                        playlists = playlists,
-                        sort = playlistSort,
-                        listState = playlistsListState,
-                        onSortSelect = { viewModel.selectPlaylistSort(it, mapOf(
-                            SystemPlaylist.ALL_SONGS to allSongsName,
-                            SystemPlaylist.FAVORITES to favoritesName,
-                        )) },
-                        onSystemClick = onPlaylistClick,
-                        onUserClick = onUserPlaylistClick,
-                        onCreate = { creatingPlaylist = true },
-                        onRename = { renaming = it },
-                        onDelete = { deleting = it },
-                    )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                ) { page ->
+                    when (tabs[page]) {
+                        NavItem.ALBUMS -> AlbumsGrid(
+                            albums = albums,
+                            columns = albumColumns,
+                            cornerDp = albumCornerDp,
+                            sort = albumSort,
+                            gridState = albumsGridState,
+                            onSortSelect = viewModel::selectAlbumSort,
+                            onClick = onAlbumClick,
+                        )
+                        NavItem.ARTISTS -> PerformersList(
+                            performers = performers,
+                            sort = artistSort,
+                            listState = performersListState,
+                            onSortSelect = viewModel::selectArtistSort,
+                            onClick = onPerformerClick,
+                        )
+                        NavItem.GENRES -> GenresList(
+                            genres = genres,
+                            sort = genreSort,
+                            listState = genresListState,
+                            onSortSelect = viewModel::selectGenreSort,
+                            onClick = onGenreClick,
+                        )
+                        NavItem.PLAYLISTS -> PlaylistsCategory(
+                            viewModel = viewModel,
+                            listState = playlistsListState,
+                            onSystemClick = onPlaylistClick,
+                            onUserClick = onUserPlaylistClick,
+                        )
+                        NavItem.FAVOURITES -> EmbeddedSystemPlaylist(SystemPlaylist.FAVORITES)
+                        NavItem.ALL_SONGS -> EmbeddedSystemPlaylist(SystemPlaylist.ALL_SONGS)
+                        else -> Unit
+                    }
                 }
             }
         } else {
@@ -411,6 +424,46 @@ fun LibraryScreen(
 
         null -> Unit
     }
+}
+
+/**
+ * The Playlists category (user + system playlists) with its create/rename/delete
+ * dialogs, shared by the Library tab and the standalone Playlists screen.
+ */
+@Composable
+private fun PlaylistsCategory(
+    viewModel: LibraryViewModel,
+    listState: LazyListState,
+    onSystemClick: (SystemPlaylist) -> Unit,
+    onUserClick: (String) -> Unit,
+) {
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistSort by viewModel.playlistSort.collectAsStateWithLifecycle()
+    val allSongsName = stringResource(R.string.playlist_all_songs)
+    val favoritesName = stringResource(R.string.playlist_favorites)
+    val names = mapOf(
+        SystemPlaylist.ALL_SONGS to allSongsName,
+        SystemPlaylist.FAVORITES to favoritesName,
+    )
+    LaunchedEffect(allSongsName, favoritesName) {
+        viewModel.setSystemPlaylistNames(names)
+    }
+
+    var creatingPlaylist by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<UserPlaylist?>(null) }
+    var deleting by remember { mutableStateOf<UserPlaylist?>(null) }
+
+    PlaylistsList(
+        playlists = playlists,
+        sort = playlistSort,
+        listState = listState,
+        onSortSelect = { viewModel.selectPlaylistSort(it, names) },
+        onSystemClick = onSystemClick,
+        onUserClick = onUserClick,
+        onCreate = { creatingPlaylist = true },
+        onRename = { renaming = it },
+        onDelete = { deleting = it },
+    )
 
     if (creatingPlaylist) {
         PlaylistNameDialog(
@@ -457,6 +510,125 @@ fun LibraryScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * A system playlist (Favourites / All songs) embedded as a Library tab: reuses the
+ * full song-list screen with its back button hidden, scoped to its own ViewModel.
+ */
+@Composable
+private fun EmbeddedSystemPlaylist(playlist: SystemPlaylist) {
+    val app = LocalContext.current.applicationContext as MusicApplication
+    val factory = remember(playlist) {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SongListViewModel(
+                    app.container,
+                    SavedStateHandle(
+                        mapOf(
+                            Routes.ARG_SOURCE_TYPE to SourceType.PLAYLIST.name,
+                            Routes.ARG_SOURCE_ARG to playlist.name,
+                        ),
+                    ),
+                ) as T
+        }
+    }
+    SongListScreen(
+        onBack = {},
+        onAlbumClick = {},
+        embedded = true,
+        viewModel = viewModel(key = "embedded_${playlist.name}", factory = factory),
+    )
+}
+
+/**
+ * Standalone screen for a single library category (Albums / Artists / Genres /
+ * Playlists), reached from a bottom-bar or More shortcut.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryCategoryScreen(
+    category: NavItem,
+    onBack: () -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onPerformerClick: (String) -> Unit,
+    onGenreClick: (String) -> Unit,
+    onPlaylistClick: (SystemPlaylist) -> Unit,
+    onUserPlaylistClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    // Hidden when the screen is a bottom-bar destination (a tab has nothing to go back to).
+    showBack: Boolean = true,
+    viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    Scaffold(
+        modifier = modifier,
+        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(navItemUi(category).labelRes)) },
+                navigationIcon = {
+                    if (showBack) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
+                        }
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            when (category) {
+                NavItem.ALBUMS -> {
+                    val albums by viewModel.albums.collectAsStateWithLifecycle()
+                    val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
+                    val albumCornerDp by viewModel.albumCornerDp.collectAsStateWithLifecycle()
+                    val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
+                    AlbumsGrid(
+                        albums = albums,
+                        columns = albumColumns,
+                        cornerDp = albumCornerDp,
+                        sort = albumSort,
+                        gridState = rememberLazyGridState(),
+                        onSortSelect = viewModel::selectAlbumSort,
+                        onClick = onAlbumClick,
+                    )
+                }
+                NavItem.ARTISTS -> {
+                    val performers by viewModel.performers.collectAsStateWithLifecycle()
+                    val artistSort by viewModel.artistSort.collectAsStateWithLifecycle()
+                    PerformersList(
+                        performers = performers,
+                        sort = artistSort,
+                        listState = rememberLazyListState(),
+                        onSortSelect = viewModel::selectArtistSort,
+                        onClick = onPerformerClick,
+                    )
+                }
+                NavItem.GENRES -> {
+                    val genres by viewModel.genres.collectAsStateWithLifecycle()
+                    val genreSort by viewModel.genreSort.collectAsStateWithLifecycle()
+                    GenresList(
+                        genres = genres,
+                        sort = genreSort,
+                        listState = rememberLazyListState(),
+                        onSortSelect = viewModel::selectGenreSort,
+                        onClick = onGenreClick,
+                    )
+                }
+                NavItem.PLAYLISTS -> PlaylistsCategory(
+                    viewModel = viewModel,
+                    listState = rememberLazyListState(),
+                    onSystemClick = onPlaylistClick,
+                    onUserClick = onUserPlaylistClick,
+                )
+                else -> Unit
+            }
+        }
     }
 }
 

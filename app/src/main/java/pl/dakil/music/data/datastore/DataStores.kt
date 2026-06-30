@@ -12,5 +12,6 @@ val Context.playlistsDataStore: DataStore<Preferences> by preferencesDataStore(n
 val Context.sortDataStore: DataStore<Preferences> by preferencesDataStore(name = "sort")
 val Context.albumRulesDataStore: DataStore<Preferences> by preferencesDataStore(name = "album_rules")
 val Context.lyricsAlignmentDataStore: DataStore<Preferences> by preferencesDataStore(name = "lyrics_alignment")
+val Context.navigationDataStore: DataStore<Preferences> by preferencesDataStore(name = "navigation")
 // Kept separate so frequent equalizer-slider writes don't rewrite the settings file.
 val Context.audioEffectsDataStore: DataStore<Preferences> by preferencesDataStore(name = "audio_effects")

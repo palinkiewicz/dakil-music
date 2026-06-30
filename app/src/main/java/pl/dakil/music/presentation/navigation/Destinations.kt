@@ -10,10 +10,17 @@ object Routes {
     const val MORE = "more"
     const val SETTINGS = "settings"
     const val ALBUM_RULES = "album_rules"
+    const val NAVIGATION = "navigation"
     const val LISTENING_HISTORY = "listening_history"
     const val STATISTICS = "statistics"
     const val LYRICS = "lyrics"
     const val BACKUP = "backup"
+
+    // Standalone library-category screens, reachable as bottom-bar / More shortcuts.
+    const val ALBUMS = "albums"
+    const val ARTISTS = "artists"
+    const val GENRES = "genres"
+    const val PLAYLISTS = "playlists"
 
     // Shared song-list detail screen, parameterised by its source.
     const val SONG_LIST = "song_list"

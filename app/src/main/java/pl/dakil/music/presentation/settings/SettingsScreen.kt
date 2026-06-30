@@ -61,6 +61,7 @@ import pl.dakil.music.presentation.components.weekdayNameRes
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenAlbumRules: () -> Unit,
+    onOpenNavigation: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
@@ -102,6 +103,13 @@ fun SettingsScreen(
                 summary = stringResource(R.string.settings_theme_summary),
                 checked = settings.forceDarkTheme,
                 onCheckedChange = viewModel::setForceDarkTheme,
+            )
+
+            SectionHeader(stringResource(R.string.settings_section_navigation))
+            NavigationRow(
+                title = stringResource(R.string.settings_navigation),
+                summary = stringResource(R.string.settings_navigation_summary),
+                onClick = onOpenNavigation,
             )
 
             SectionHeader(stringResource(R.string.settings_section_library))
