@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import pl.dakil.music.MainActivity
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
+import pl.dakil.music.domain.model.AudioEffectsSettings
 import pl.dakil.music.domain.model.Song
 
 /**
@@ -52,6 +53,12 @@ class PlaybackService : MediaLibraryService() {
 
     /** Owns the platform audio effects bound to the player's session. */
     private var audioEffects: AudioEffectsController? = null
+
+    /** Latest desired effect settings, re-applied whenever the audio session changes. */
+    private var audioEffectsSettings = AudioEffectsSettings()
+
+    /** Audio session id the effects are currently attached to, to avoid needless rebuilds. */
+    private var audioEffectsSessionId: Int? = null
 
     /** Latest library snapshot, used to build the browse tree off the main library cache. */
     @Volatile
@@ -85,12 +92,20 @@ class PlaybackService : MediaLibraryService() {
             .build()
 
         // Pin a stable audio session id up front so the effects can attach immediately,
-        // rather than waiting for the id to materialize on first playback.
+        // and also (re)build the controller if ExoPlayer reports a different session id
+        // once its AudioTrack is initialized. Whenever the controller is rebuilt, the
+        // latest desired settings are re-applied.
         val audioSessionId = audioManager.generateAudioSessionId()
         if (audioSessionId != AudioManager.ERROR) {
             player.setAudioSessionId(audioSessionId)
-            audioEffects = AudioEffectsController(audioSessionId)
+            attachAudioEffects(audioSessionId)
         }
+        player.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
+                attachAudioEffects(audioSessionId)
+            }
+        })
 
         val closeButton = CommandButton.Builder()
             .setDisplayName(getString(R.string.notification_action_close))
@@ -116,8 +131,13 @@ class PlaybackService : MediaLibraryService() {
             .launchIn(serviceScope)
 
         // Apply audio effects from the shared store; the UI writes, the service applies.
+        // Cache the latest settings too, so they can be re-applied when the audio
+        // session id changes and the effects controller is rebuilt.
         container.audioEffectsRepository.settings
-            .onEach { audioEffects?.apply(it) }
+            .onEach {
+                audioEffectsSettings = it
+                audioEffects?.apply(it)
+            }
             .launchIn(serviceScope)
 
         // Cache the library for the browse tree and tell browsers when it changes.
@@ -131,6 +151,14 @@ class PlaybackService : MediaLibraryService() {
         serviceScope.launch { runCatching { container.musicRepository.refresh() } }
 
         registerVolumeObserver()
+    }
+
+    /** (Re)build the effects controller for [sessionId] and apply the latest settings. */
+    private fun attachAudioEffects(sessionId: Int) {
+        if (audioEffectsSessionId == sessionId && audioEffects != null) return
+        audioEffects?.release()
+        audioEffectsSessionId = sessionId
+        audioEffects = AudioEffectsController(sessionId).also { it.apply(audioEffectsSettings) }
     }
 
     /**

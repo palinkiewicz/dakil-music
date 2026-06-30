@@ -17,18 +17,25 @@ import pl.dakil.music.domain.model.AudioEffectsSettings
  */
 class AudioEffectsController(audioSessionId: Int) {
 
+    init {
+        Log.d(TAG, "Creating effects for audioSessionId=$audioSessionId")
+    }
+
     private val equalizer: Equalizer? = runCatching {
         // Priority 0, attached to the player's session.
         Equalizer(0, audioSessionId)
     }.onFailure { Log.w(TAG, "Equalizer unavailable", it) }.getOrNull()
+        .also { Log.d(TAG, "Equalizer created=${it != null} hasControl=${it?.hasControl()}") }
 
     private val bassBoost: BassBoost? = runCatching {
         BassBoost(0, audioSessionId)
     }.onFailure { Log.w(TAG, "BassBoost unavailable", it) }.getOrNull()
+        .also { Log.d(TAG, "BassBoost created=${it != null} hasControl=${it?.hasControl()}") }
 
     private val virtualizer: Virtualizer? = runCatching {
         Virtualizer(0, audioSessionId)
     }.onFailure { Log.w(TAG, "Virtualizer unavailable", it) }.getOrNull()
+        .also { Log.d(TAG, "Virtualizer created=${it != null} hasControl=${it?.hasControl()}") }
 
     fun capabilities(): AudioEffectsCapabilities {
         val eq = equalizer ?: return AudioEffectsCapabilities(available = false)
@@ -80,7 +87,8 @@ class AudioEffectsController(audioSessionId: Int) {
             // Enable first, then write parameters — the order the AudioEffect API expects.
             // Writing band levels to a disabled effect and enabling afterwards mutes
             // output on some devices.
-            eq.enabled = active
+            val status = eq.setEnabled(active)
+            Log.d(TAG, "Equalizer setEnabled($active) -> $status; enabled=${eq.enabled} hasControl=${eq.hasControl()}")
             if (!active) return
             if (usingPreset) {
                 eq.usePreset(settings.preset.toShort())
@@ -97,7 +105,8 @@ class AudioEffectsController(audioSessionId: Int) {
     private fun applyBassBoost(effect: BassBoost, masterOn: Boolean, strength: Int) {
         runCatching {
             val active = masterOn && strength > 0
-            effect.enabled = active
+            val status = effect.setEnabled(active)
+            Log.d(TAG, "BassBoost setEnabled($active) -> $status; enabled=${effect.enabled} hasControl=${effect.hasControl()} strengthSupported=${effect.strengthSupported}")
             if (active && effect.strengthSupported) {
                 effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
             }
