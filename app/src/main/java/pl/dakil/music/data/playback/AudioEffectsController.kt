@@ -77,10 +77,11 @@ class AudioEffectsController(audioSessionId: Int) {
             // flat EQ needlessly interacts with BassBoost/Virtualizer on some devices.
             val active = on && (usingPreset || hasManualBoost)
 
-            if (!active) {
-                eq.enabled = false
-                return
-            }
+            // Enable first, then write parameters — the order the AudioEffect API expects.
+            // Writing band levels to a disabled effect and enabling afterwards mutes
+            // output on some devices.
+            eq.enabled = active
+            if (!active) return
             if (usingPreset) {
                 eq.usePreset(settings.preset.toShort())
             } else {
@@ -90,31 +91,29 @@ class AudioEffectsController(audioSessionId: Int) {
                     eq.setBandLevel(band.toShort(), clamped.toShort())
                 }
             }
-            eq.enabled = true
         }.onFailure { Log.w(TAG, "Failed to apply equalizer", it) }
     }
 
     private fun applyBassBoost(effect: BassBoost, masterOn: Boolean, strength: Int) {
         runCatching {
             val active = masterOn && strength > 0
-            // Set the strength before enabling so the effect engages at the right level.
-            if (effect.strengthSupported) effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
             effect.enabled = active
+            if (active && effect.strengthSupported) {
+                effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
+            }
         }.onFailure { Log.w(TAG, "Failed to apply BassBoost", it) }
     }
 
     private fun applyVirtualizer(effect: Virtualizer, masterOn: Boolean, strength: Int) {
         runCatching {
             val active = masterOn && strength > 0
-            if (effect.strengthSupported) effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
             effect.enabled = active
-            // Force a virtualization mode while active; left on AUTO the effect stays
-            // inaudible for ordinary stereo output on most devices.
-            if (active) {
+            if (active && effect.strengthSupported) {
+                effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
+                // Force a virtualization mode while active; left on AUTO the effect stays
+                // inaudible for ordinary stereo output on most devices.
                 val forced = effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_BINAURAL)
                 if (!forced) effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_AUTO)
-            } else {
-                effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_AUTO)
             }
         }.onFailure { Log.w(TAG, "Failed to apply Virtualizer", it) }
     }
