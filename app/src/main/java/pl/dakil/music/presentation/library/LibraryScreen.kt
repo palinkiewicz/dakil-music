@@ -988,6 +988,7 @@ private fun <T : Enum<T>> SortChipRow(
                     val labelRes = when (option) {
                         is AlbumSortOption -> option.labelRes
                         is ArtistSortOption -> option.labelRes
+                        is GenreSortOption -> option.labelRes
                         is PlaylistSortOption -> option.labelRes
                         else -> 0
                     }
