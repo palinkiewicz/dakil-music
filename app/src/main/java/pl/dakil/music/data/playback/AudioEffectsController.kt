@@ -68,42 +68,54 @@ class AudioEffectsController(audioSessionId: Int) {
     private fun applyEqualizer(settings: AudioEffectsSettings, on: Boolean) {
         val eq = equalizer ?: return
         runCatching {
-            eq.enabled = on
-            if (!on) return
             val bandCount = eq.numberOfBands.toInt()
             val levels = settings.bandLevelsMb
-            when {
-                settings.preset != AudioEffectsSettings.PRESET_CUSTOM &&
-                    settings.preset < eq.numberOfPresets -> {
-                    eq.usePreset(settings.preset.toShort())
-                }
-                // Apply manual levels only when they match this device's band count.
-                levels.size == bandCount -> {
-                    val range = eq.bandLevelRange
-                    for (band in 0 until bandCount) {
-                        val clamped = levels[band].coerceIn(range[0].toInt(), range[1].toInt())
-                        eq.setBandLevel(band.toShort(), clamped.toShort())
-                    }
-                }
-                // Custom with no usable levels -> flat.
-                else -> {
-                    for (band in 0 until bandCount) eq.setBandLevel(band.toShort(), 0)
+            val usingPreset = settings.preset != AudioEffectsSettings.PRESET_CUSTOM &&
+                settings.preset < eq.numberOfPresets
+            val hasManualBoost = levels.size == bandCount && levels.any { it != 0 }
+            // A flat equalizer is left out of the effect chain entirely: an active but
+            // flat EQ needlessly interacts with BassBoost/Virtualizer on some devices.
+            val active = on && (usingPreset || hasManualBoost)
+
+            if (!active) {
+                eq.enabled = false
+                return
+            }
+            if (usingPreset) {
+                eq.usePreset(settings.preset.toShort())
+            } else {
+                val range = eq.bandLevelRange
+                for (band in 0 until bandCount) {
+                    val clamped = levels[band].coerceIn(range[0].toInt(), range[1].toInt())
+                    eq.setBandLevel(band.toShort(), clamped.toShort())
                 }
             }
+            eq.enabled = true
         }.onFailure { Log.w(TAG, "Failed to apply equalizer", it) }
     }
 
     private fun applyBassBoost(effect: BassBoost, masterOn: Boolean, strength: Int) {
         runCatching {
-            effect.enabled = masterOn && strength > 0
-            if (effect.strengthSupported) effect.setStrength(strength.toShort())
+            val active = masterOn && strength > 0
+            // Set the strength before enabling so the effect engages at the right level.
+            if (effect.strengthSupported) effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
+            effect.enabled = active
         }.onFailure { Log.w(TAG, "Failed to apply BassBoost", it) }
     }
 
     private fun applyVirtualizer(effect: Virtualizer, masterOn: Boolean, strength: Int) {
         runCatching {
-            effect.enabled = masterOn && strength > 0
-            if (effect.strengthSupported) effect.setStrength(strength.toShort())
+            val active = masterOn && strength > 0
+            if (effect.strengthSupported) effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
+            effect.enabled = active
+            // Force a virtualization mode while active; left on AUTO the effect stays
+            // inaudible for ordinary stereo output on most devices.
+            if (active) {
+                val forced = effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_BINAURAL)
+                if (!forced) effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_AUTO)
+            } else {
+                effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_AUTO)
+            }
         }.onFailure { Log.w(TAG, "Failed to apply Virtualizer", it) }
     }
 
@@ -115,5 +127,6 @@ class AudioEffectsController(audioSessionId: Int) {
 
     private companion object {
         const val TAG = "AudioEffectsController"
+        const val MAX_STRENGTH = 1000
     }
 }
