@@ -13,6 +13,7 @@ import pl.dakil.music.presentation.library.LibraryViewModel
 import pl.dakil.music.presentation.lyrics.LyricsViewModel
 import pl.dakil.music.presentation.more.MoreViewModel
 import pl.dakil.music.presentation.nowplaying.NowPlayingViewModel
+import pl.dakil.music.presentation.quickplayer.QuickPlayerViewModel
 import pl.dakil.music.presentation.settings.AlbumRulesViewModel
 import pl.dakil.music.presentation.settings.NavigationCustomizationViewModel
 import pl.dakil.music.presentation.settings.SettingsViewModel
@@ -34,6 +35,10 @@ object AppViewModelProvider {
         initializer { StatisticsViewModel(container()) }
         initializer { LyricsViewModel(container()) }
         initializer { BackupViewModel(container()) }
+        initializer {
+            val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MusicApplication
+            QuickPlayerViewModel(app, app.container.resolveAudioUri, app.container.playAtFront)
+        }
     }
 }
 

@@ -26,6 +26,7 @@ import pl.dakil.music.domain.usecase.ExportFullBackupUseCase
 import pl.dakil.music.domain.usecase.ImportBackupCategoryUseCase
 import pl.dakil.music.domain.usecase.ImportFullBackupUseCase
 import pl.dakil.music.data.mediastore.MediaStoreDataSource
+import pl.dakil.music.data.mediastore.UriAudioResolver
 import pl.dakil.music.data.playback.AudioEffectsCapabilitiesProvider
 import pl.dakil.music.data.playback.LyricsController
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
@@ -71,6 +72,8 @@ import pl.dakil.music.domain.usecase.ReconcileHistoryUseCase
 import pl.dakil.music.domain.usecase.SearchLibraryUseCase
 import pl.dakil.music.domain.usecase.AddSongsToPlaylistUseCase
 import pl.dakil.music.domain.usecase.AddToQueueUseCase
+import pl.dakil.music.domain.usecase.EnqueueOrPlayUseCase
+import pl.dakil.music.domain.usecase.PlayAtFrontUseCase
 import pl.dakil.music.domain.usecase.ObserveAudioEffectsUseCase
 import pl.dakil.music.domain.usecase.UpdateAudioEffectsUseCase
 import pl.dakil.music.domain.usecase.CreatePlaylistUseCase
@@ -104,6 +107,7 @@ import pl.dakil.music.domain.usecase.PlaySongsUseCase
 import pl.dakil.music.domain.usecase.RefreshLibraryUseCase
 import pl.dakil.music.domain.usecase.SearchLrclibUseCase
 import pl.dakil.music.domain.usecase.RenamePlaylistUseCase
+import pl.dakil.music.domain.usecase.ResolveAudioUriUseCase
 import pl.dakil.music.domain.usecase.ReorderFavoritesUseCase
 import pl.dakil.music.domain.usecase.SetFavoritesUseCase
 import pl.dakil.music.domain.usecase.ShufflePlayUseCase
@@ -124,6 +128,8 @@ class AppContainer(context: Context) {
     // --- Data sources & repositories (interfaces exposed, impls hidden) -------------
 
     private val mediaStoreDataSource = MediaStoreDataSource(appContext)
+
+    private val uriAudioResolver = UriAudioResolver(appContext)
 
     val settingsRepository: SettingsRepository =
         SettingsRepositoryImpl(appContext.settingsDataStore)
@@ -224,7 +230,10 @@ class AppContainer(context: Context) {
     val playSongs = PlaySongsUseCase(playerRepository)
     val shufflePlay = ShufflePlayUseCase(playerRepository)
     val addToQueue = AddToQueueUseCase(playerRepository)
+    val enqueueOrPlay = EnqueueOrPlayUseCase(playerRepository)
+    val playAtFront = PlayAtFrontUseCase(playerRepository)
     val playbackControl = PlaybackControlUseCase(playerRepository)
+    val resolveAudioUri = ResolveAudioUriUseCase(uriAudioResolver, musicRepository)
 
     val searchLibrary = SearchLibraryUseCase()
 

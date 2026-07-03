@@ -49,6 +49,42 @@
             </intent-filter>
         </activity>
 
+        <!-- Chooser entry for externally opened audio files: appends the file to the
+             live play queue. An alias so the option gets its own label while routing
+             into MainActivity's existing singleTop intent handling. -->
+        <activity-alias
+            android:name=".AddToQueueActivity"
+            android:exported="true"
+            android:label="@string/chooser_add_to_queue"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="audio/*" />
+                <data android:scheme="file" android:mimeType="audio/*" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Chooser entry for externally opened audio files: transient standalone player.
+             Only the VIEW filter, so it is unreachable from the launcher or in-app
+             navigation; empty taskAffinity + excludeFromRecents keep it inside the
+             caller's task, like a viewer rather than a second app instance. -->
+        <activity
+            android:name=".presentation.quickplayer.QuickPlayerActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/chooser_quick_player"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Music">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="audio/*" />
+                <data android:scheme="file" android:mimeType="audio/*" />
+            </intent-filter>
+        </activity>
+
         <!-- Media3 playback engine: hosts the ExoPlayer + MediaLibrarySession so playback,
              the system Now Playing notification and lock-screen controls survive
              outside the Activity lifecycle, and so media browsers (Android Auto) can

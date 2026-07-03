@@ -90,6 +90,7 @@ import pl.dakil.music.domain.model.Song
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.coverArtModel
+import pl.dakil.music.presentation.components.TimeBar
 import pl.dakil.music.presentation.components.formatDuration
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import sh.calvin.reorderable.ReorderableItem
@@ -577,45 +578,6 @@ private fun QueueListItem(
             },
             modifier = clickModifier,
         )
-    }
-}
-
-@Composable
-private fun TimeBar(
-    positionMs: Long,
-    durationMs: Long,
-    onSeek: (Long) -> Unit,
-) {
-    // While dragging we show the in-progress value; otherwise the live position.
-    var dragValue by remember { mutableStateOf<Float?>(null) }
-    val duration = durationMs.coerceAtLeast(1L).toFloat()
-    val sliderValue = dragValue ?: positionMs.toFloat().coerceIn(0f, duration)
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Slider(
-            value = sliderValue,
-            onValueChange = { dragValue = it },
-            onValueChangeFinished = {
-                dragValue?.let { onSeek(it.toLong()) }
-                dragValue = null
-            },
-            valueRange = 0f..duration,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = formatDuration(sliderValue.toLong()),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = formatDuration(durationMs),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

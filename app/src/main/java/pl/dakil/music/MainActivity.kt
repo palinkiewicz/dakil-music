@@ -2,6 +2,7 @@ package pl.dakil.music
 
 import android.app.SearchManager
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
@@ -60,6 +61,29 @@ class MainActivity : ComponentActivity() {
         }
         if (intent?.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
             playFromSearch(intent.getStringExtra(SearchManager.QUERY))
+        }
+        // "Add to Playback Queue" chooser entry (the .AddToQueueActivity alias).
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.data?.let(::enqueueExternalAudio)
+        }
+    }
+
+    /**
+     * "Add to Playback Queue" system action for an externally opened audio file:
+     * appends it to the live queue (a library track when the uri resolves to one,
+     * otherwise a synthetic song playing the granted uri). If nothing is currently
+     * playing it starts immediately; otherwise it is appended quietly, without
+     * interrupting the current track.
+     */
+    private fun enqueueExternalAudio(uri: Uri) {
+        // Best effort: keep read access beyond this task for SAF-persistable grants;
+        // most ACTION_VIEW grants aren't persistable, hence the swallow.
+        runCatching {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        lifecycleScope.launch {
+            val song = container.resolveAudioUri(uri)
+            container.enqueueOrPlay(listOf(song))
         }
     }
 

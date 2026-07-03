@@ -135,6 +135,38 @@ class MediaControllerPlayerRepository(
         syncState()
     }
 
+    override fun enqueueOrPlay(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        val c = controller ?: run {
+            // Deferred until connected, so isPlaying reflects any live background session.
+            pendingAction = { enqueueOrPlay(songs) }
+            return
+        }
+        songs.forEach { queueById[it.id.toString()] = it }
+        val startIndex = c.mediaItemCount
+        c.addMediaItems(songs.map(MediaItemMapper::toMediaItem))
+        // Idle → start the first appended track; already playing → leave it untouched.
+        if (!c.isPlaying) {
+            c.seekToDefaultPosition(startIndex)
+            if (c.playbackState == Player.STATE_IDLE || c.playbackState == Player.STATE_ENDED) c.prepare()
+            c.play()
+        }
+        syncState()
+    }
+
+    override fun playAtFront(song: Song, positionMs: Long) {
+        val c = controller ?: run {
+            pendingAction = { playAtFront(song, positionMs) }
+            return
+        }
+        queueById[song.id.toString()] = song
+        c.addMediaItem(0, MediaItemMapper.toMediaItem(song))
+        c.seekTo(0, positionMs.coerceAtLeast(0L))
+        if (c.playbackState == Player.STATE_IDLE || c.playbackState == Player.STATE_ENDED) c.prepare()
+        c.play()
+        syncState()
+    }
+
     override fun skipToQueueItem(index: Int) {
         val c = controller ?: return
         if (index in 0 until c.mediaItemCount) {

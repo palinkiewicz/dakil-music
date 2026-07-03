@@ -254,6 +254,14 @@
     <string name="unknown_album">Unknown album</string>
     <string name="unknown_artist">Unknown artist</string>
 
+    <!-- External audio open (ACTION_VIEW) -->
+    <string name="chooser_add_to_queue">Add to Playback Queue</string>
+    <string name="chooser_quick_player">Quick Player</string>
+    <string name="quick_player_unknown_title">Unknown title</string>
+    <string name="quick_player_open_app">Open Music app</string>
+    <string name="cd_seek_back">Rewind 10 seconds</string>
+    <string name="cd_seek_forward">Forward 10 seconds</string>
+
     <!-- Listening history & statistics -->
     <string name="action_cancel">Cancel</string>
     <string name="more_listening_history">Listening history</string>

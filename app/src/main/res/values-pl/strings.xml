@@ -241,6 +241,14 @@
     <string name="unknown_album">Nieznany album</string>
     <string name="unknown_artist">Nieznany artysta</string>
 
+    <!-- Otwieranie plików audio z zewnątrz (ACTION_VIEW) -->
+    <string name="chooser_add_to_queue">Dodaj do kolejki odtwarzania</string>
+    <string name="chooser_quick_player">Szybki odtwarzacz</string>
+    <string name="quick_player_unknown_title">Nieznany tytuł</string>
+    <string name="quick_player_open_app">Otwórz aplikację Music</string>
+    <string name="cd_seek_back">Przewiń 10 sekund do tyłu</string>
+    <string name="cd_seek_forward">Przewiń 10 sekund do przodu</string>
+
     <!-- Historia odsłuchów i statystyki -->
     <string name="action_cancel">Anuluj</string>
     <string name="more_listening_history">Historia odsłuchów</string>

@@ -18,6 +18,18 @@ interface PlayerRepository {
     /** Appends [songs] to the end of the current queue. */
     fun addToQueue(songs: List<Song>)
 
+    /**
+     * Appends [songs] to the queue; if nothing is currently playing, immediately
+     * starts playing the first appended track. Never interrupts ongoing playback.
+     */
+    fun enqueueOrPlay(songs: List<Song>)
+
+    /**
+     * Inserts [song] at the front of the queue and plays it from [positionMs],
+     * preserving the rest of the queue (used to hand a track off from the quick player).
+     */
+    fun playAtFront(song: Song, positionMs: Long)
+
     /** Jumps to [index] in the current queue and plays. */
     fun skipToQueueItem(index: Int)
 

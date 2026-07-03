@@ -33,6 +33,25 @@ class AddToQueueUseCase(private val player: PlayerRepository) {
     }
 }
 
+/**
+ * Appends [songs]; when nothing is playing, immediately starts the first one.
+ * Used by the "Add to Playback Queue" system action.
+ */
+class EnqueueOrPlayUseCase(private val player: PlayerRepository) {
+    operator fun invoke(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        player.enqueueOrPlay(songs)
+    }
+}
+
+/**
+ * Inserts [song] at the front of the queue and resumes it from [positionMs].
+ * Used to hand a track off from the quick player into the main app.
+ */
+class PlayAtFrontUseCase(private val player: PlayerRepository) {
+    operator fun invoke(song: Song, positionMs: Long) = player.playAtFront(song, positionMs)
+}
+
 /** Bundles the simple transport commands so the ViewModel depends on one object. */
 class PlaybackControlUseCase(private val player: PlayerRepository) {
     fun togglePlayPause() = player.togglePlayPause()
