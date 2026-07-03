@@ -158,7 +158,6 @@ fun NowPlayingScreen(
             onSelectPreset = viewModel::onSelectEqPreset,
             onBandLevel = viewModel::onSetEqBandLevel,
             onBassBoost = viewModel::onSetBassBoost,
-            onVirtualizer = viewModel::onSetVirtualizer,
             onReset = viewModel::onResetEqualizer,
         )
     }

@@ -18,8 +18,6 @@ interface AudioEffectsRepository {
 
     suspend fun setBassBoostStrength(strength: Int)
 
-    suspend fun setVirtualizerStrength(strength: Int)
-
     /** Zero the bands and detach from any preset, leaving the master switch untouched. */
     suspend fun resetToFlat()
 }

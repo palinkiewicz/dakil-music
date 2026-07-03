@@ -13,6 +13,5 @@ class UpdateAudioEffectsUseCase(private val repository: AudioEffectsRepository) 
     suspend fun setPreset(preset: Int) = repository.setPreset(preset)
     suspend fun setBandLevels(levelsMb: List<Int>) = repository.setBandLevels(levelsMb)
     suspend fun setBassBoostStrength(strength: Int) = repository.setBassBoostStrength(strength)
-    suspend fun setVirtualizerStrength(strength: Int) = repository.setVirtualizerStrength(strength)
     suspend fun resetToFlat() = repository.resetToFlat()
 }

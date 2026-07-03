@@ -38,8 +38,8 @@ import pl.dakil.music.domain.model.AudioEffectsSettings
 import kotlin.math.roundToInt
 
 /**
- * Material 3 bottom sheet exposing the equalizer: a master switch, device presets,
- * per-band sliders, and bass-boost / virtualizer strength. Reads everything from
+ * Material 3 bottom sheet exposing the equalizer: a master switch, presets,
+ * per-band sliders, and bass-boost strength. Reads everything from
  * [EqualizerUiState]; all changes are persisted by the caller (the ViewModel).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +51,6 @@ fun EqualizerSheet(
     onSelectPreset: (Int) -> Unit,
     onBandLevel: (index: Int, levelMb: Int) -> Unit,
     onBassBoost: (strength: Int) -> Unit,
-    onVirtualizer: (strength: Int) -> Unit,
     onReset: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -121,17 +120,6 @@ fun EqualizerSheet(
                     strength = state.settings.bassBoostStrength,
                     enabled = enabled,
                     onChange = onBassBoost,
-                    modifier = Modifier.alpha(controlsAlpha),
-                )
-            }
-
-            if (state.capabilities.virtualizerSupported) {
-                Spacer(Modifier.height(8.dp))
-                StrengthSlider(
-                    label = stringResource(R.string.eq_virtualizer),
-                    strength = state.settings.virtualizerStrength,
-                    enabled = enabled,
-                    onChange = onVirtualizer,
                     modifier = Modifier.alpha(controlsAlpha),
                 )
             }

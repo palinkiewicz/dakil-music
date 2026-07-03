@@ -22,7 +22,6 @@ class AudioEffectsRepositoryImpl(
             preset = prefs[KEY_PRESET] ?: AudioEffectsSettings.PRESET_CUSTOM,
             bandLevelsMb = BandLevelCodec.parse(prefs[KEY_BAND_LEVELS]),
             bassBoostStrength = prefs[KEY_BASS_BOOST] ?: 0,
-            virtualizerStrength = prefs[KEY_VIRTUALIZER] ?: 0,
         )
     }
 
@@ -49,16 +48,11 @@ class AudioEffectsRepositoryImpl(
         dataStore.edit { it[KEY_BASS_BOOST] = strength.coerceIn(0, AudioEffectsSettings.STRENGTH_MAX) }
     }
 
-    override suspend fun setVirtualizerStrength(strength: Int) {
-        dataStore.edit { it[KEY_VIRTUALIZER] = strength.coerceIn(0, AudioEffectsSettings.STRENGTH_MAX) }
-    }
-
     override suspend fun resetToFlat() {
         dataStore.edit {
             it.remove(KEY_BAND_LEVELS)
             it[KEY_PRESET] = AudioEffectsSettings.PRESET_CUSTOM
             it[KEY_BASS_BOOST] = 0
-            it[KEY_VIRTUALIZER] = 0
         }
     }
 
@@ -67,6 +61,5 @@ class AudioEffectsRepositoryImpl(
         val KEY_PRESET = intPreferencesKey("preset")
         val KEY_BAND_LEVELS = stringPreferencesKey("band_levels_mb")
         val KEY_BASS_BOOST = intPreferencesKey("bass_boost_strength")
-        val KEY_VIRTUALIZER = intPreferencesKey("virtualizer_strength")
     }
 }

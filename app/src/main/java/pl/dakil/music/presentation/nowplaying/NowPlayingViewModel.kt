@@ -47,7 +47,7 @@ data class NowPlayingUiState(
     val sleepTimerMode: SleepTimerMode? = null,
 )
 
-/** State for the equalizer bottom sheet: device capabilities + the persisted settings. */
+/** State for the equalizer bottom sheet: effect capabilities + the persisted settings. */
 data class EqualizerUiState(
     val capabilities: AudioEffectsCapabilities = AudioEffectsCapabilities(),
     val settings: AudioEffectsSettings = AudioEffectsSettings(),
@@ -187,10 +187,6 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
 
     fun onSetBassBoost(strength: Int) = viewModelScope.launch {
         container.updateAudioEffects.setBassBoostStrength(strength)
-    }
-
-    fun onSetVirtualizer(strength: Int) = viewModelScope.launch {
-        container.updateAudioEffects.setVirtualizerStrength(strength)
     }
 
     fun onResetEqualizer() = viewModelScope.launch {

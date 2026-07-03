@@ -1,16 +1,20 @@
 package pl.dakil.music.data.playback
 
-import android.media.audiofx.BassBoost
-import android.media.audiofx.Equalizer
-import android.media.audiofx.Virtualizer
+import android.media.audiofx.DynamicsProcessing
 import android.util.Log
-import pl.dakil.music.domain.model.AudioEffectsCapabilities
 import pl.dakil.music.domain.model.AudioEffectsSettings
 
 /**
- * Owns the platform [Equalizer]/[BassBoost]/[Virtualizer] for a single audio session
- * and applies [AudioEffectsSettings] to them. Lives in the playback-service process,
- * which is where the ExoPlayer audio session exists.
+ * Owns a platform [DynamicsProcessing] effect for a single audio session and applies
+ * [AudioEffectsSettings] to it. Lives in the playback-service process, which is where
+ * the ExoPlayer audio session exists.
+ *
+ * DynamicsProcessing replaces the legacy Equalizer + BassBoost pair: the old LVM effect
+ * bundle silently attenuates the whole session to reserve clipping headroom whenever any
+ * band is boosted, making everything sound quieter. Here we do our own gain staging —
+ * the equalizer and the bass boost are both gains on a post-EQ stage (bass boost is a
+ * low-shelf contribution on the bottom bands), guarded by an explicit limiter instead
+ * of a blanket volume drop.
  *
  * Every platform call is guarded: audio-effect creation throws on some devices and
  * emulators, in which case the controller degrades gracefully to "unavailable".
@@ -21,120 +25,91 @@ class AudioEffectsController(audioSessionId: Int) {
         Log.d(TAG, "Creating effects for audioSessionId=$audioSessionId")
     }
 
-    private val equalizer: Equalizer? = runCatching {
+    private val dynamicsProcessing: DynamicsProcessing? = runCatching {
         // Priority 0, attached to the player's session.
-        Equalizer(0, audioSessionId)
-    }.onFailure { Log.w(TAG, "Equalizer unavailable", it) }.getOrNull()
-        .also { Log.d(TAG, "Equalizer created=${it != null} hasControl=${it?.hasControl()}") }
+        DynamicsProcessing(0, audioSessionId, buildConfig()).apply {
+            setLimiterAllChannelsTo(buildLimiter())
+        }
+    }.onFailure { Log.w(TAG, "DynamicsProcessing unavailable", it) }.getOrNull()
+        .also { Log.d(TAG, "DynamicsProcessing created=${it != null} hasControl=${it?.hasControl()}") }
 
-    private val bassBoost: BassBoost? = runCatching {
-        BassBoost(0, audioSessionId)
-    }.onFailure { Log.w(TAG, "BassBoost unavailable", it) }.getOrNull()
-        .also { Log.d(TAG, "BassBoost created=${it != null} hasControl=${it?.hasControl()}") }
+    val isAvailable: Boolean get() = dynamicsProcessing != null
 
-    private val virtualizer: Virtualizer? = runCatching {
-        Virtualizer(0, audioSessionId)
-    }.onFailure { Log.w(TAG, "Virtualizer unavailable", it) }.getOrNull()
-        .also { Log.d(TAG, "Virtualizer created=${it != null} hasControl=${it?.hasControl()}") }
-
-    fun capabilities(): AudioEffectsCapabilities {
-        val eq = equalizer ?: return AudioEffectsCapabilities(available = false)
-        return runCatching {
-            val bandCount = eq.numberOfBands.toInt()
-            val range = eq.bandLevelRange // [min, max] in millibels
-            val presetCount = eq.numberOfPresets.toInt()
-            val presetNames = (0 until presetCount).map { eq.getPresetName(it.toShort()) }
-            // Read each preset's band levels so the UI can seed the manual sliders.
-            val presetLevels = (0 until presetCount).map { preset ->
-                eq.usePreset(preset.toShort())
-                (0 until bandCount).map { eq.getBandLevel(it.toShort()).toInt() }
-            }
-            AudioEffectsCapabilities(
-                available = bandCount > 0,
-                numberOfBands = bandCount,
-                minLevelMb = range[0].toInt(),
-                maxLevelMb = range[1].toInt(),
-                centerFreqsMilliHz = (0 until bandCount).map { eq.getCenterFreq(it.toShort()) },
-                presetNames = presetNames,
-                presetBandLevelsMb = presetLevels,
-                bassBoostSupported = bassBoost?.strengthSupported == true,
-                virtualizerSupported = virtualizer?.strengthSupported == true,
-            )
-        }.onFailure { Log.w(TAG, "Failed to read capabilities", it) }
-            .getOrDefault(AudioEffectsCapabilities(available = false))
-    }
-
-    /** Apply the desired state to the live effects. Safe to call repeatedly. */
+    /** Apply the desired state to the live effect. Safe to call repeatedly. */
     fun apply(settings: AudioEffectsSettings) {
-        val on = settings.masterEnabled
-        applyEqualizer(settings, on)
-        bassBoost?.let { applyBassBoost(it, on, settings.bassBoostStrength) }
-        virtualizer?.let { applyVirtualizer(it, on, settings.virtualizerStrength) }
-    }
-
-    private fun applyEqualizer(settings: AudioEffectsSettings, on: Boolean) {
-        val eq = equalizer ?: return
+        val dp = dynamicsProcessing ?: return
         runCatching {
-            val bandCount = eq.numberOfBands.toInt()
-            val levels = settings.bandLevelsMb
-            val usingPreset = settings.preset != AudioEffectsSettings.PRESET_CUSTOM &&
-                settings.preset < eq.numberOfPresets
-            val hasManualBoost = levels.size == bandCount && levels.any { it != 0 }
-            // A flat equalizer is left out of the effect chain entirely: an active but
-            // flat EQ needlessly interacts with BassBoost/Virtualizer on some devices.
-            val active = on && (usingPreset || hasManualBoost)
+            val levels = resolveBandLevelsMb(settings)
+            val bassBoostDb = settings.bassBoostStrength
+                .coerceIn(0, AudioEffectsSettings.STRENGTH_MAX)
+                .toFloat() * BASS_BOOST_MAX_DB / AudioEffectsSettings.STRENGTH_MAX
+            // A flat chain is left out of the effect path entirely — no reason to spend
+            // DSP cycles (or risk device quirks) on an effect that changes nothing.
+            val active = settings.masterEnabled && (levels.any { it != 0 } || bassBoostDb > 0f)
 
             // Enable first, then write parameters — the order the AudioEffect API expects.
-            // Writing band levels to a disabled effect and enabling afterwards mutes
-            // output on some devices.
-            val status = eq.setEnabled(active)
-            Log.d(TAG, "Equalizer setEnabled($active) -> $status; enabled=${eq.enabled} hasControl=${eq.hasControl()}")
+            val status = dp.setEnabled(active)
+            Log.d(TAG, "DynamicsProcessing setEnabled($active) -> $status; enabled=${dp.enabled} hasControl=${dp.hasControl()}")
             if (!active) return
-            if (usingPreset) {
-                eq.usePreset(settings.preset.toShort())
-            } else {
-                val range = eq.bandLevelRange
-                for (band in 0 until bandCount) {
-                    val clamped = levels[band].coerceIn(range[0].toInt(), range[1].toInt())
-                    eq.setBandLevel(band.toShort(), clamped.toShort())
-                }
+            for (band in 0 until EqualizerSpec.BAND_COUNT) {
+                val gainDb = levels[band] / 100f + bassBoostDb * BASS_SHELF_WEIGHTS[band]
+                dp.setPostEqBandAllChannelsTo(
+                    band,
+                    DynamicsProcessing.EqBand(true, EqualizerSpec.CUTOFF_FREQS_HZ[band], gainDb),
+                )
             }
-        }.onFailure { Log.w(TAG, "Failed to apply equalizer", it) }
+        }.onFailure { Log.w(TAG, "Failed to apply audio effects", it) }
     }
 
-    private fun applyBassBoost(effect: BassBoost, masterOn: Boolean, strength: Int) {
-        runCatching {
-            val active = masterOn && strength > 0
-            val status = effect.setEnabled(active)
-            Log.d(TAG, "BassBoost setEnabled($active) -> $status; enabled=${effect.enabled} hasControl=${effect.hasControl()} strengthSupported=${effect.strengthSupported}")
-            if (active && effect.strengthSupported) {
-                effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply BassBoost", it) }
+    /** Band gains from the active preset, or the (clamped) manual levels, or flat. */
+    private fun resolveBandLevelsMb(settings: AudioEffectsSettings): List<Int> {
+        EqualizerSpec.PRESETS.getOrNull(settings.preset)?.let { return it.levelsMb }
+        if (settings.bandLevelsMb.size != EqualizerSpec.BAND_COUNT) {
+            return List(EqualizerSpec.BAND_COUNT) { 0 }
+        }
+        return settings.bandLevelsMb.map {
+            it.coerceIn(EqualizerSpec.MIN_LEVEL_MB, EqualizerSpec.MAX_LEVEL_MB)
+        }
     }
 
-    private fun applyVirtualizer(effect: Virtualizer, masterOn: Boolean, strength: Int) {
-        runCatching {
-            val active = masterOn && strength > 0
-            effect.enabled = active
-            if (active && effect.strengthSupported) {
-                effect.setStrength(strength.coerceIn(0, MAX_STRENGTH).toShort())
-                // Force a virtualization mode while active; left on AUTO the effect stays
-                // inaudible for ordinary stereo output on most devices.
-                val forced = effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_BINAURAL)
-                if (!forced) effect.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_AUTO)
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply Virtualizer", it) }
-    }
+    private fun buildConfig(): DynamicsProcessing.Config =
+        DynamicsProcessing.Config.Builder(
+            DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+            // Channel count is a template; the platform re-fits the config to the
+            // session's actual channel count on creation.
+            /* channelCount = */ 2,
+            /* preEqInUse = */ false, /* preEqBandCount = */ 0,
+            /* mbcInUse = */ false, /* mbcBandCount = */ 0,
+            /* postEqInUse = */ true, /* postEqBandCount = */ EqualizerSpec.BAND_COUNT,
+            /* limiterInUse = */ true,
+        ).build()
+
+    /**
+     * Brick-wall-ish limiter that absorbs the headroom the band boosts eat into,
+     * instead of the legacy bundle's fixed whole-session attenuation.
+     */
+    private fun buildLimiter() = DynamicsProcessing.Limiter(
+        /* inUse = */ true,
+        /* enabled = */ true,
+        /* linkGroup = */ 0,
+        /* attackTime = */ 1f,
+        /* releaseTime = */ 60f,
+        /* ratio = */ 10f,
+        /* threshold = */ -1f,
+        /* postGain = */ 0f,
+    )
 
     fun release() {
-        runCatching { equalizer?.release() }
-        runCatching { bassBoost?.release() }
-        runCatching { virtualizer?.release() }
+        runCatching { dynamicsProcessing?.release() }
     }
 
     private companion object {
         const val TAG = "AudioEffectsController"
-        const val MAX_STRENGTH = 1000
+
+        /** Bass-boost gain in dB at full strength. */
+        const val BASS_BOOST_MAX_DB = 6f
+
+        /** How much of the bass boost each band receives — a low shelf over the bottom bands. */
+        val BASS_SHELF_WEIGHTS = listOf(1f, 0.5f, 0f, 0f, 0f)
     }
 }
