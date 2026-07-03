@@ -34,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pl.dakil.music.domain.model.NavComponent
 import pl.dakil.music.domain.model.NavItem
+import pl.dakil.music.domain.model.SystemPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.backup.BackupScreen
 import pl.dakil.music.presentation.history.ListeningHistoryScreen
@@ -52,6 +53,7 @@ import pl.dakil.music.presentation.settings.NavigationCustomizationScreen
 import pl.dakil.music.presentation.settings.NavigationCustomizationViewModel
 import pl.dakil.music.presentation.settings.SettingsScreen
 import pl.dakil.music.presentation.songlist.SongListScreen
+import pl.dakil.music.presentation.songlist.SystemPlaylistSongListScreen
 
 /** Maps the current route to the bottom-bar item that should look selected. */
 private fun activeNavItem(currentRoute: String?, bottomItems: List<NavItem>): NavItem? {
@@ -267,6 +269,25 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                         onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
                         onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
                         modifier = Modifier.statusBarsPadding(),
+                        showBack = showBack,
+                    )
+                }
+            }
+            // Dedicated Favourites / All songs shortcuts (bottom-bar / More).
+            val systemPlaylistRoutes = mapOf(
+                Routes.FAVOURITES to SystemPlaylist.FAVORITES,
+                Routes.ALL_SONGS to SystemPlaylist.ALL_SONGS,
+            )
+            systemPlaylistRoutes.forEach { (route, playlist) ->
+                composable(route) { entry ->
+                    val showBack = remember(entry) {
+                        navController.previousBackStackEntry?.destination?.route !=
+                            navController.graph.findStartDestination().route
+                    }
+                    SystemPlaylistSongListScreen(
+                        playlist = playlist,
+                        onBack = { navController.popBackStack() },
+                        onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
                         showBack = showBack,
                     )
                 }

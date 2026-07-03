@@ -8,9 +8,13 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,7 +81,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -116,6 +123,8 @@ fun SongListScreen(
     onAlbumClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     embedded: Boolean = false,
+    // Hidden when the list is a bottom-bar destination (a tab has nothing to go back to).
+    showBack: Boolean = true,
     viewModel: SongListViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -176,6 +185,11 @@ fun SongListScreen(
     // Embedded as a Library tab: no artwork header and no top bar, matching the other tabs.
     val headerCount = if (embedded) 0 else 1
 
+    val density = LocalDensity.current
+    // Measured height of the contextual selection bar. In embedded mode the list is padded
+    // below it so the bar never covers a song (there's no artwork header to overlay).
+    var selectionBarHeightPx by remember { mutableIntStateOf(0) }
+
     val listState = rememberLazyListState()
     // Once the header has scrolled away, pin the title in the top bar.
     val collapsed by remember {
@@ -205,7 +219,15 @@ fun SongListScreen(
         } else {
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(bottom = 104.dp), // clear the FABs
+                contentPadding = PaddingValues(
+                    // Embedded selection bar sits in the layout's top edge; pad below it.
+                    top = if (embedded && state.inSelectionMode) {
+                        with(density) { selectionBarHeightPx.toDp() }
+                    } else {
+                        0.dp
+                    },
+                    bottom = 104.dp, // clear the FABs
+                ),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (!embedded) {
@@ -239,69 +261,65 @@ fun SongListScreen(
                     itemsIndexed(localEntries, key = { _, entry -> entry.key }) { index, entry ->
                         ReorderableItem(reorderState, key = entry.key) { dragging ->
                             val itemScope = this
-                            // Mirror the Now Playing queue: the held row lifts (shadow) and
-                            // gets a surfaceVariant tint that spans the whole row, including
-                            // the drag handle, so it reads as a single picked-up element.
-                            val elevation by animateDpAsState(
-                                if (dragging) 6.dp else 0.dp,
-                                label = "playlistElevation",
-                            )
-                            // The drag handle sits *outside* the row's clickable area so a
-                            // long-press on it starts a drag (queue-style) without ever
-                            // triggering the row's long-press selection.
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .shadow(elevation)
-                                    .background(
-                                        if (dragging) {
-                                            MaterialTheme.colorScheme.surfaceVariant
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                    ),
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    SongRow(
-                                        song = entry.song,
-                                        position = index + 1,
-                                        albumMode = false,
-                                        selectionMode = false,
-                                        selected = false,
-                                        favorite = state.isFavorite(entry.song.id),
-                                        current = state.isCurrent(entry.song.id),
-                                        dragging = dragging,
-                                        onClick = { viewModel.onSongClick(index) },
-                                        onLongClick = { viewModel.onSongLongClick(entry.song.id) },
-                                        coverArtVersion = coverArtVersion,
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Rounded.DragHandle,
-                                    contentDescription = stringResource(R.string.cd_reorder),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = with(itemScope) {
-                                        Modifier.longPressDraggableHandle(
-                                            onDragStarted = {
-                                                isDragging = true
-                                                dragStartIndex = index
-                                            },
-                                            onDragStopped = {
-                                                isDragging = false
-                                                val to = localEntries.indexOfFirst { it.key == entry.key }
-                                                if (dragStartIndex in localEntries.indices &&
-                                                    to >= 0 && dragStartIndex != to
-                                                ) {
-                                                    viewModel.movePlaylistSong(dragStartIndex, to)
+                            // The drag handle lives inside the row (as trailing content), so
+                            // the whole item is one clickable surface and the tap ripple spans
+                            // the handle too — exactly like the Now Playing queue. The handle
+                            // grabs on long-press; the guard below stops that same long-press
+                            // from also triggering the row's select.
+                            var handlePressed by remember { mutableStateOf(false) }
+                            SongRow(
+                                song = entry.song,
+                                position = index + 1,
+                                albumMode = false,
+                                selectionMode = false,
+                                selected = false,
+                                favorite = state.isFavorite(entry.song.id),
+                                current = state.isCurrent(entry.song.id),
+                                dragging = dragging,
+                                onClick = { viewModel.onSongClick(index) },
+                                onLongClick = {
+                                    if (!handlePressed) viewModel.onSongLongClick(entry.song.id)
+                                },
+                                coverArtVersion = coverArtVersion,
+                                dragHandle = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DragHandle,
+                                        contentDescription = stringResource(R.string.cd_reorder),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = with(itemScope) {
+                                            Modifier
+                                                // Flag a press on the handle (without consuming, so
+                                                // the drag still works) so the row skips selection.
+                                                .pointerInput(Unit) {
+                                                    awaitEachGesture {
+                                                        awaitFirstDown(requireUnconsumed = false)
+                                                        handlePressed = true
+                                                        while (awaitPointerEvent().changes.any { it.pressed }) {
+                                                            // wait until the finger lifts
+                                                        }
+                                                        handlePressed = false
+                                                    }
                                                 }
-                                                dragStartIndex = -1
-                                            },
-                                        )
-                                    }
-                                        .padding(end = 12.dp)
-                                        .size(24.dp),
-                                )
-                            }
+                                                .longPressDraggableHandle(
+                                                    onDragStarted = {
+                                                        isDragging = true
+                                                        dragStartIndex = index
+                                                    },
+                                                    onDragStopped = {
+                                                        isDragging = false
+                                                        val to = localEntries.indexOfFirst { it.key == entry.key }
+                                                        if (dragStartIndex in localEntries.indices &&
+                                                            to >= 0 && dragStartIndex != to
+                                                        ) {
+                                                            viewModel.movePlaylistSong(dragStartIndex, to)
+                                                        }
+                                                        dragStartIndex = -1
+                                                    },
+                                                )
+                                        }.size(24.dp),
+                                    )
+                                },
+                            )
                         }
                     }
                 } else {
@@ -345,13 +363,17 @@ fun SongListScreen(
                     viewModel.clearSelection()
                 },
                 onShowInfo = viewModel::startFileInfo,
-                modifier = Modifier.align(Alignment.TopStart),
+                // In a tab the bar isn't at the screen top, so drop the status-bar inset.
+                windowInsets = if (embedded) WindowInsets(0, 0, 0, 0) else TopAppBarDefaults.windowInsets,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .onSizeChanged { selectionBarHeightPx = it.height },
             )
         } else if (!embedded) {
             CollapsingTopBar(
                 title = title,
                 collapsed = collapsed,
-                showBack = !embedded,
+                showBack = showBack,
                 onBack = onBack,
                 onAddToQueue = viewModel::addAllToQueue,
                 onAddToPlaylist = if (canAddToPlaylist) viewModel::startAddSongToPlaylist else null,
@@ -693,6 +715,9 @@ private fun SongRow(
     onLongClick: () -> Unit,
     dragging: Boolean = false,
     coverArtVersion: Int = 0,
+    // When present (reorderable lists) the handle lives inside the row, so the whole
+    // item is one clickable surface and the tap ripple covers the handle too.
+    dragHandle: (@Composable () -> Unit)? = null,
 ) {
     val containerColor = when {
         // While picked up for reordering the row is tinted like the Now Playing queue.
@@ -703,9 +728,13 @@ private fun SongRow(
             .compositeOver(MaterialTheme.colorScheme.surface)
         else -> MaterialTheme.colorScheme.surface
     }
+    val elevation by animateDpAsState(if (dragging) 6.dp else 0.dp, label = "songRowElevation")
 
     ListItem(
         colors = ListItemDefaults.colors(containerColor = containerColor),
+        modifier = Modifier
+            .shadow(elevation)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         leadingContent = {
             when {
                 selectionMode -> Checkbox(checked = selected, onCheckedChange = { onClick() })
@@ -753,9 +782,9 @@ private fun SongRow(
                     )
                 }
                 Text(formatDuration(song.durationMs), style = MaterialTheme.typography.labelMedium)
+                dragHandle?.invoke()
             }
         },
-        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
     )
 }
 

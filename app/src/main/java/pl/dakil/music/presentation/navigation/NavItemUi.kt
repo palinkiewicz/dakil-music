@@ -20,7 +20,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.NavItem
-import pl.dakil.music.domain.model.SystemPlaylist
 
 /** What tapping a [NavItem] does: open a route, or perform an in-place action. */
 sealed interface NavAction {
@@ -88,11 +87,11 @@ fun navItemUi(item: NavItem): NavItemUi = when (item) {
     )
     NavItem.FAVOURITES -> NavItemUi(
         Icons.Rounded.Favorite, R.string.playlist_favorites, R.string.nav_favourites_summary,
-        NavAction.Route(Routes.playlistSongs(SystemPlaylist.FAVORITES)),
+        NavAction.Route(Routes.FAVOURITES),
     )
     NavItem.ALL_SONGS -> NavItemUi(
         Icons.Rounded.MusicNote, R.string.playlist_all_songs, R.string.nav_all_songs_summary,
-        NavAction.Route(Routes.playlistSongs(SystemPlaylist.ALL_SONGS)),
+        NavAction.Route(Routes.ALL_SONGS),
     )
     NavItem.MORE -> NavItemUi(
         Icons.Rounded.MoreHoriz, R.string.nav_more, R.string.nav_more_summary,

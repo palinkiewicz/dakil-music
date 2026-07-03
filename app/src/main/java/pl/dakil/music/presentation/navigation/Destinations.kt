@@ -21,6 +21,10 @@ object Routes {
     const val ARTISTS = "artists"
     const val GENRES = "genres"
     const val PLAYLISTS = "playlists"
+    // Dedicated destinations for the Favourites / All songs shortcuts (distinct from the
+    // parameterised song-list route so the bottom bar can highlight them).
+    const val FAVOURITES = "favourites"
+    const val ALL_SONGS = "all_songs"
 
     // Shared song-list detail screen, parameterised by its source.
     const val SONG_LIST = "song_list"

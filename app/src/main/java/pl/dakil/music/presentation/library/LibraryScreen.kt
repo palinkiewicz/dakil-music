@@ -112,12 +112,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Genre
@@ -136,15 +132,12 @@ import pl.dakil.music.presentation.components.FileInfoDialog
 import pl.dakil.music.presentation.components.SelectionTopBar
 import pl.dakil.music.presentation.components.clickableRow
 import pl.dakil.music.presentation.components.shareSongs
-import pl.dakil.music.presentation.navigation.Routes
-import pl.dakil.music.presentation.navigation.SourceType
 import pl.dakil.music.presentation.navigation.navItemUi
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
 import pl.dakil.music.presentation.songlist.EditTagsDialog
-import pl.dakil.music.presentation.songlist.SongListScreen
-import pl.dakil.music.presentation.songlist.SongListViewModel
+import pl.dakil.music.presentation.songlist.SystemPlaylistSongListScreen
 
 @StringRes
 fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
@@ -560,27 +553,11 @@ private fun PlaylistsCategory(
  */
 @Composable
 private fun EmbeddedSystemPlaylist(playlist: SystemPlaylist) {
-    val app = LocalContext.current.applicationContext as MusicApplication
-    val factory = remember(playlist) {
-        object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                SongListViewModel(
-                    app.container,
-                    SavedStateHandle(
-                        mapOf(
-                            Routes.ARG_SOURCE_TYPE to SourceType.PLAYLIST.name,
-                            Routes.ARG_SOURCE_ARG to playlist.name,
-                        ),
-                    ),
-                ) as T
-        }
-    }
-    SongListScreen(
+    SystemPlaylistSongListScreen(
+        playlist = playlist,
         onBack = {},
         onAlbumClick = {},
         embedded = true,
-        viewModel = viewModel(key = "embedded_${playlist.name}", factory = factory),
     )
 }
 
