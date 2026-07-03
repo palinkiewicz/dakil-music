@@ -102,6 +102,19 @@
             </intent-filter>
         </service>
 
+        <!-- Restarts PlaybackService when a media button or playback-resumption command
+             arrives while the process is dead (Bluetooth, System UI, OEM media panels
+             such as Huawei's Control Panel). Declaring it also makes Media3 advertise
+             playback resumption to those panels. Must stay the only receiver matching
+             MEDIA_BUTTON — Media3 refuses ambiguous matches. -->
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
         <!-- Declares this app as an Android Auto media app. -->
         <meta-data
             android:name="com.google.android.gms.car.application"

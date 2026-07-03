@@ -12,6 +12,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
@@ -24,16 +25,25 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import pl.dakil.music.MainActivity
 import pl.dakil.music.MusicApplication
 import pl.dakil.music.R
+import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.AudioEffectsSettings
 import pl.dakil.music.domain.model.Song
 
@@ -50,6 +60,13 @@ class PlaybackService : MediaLibraryService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private lateinit var audioManager: AudioManager
+    private lateinit var container: AppContainer
+
+    /** Debounced writer of the resumption snapshot; one pending write at a time. */
+    private var resumptionSaveJob: Job? = null
+
+    /** Periodic position checkpoint while playing, so a killed process resumes close by. */
+    private var positionCheckpointJob: Job? = null
 
     /** Owns the platform audio effects bound to the player's session. */
     private var audioEffects: AudioEffectsController? = null
@@ -78,6 +95,7 @@ class PlaybackService : MediaLibraryService() {
         super.onCreate()
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        container = (application as MusicApplication).container
 
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(
@@ -106,6 +124,7 @@ class PlaybackService : MediaLibraryService() {
                 attachAudioEffects(audioSessionId)
             }
         })
+        registerResumptionSaver(player)
 
         val closeButton = CommandButton.Builder()
             .setDisplayName(getString(R.string.notification_action_close))
@@ -118,8 +137,6 @@ class PlaybackService : MediaLibraryService() {
             // Tapping the notification body opens the app on the Now Playing screen.
             .setSessionActivity(buildNowPlayingActivityIntent())
             .build()
-
-        val container = (application as MusicApplication).container
 
         // Keep the auto-pause preferences fresh (works even with no UI connected).
         val settingsRepository = container.settingsRepository
@@ -159,6 +176,91 @@ class PlaybackService : MediaLibraryService() {
         audioEffects?.release()
         audioEffectsSessionId = sessionId
         audioEffects = AudioEffectsController(sessionId).also { it.apply(audioEffectsSettings) }
+    }
+
+    /**
+     * Persist queue snapshots so [LibrarySessionCallback.onPlaybackResumption] can
+     * restore playback after process death — System UI and OEM media panels (e.g.
+     * Huawei's Control Panel) list the app as recently used and expect a play
+     * command to bring the previous queue back.
+     */
+    private fun registerResumptionSaver(player: Player) {
+        player.addListener(object : Player.Listener {
+            override fun onTimelineChanged(timeline: Timeline, reason: Int) =
+                scheduleResumptionSave()
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) =
+                scheduleResumptionSave()
+
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) =
+                scheduleResumptionSave()
+
+            override fun onRepeatModeChanged(repeatMode: Int) = scheduleResumptionSave()
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) = scheduleResumptionSave()
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                positionCheckpointJob?.cancel()
+                if (isPlaying) {
+                    positionCheckpointJob = serviceScope.launch {
+                        while (true) {
+                            delay(RESUMPTION_CHECKPOINT_MS)
+                            saveResumptionStateNow()
+                        }
+                    }
+                } else {
+                    // Bank the position on pause; kills rarely happen mid-playback.
+                    scheduleResumptionSave()
+                }
+            }
+        })
+    }
+
+    /** Coalesces bursts of player events into a single write. */
+    private fun scheduleResumptionSave() {
+        resumptionSaveJob?.cancel()
+        resumptionSaveJob = serviceScope.launch {
+            delay(RESUMPTION_SAVE_DEBOUNCE_MS)
+            saveResumptionStateNow()
+        }
+    }
+
+    private suspend fun saveResumptionStateNow() {
+        val state = snapshotResumptionState() ?: return
+        container.playbackResumptionStore.save(state)
+    }
+
+    /** Main-thread snapshot of the player queue; null when there is nothing to save. */
+    private fun snapshotResumptionState(): ResumptionState? {
+        val player = mediaSession?.player ?: return null
+        val count = player.mediaItemCount
+        if (count == 0) return null
+        val currentIndex = player.currentMediaItemIndex
+        // Externally opened files can carry non-numeric media ids; they can't be
+        // re-resolved from MediaStore later, so skip them and shift the index.
+        val ids = ArrayList<Long>(count)
+        var index = currentIndex
+        var currentDropped = false
+        for (i in 0 until count) {
+            val id = player.getMediaItemAt(i).mediaId.toLongOrNull()
+            when {
+                id != null -> ids.add(id)
+                i < currentIndex -> index--
+                i == currentIndex -> currentDropped = true
+            }
+        }
+        if (ids.isEmpty()) return null
+        return ResumptionState(
+            queueIds = ids,
+            currentIndex = index.coerceIn(0, ids.lastIndex),
+            positionMs = if (currentDropped) 0 else player.currentPosition,
+            shuffle = player.shuffleModeEnabled,
+            repeatMode = player.repeatMode,
+        )
     }
 
     /**
@@ -250,6 +352,14 @@ class PlaybackService : MediaLibraryService() {
             args: Bundle,
         ): ListenableFuture<SessionResult> {
             if (customCommand.customAction == ACTION_CLOSE) {
+                // Closing means "done listening": forget the resumption queue so the
+                // app leaves the system/OEM media panels. NonCancellable lets the
+                // write outlive the scope cancellation in onDestroy.
+                resumptionSaveJob?.cancel()
+                positionCheckpointJob?.cancel()
+                serviceScope.launch {
+                    withContext(NonCancellable) { container.playbackResumptionStore.clear() }
+                }
                 stopEverything()
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
@@ -304,6 +414,62 @@ class PlaybackService : MediaLibraryService() {
         }
 
         /**
+         * Rebuilds the last saved queue when the system revives the session with a
+         * play command after process death (Bluetooth button, System UI or OEM
+         * resumption cards). Must resolve fast: the service is already foreground-
+         * pending, so a hung future would trip the FGS start timeout.
+         */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+            val job = serviceScope.launch {
+                val saved = container.playbackResumptionStore.read()
+                if (saved == null) {
+                    future.setException(UnsupportedOperationException("Nothing to resume"))
+                    return@launch
+                }
+                // On a cold start the library may still be loading (onCreate kicked
+                // off a refresh); wait briefly for it rather than failing outright.
+                val songs = withTimeoutOrNull(RESUMPTION_LIBRARY_TIMEOUT_MS) {
+                    container.musicRepository.songs.first { it.isNotEmpty() }
+                }.orEmpty()
+                val byId = songs.associateBy(Song::id)
+                // Drop songs deleted since the save, shifting the start index along.
+                var startIndex = saved.currentIndex
+                var currentDropped = false
+                val items = ArrayList<MediaItem>(saved.queueIds.size)
+                saved.queueIds.forEachIndexed { i, id ->
+                    val song = byId[id]
+                    when {
+                        song != null -> items.add(MediaItemMapper.toMediaItem(song))
+                        i < saved.currentIndex -> startIndex--
+                        i == saved.currentIndex -> currentDropped = true
+                    }
+                }
+                if (items.isEmpty()) {
+                    future.setException(UnsupportedOperationException("Saved queue no longer exists"))
+                    return@launch
+                }
+                mediaSession.player.shuffleModeEnabled = saved.shuffle
+                mediaSession.player.repeatMode = saved.repeatMode
+                future.set(
+                    MediaSession.MediaItemsWithStartPosition(
+                        items,
+                        startIndex.coerceIn(0, items.lastIndex),
+                        if (currentDropped) 0 else saved.positionMs,
+                    )
+                )
+            }
+            // If the service dies mid-resolution, fail the future instead of hanging.
+            job.invokeOnCompletion { cause ->
+                if (cause != null && !future.isDone) future.setException(cause)
+            }
+            return future
+        }
+
+        /**
          * Browsers send back items stripped to their media id (no uri); re-attach the
          * playable [MediaItem] for each known song so playback can start.
          */
@@ -350,13 +516,26 @@ class PlaybackService : MediaLibraryService() {
 
     /** Stop the service if the user swipes the app away with nothing playing. */
     override fun onTaskRemoved(rootIntent: Intent?) {
+        flushResumptionState()
         val player = mediaSession?.player
         if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
             stopSelf()
         }
     }
 
+    /**
+     * Synchronous last-chance write of the resumption snapshot, mirroring the
+     * [PlaybackHistoryTracker.release] flush precedent. No-op with an empty queue,
+     * so the close action's cleared state stays cleared.
+     */
+    private fun flushResumptionState() {
+        val state = snapshotResumptionState() ?: return
+        resumptionSaveJob?.cancel()
+        runBlocking { container.playbackResumptionStore.save(state) }
+    }
+
     override fun onDestroy() {
+        flushResumptionState()
         volumeObserver?.let(contentResolver::unregisterContentObserver)
         volumeObserver = null
         serviceScope.cancel()
@@ -373,5 +552,14 @@ class PlaybackService : MediaLibraryService() {
     private companion object {
         /** Custom session command id for the notification's close action. */
         const val ACTION_CLOSE = "pl.dakil.music.action.CLOSE"
+
+        /** Coalescing window for resumption-snapshot writes after player events. */
+        const val RESUMPTION_SAVE_DEBOUNCE_MS = 1_000L
+
+        /** Position-checkpoint cadence while playing. */
+        const val RESUMPTION_CHECKPOINT_MS = 15_000L
+
+        /** How long resumption may wait for the library before failing the request. */
+        const val RESUMPTION_LIBRARY_TIMEOUT_MS = 4_000L
     }
 }

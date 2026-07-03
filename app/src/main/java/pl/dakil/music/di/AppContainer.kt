@@ -13,6 +13,7 @@ import pl.dakil.music.data.datastore.audioEffectsDataStore
 import pl.dakil.music.data.datastore.favoritesDataStore
 import pl.dakil.music.data.datastore.lyricsAlignmentDataStore
 import pl.dakil.music.data.datastore.navigationDataStore
+import pl.dakil.music.data.datastore.playbackStateDataStore
 import pl.dakil.music.data.datastore.playlistsDataStore
 import pl.dakil.music.data.datastore.settingsDataStore
 import pl.dakil.music.data.datastore.sortDataStore
@@ -31,6 +32,7 @@ import pl.dakil.music.data.playback.AudioEffectsCapabilitiesProvider
 import pl.dakil.music.data.playback.LyricsController
 import pl.dakil.music.data.playback.MediaControllerPlayerRepository
 import pl.dakil.music.data.playback.PlaybackHistoryTracker
+import pl.dakil.music.data.playback.PlaybackResumptionStore
 import pl.dakil.music.data.repository.AlbumRuleRepositoryImpl
 import pl.dakil.music.data.repository.AudioEffectsRepositoryImpl
 import pl.dakil.music.data.repository.FavoritesRepositoryImpl
@@ -166,6 +168,9 @@ class AppContainer(context: Context) {
 
     val navigationConfigRepository: NavigationConfigRepository =
         NavigationConfigRepositoryImpl(appContext.navigationDataStore)
+
+    /** Last-queue snapshots consumed by PlaybackService for system playback resumption. */
+    val playbackResumptionStore = PlaybackResumptionStore(appContext.playbackStateDataStore)
 
     private val database = Room.databaseBuilder(appContext, MusicDatabase::class.java, "music.db").build()
 

@@ -15,3 +15,5 @@ val Context.lyricsAlignmentDataStore: DataStore<Preferences> by preferencesDataS
 val Context.navigationDataStore: DataStore<Preferences> by preferencesDataStore(name = "navigation")
 // Kept separate so frequent equalizer-slider writes don't rewrite the settings file.
 val Context.audioEffectsDataStore: DataStore<Preferences> by preferencesDataStore(name = "audio_effects")
+// Kept separate: playback-position checkpoints write repeatedly while music plays.
+val Context.playbackStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "playback_state")
