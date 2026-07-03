@@ -173,6 +173,8 @@ fun SongListScreen(
         source.playlist == pl.dakil.music.domain.model.SystemPlaylist.FAVORITES
     val canAddToPlaylist = isUserPlaylist || isFavorites
     val cornerDp = settings.albumCornerRoundnessDp.dp
+    // Embedded as a Library tab: no artwork header and no top bar, matching the other tabs.
+    val headerCount = if (embedded) 0 else 1
 
     val listState = rememberLazyListState()
     // Once the header has scrolled away, pin the title in the top bar.
@@ -187,10 +189,10 @@ fun SongListScreen(
     LaunchedEffect(state.songs) {
         if (!isDragging) localEntries = state.songs.toSongEntries()
     }
-    // The header is the single item before the playlist songs.
+    // The header (when present) is the single item before the playlist songs.
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        val f = from.index - 1
-        val t = to.index - 1
+        val f = from.index - headerCount
+        val t = to.index - headerCount
         if (f in localEntries.indices && t in localEntries.indices) {
             localEntries = localEntries.toMutableList().apply { add(t, removeAt(f)) }
         }
@@ -206,16 +208,18 @@ fun SongListScreen(
                 contentPadding = PaddingValues(bottom = 104.dp), // clear the FABs
                 modifier = Modifier.fillMaxSize(),
             ) {
-                item(key = "header") {
-                    SongListHeader(
-                        title = title,
-                        artModel = state.songs.firstOrNull()?.coverArtModel(coverArtVersion),
-                        author = if (isAlbum) currentAlbum?.artist?.takeIf { it.isNotBlank() } else null,
-                        year = if (isAlbum) currentAlbum?.year ?: 0 else 0,
-                        songCount = state.songs.size,
-                        totalDurationMs = state.songs.sumOf { it.durationMs },
-                        cornerShape = RoundedCornerShape(cornerDp),
-                    )
+                if (!embedded) {
+                    item(key = "header") {
+                        SongListHeader(
+                            title = title,
+                            artModel = state.songs.firstOrNull()?.coverArtModel(coverArtVersion),
+                            author = if (isAlbum) currentAlbum?.artist?.takeIf { it.isNotBlank() } else null,
+                            year = if (isAlbum) currentAlbum?.year ?: 0 else 0,
+                            songCount = state.songs.size,
+                            totalDurationMs = state.songs.sumOf { it.durationMs },
+                            cornerShape = RoundedCornerShape(cornerDp),
+                        )
+                    }
                 }
 
                 if (isPerformer && authoredAlbums.isNotEmpty()) {
@@ -343,7 +347,7 @@ fun SongListScreen(
                 onShowInfo = viewModel::startFileInfo,
                 modifier = Modifier.align(Alignment.TopStart),
             )
-        } else {
+        } else if (!embedded) {
             CollapsingTopBar(
                 title = title,
                 collapsed = collapsed,
