@@ -12,8 +12,6 @@
 
 The application follows strict Clean Architecture guidelines, utilizing manual dependency injection for zero-overhead startup times, robust performance, and absolute reliability.
 
----
-
 ## Key Features
 
 ### 🎵 Core Playback & Queue Management
@@ -42,8 +40,6 @@ The application follows strict Clean Architecture guidelines, utilizing manual d
 * **Glance Home-Screen Widget**: Clean, modern remote control widget utilizing Jetpack Glance, reflecting live playback states, track info, and cached cover art previews.
 * **Enterprise Backup Engine**: Export independent slices of your application configuration (settings, playlists, rules, sort states) into structured CSV files packed securely within a single cross-device ZIP file.
 
----
-
 ## Architecture & Technology Stack
 
 The project relies on a highly disciplined multi-layered structure with inward-pointing dependencies (`presentation` → `domain` ← `data`) ensuring strict isolation of business logic:
@@ -52,8 +48,6 @@ The project relies on a highly disciplined multi-layered structure with inward-p
 * **Data Layer**: Concrete implementations of domains. Media discovery is handled live through the Android `MediaStore` (no heavy local database caching for media), persistence utilizes **Room** (for listening records) and **9 isolated Preferences DataStores** to prevent I/O bottlenecks. Audio manipulation utilizes JAudiotagger for tag parsing.
 * **Presentation Layer**: Built completely using **Jetpack Compose (Material Design 3)**, establishing pure state tracking via `StateFlow` under an MVVM structure.
 * **Manual Dependency Injection**: Zero DI frameworks (no Hilt/Dagger/Koin overhead). Dependencies are explicitly wired inside a process-lifetime `AppContainer` for deterministic lifecycle control and accelerated application launch speeds.
-
----
 
 ## Getting Started & Development
 
@@ -76,8 +70,6 @@ cd music
 # Build and deploy directly onto a connected device or emulator
 ./gradlew installDebug
 ```
-
----
 
 ## Verification & Testing
 
