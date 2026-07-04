@@ -197,10 +197,19 @@
 
     <!-- Settings screen placeholders -->
     <string name="settings_title">Settings</string>
-    <string name="settings_dynamic_color">Use dynamic color</string>
-    <string name="settings_dynamic_color_summary">Tint the app with colors from your wallpaper</string>
-    <string name="settings_theme">Dark theme</string>
-    <string name="settings_theme_summary">Follow the system dark theme setting</string>
+    <string name="settings_dark_mode">Dark mode</string>
+    <string name="dark_mode_system">System</string>
+    <string name="dark_mode_light">Light</string>
+    <string name="dark_mode_dark">Dark</string>
+    <string name="settings_pure_black">Deep dark OLED</string>
+    <string name="settings_pure_black_summary">Fully black background in dark mode, saves battery on OLED screens</string>
+    <string name="theme_name_dakils_music">Dakil\'s Music</string>
+    <string name="theme_name_dynamic">Dynamic</string>
+    <string name="theme_name_ocean">Ocean</string>
+    <string name="theme_name_lavender">Lavender</string>
+    <string name="theme_name_sunset">Sunset</string>
+    <string name="theme_name_rose">Rose</string>
+    <string name="theme_name_teal">Teal</string>
     <string name="settings_gapless">Gapless playback</string>
     <string name="settings_gapless_summary">Remove silence between consecutive tracks</string>
     <string name="settings_auto_pause_zero_volume">Pause at zero volume</string>

@@ -9,6 +9,8 @@ import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -19,12 +21,16 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     val settings: StateFlow<AppSettings> = container.observeSettings()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
-    fun setDynamicColor(enabled: Boolean) = viewModelScope.launch {
-        container.updateSettings.setDynamicColor(enabled)
+    fun setColorTheme(theme: AppColorTheme) = viewModelScope.launch {
+        container.updateSettings.setColorTheme(theme)
     }
 
-    fun setForceDarkTheme(enabled: Boolean) = viewModelScope.launch {
-        container.updateSettings.setForceDarkTheme(enabled)
+    fun setDarkThemeOption(option: DarkThemeOption) = viewModelScope.launch {
+        container.updateSettings.setDarkThemeOption(option)
+    }
+
+    fun setPureBlack(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setPureBlack(enabled)
     }
 
     fun setGaplessPlayback(enabled: Boolean) = viewModelScope.launch {

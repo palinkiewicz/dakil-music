@@ -3,6 +3,8 @@ package pl.dakil.music.domain.usecase
 import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -14,8 +16,9 @@ class ObserveSettingsUseCase(private val repository: SettingsRepository) {
 }
 
 class UpdateSettingsUseCase(private val repository: SettingsRepository) {
-    suspend fun setDynamicColor(enabled: Boolean) = repository.setDynamicColor(enabled)
-    suspend fun setForceDarkTheme(enabled: Boolean) = repository.setForceDarkTheme(enabled)
+    suspend fun setColorTheme(theme: AppColorTheme) = repository.setColorTheme(theme)
+    suspend fun setDarkThemeOption(option: DarkThemeOption) = repository.setDarkThemeOption(option)
+    suspend fun setPureBlack(enabled: Boolean) = repository.setPureBlack(enabled)
     suspend fun setGaplessPlayback(enabled: Boolean) = repository.setGaplessPlayback(enabled)
     suspend fun setAutoPauseOnZeroVolume(enabled: Boolean) = repository.setAutoPauseOnZeroVolume(enabled)
     suspend fun setAutoResumeOnVolumeRestored(enabled: Boolean) = repository.setAutoResumeOnVolumeRestored(enabled)

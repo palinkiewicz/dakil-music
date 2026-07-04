@@ -3,6 +3,8 @@ package pl.dakil.music.domain.repository
 import kotlinx.coroutines.flow.Flow
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -12,9 +14,11 @@ interface SettingsRepository {
 
     val settings: Flow<AppSettings>
 
-    suspend fun setDynamicColor(enabled: Boolean)
+    suspend fun setColorTheme(theme: AppColorTheme)
 
-    suspend fun setForceDarkTheme(enabled: Boolean)
+    suspend fun setDarkThemeOption(option: DarkThemeOption)
+
+    suspend fun setPureBlack(enabled: Boolean)
 
     suspend fun setGaplessPlayback(enabled: Boolean)
 
@@ -54,8 +58,10 @@ interface SettingsRepository {
 }
 
 data class AppSettings(
-    val dynamicColor: Boolean = true,
-    val forceDarkTheme: Boolean = false,
+    val colorTheme: AppColorTheme = AppColorTheme.DAKILS_MUSIC,
+    val darkThemeOption: DarkThemeOption = DarkThemeOption.FOLLOW_SYSTEM,
+    /** Fully black background in dark mode (OLED battery saving); ignored when [darkThemeOption] is LIGHT. */
+    val pureBlack: Boolean = false,
     val gaplessPlayback: Boolean = true,
     /** Pause playback when the device media volume reaches 0%. */
     val autoPauseOnZeroVolume: Boolean = true,

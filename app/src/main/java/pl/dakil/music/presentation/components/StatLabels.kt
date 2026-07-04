@@ -3,10 +3,30 @@ package pl.dakil.music.presentation.components
 import androidx.annotation.StringRes
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.AlbumAuthorMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.model.StatRangeType
+
+@StringRes
+fun colorThemeNameRes(theme: AppColorTheme): Int = when (theme) {
+    AppColorTheme.DAKILS_MUSIC -> R.string.theme_name_dakils_music
+    AppColorTheme.DYNAMIC -> R.string.theme_name_dynamic
+    AppColorTheme.OCEAN -> R.string.theme_name_ocean
+    AppColorTheme.LAVENDER -> R.string.theme_name_lavender
+    AppColorTheme.SUNSET -> R.string.theme_name_sunset
+    AppColorTheme.ROSE -> R.string.theme_name_rose
+    AppColorTheme.TEAL -> R.string.theme_name_teal
+}
+
+@StringRes
+fun darkThemeOptionNameRes(option: DarkThemeOption): Int = when (option) {
+    DarkThemeOption.FOLLOW_SYSTEM -> R.string.dark_mode_system
+    DarkThemeOption.LIGHT -> R.string.dark_mode_light
+    DarkThemeOption.DARK -> R.string.dark_mode_dark
+}
 
 /** Maps an ISO day-of-week (Mon=1 .. Sun=7) to its localized name resource. */
 @StringRes

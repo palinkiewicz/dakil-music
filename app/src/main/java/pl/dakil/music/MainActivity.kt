@@ -8,7 +8,6 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -39,8 +38,9 @@ class MainActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = AppSettings())
 
             MusicTheme(
-                darkTheme = isSystemInDarkTheme() || settings.forceDarkTheme,
-                dynamicColor = settings.dynamicColor,
+                colorTheme = settings.colorTheme,
+                darkThemeOption = settings.darkThemeOption,
+                pureBlack = settings.pureBlack,
             ) {
                 AudioPermissionGate(onGranted = ::scanLibrary) {
                     MusicApp(navigateToNowPlaying = openNowPlaying)

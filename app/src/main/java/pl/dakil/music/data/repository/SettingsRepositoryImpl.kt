@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -22,8 +24,15 @@ class SettingsRepositoryImpl(
 
     override val settings: Flow<AppSettings> = dataStore.data.map { prefs ->
         AppSettings(
-            dynamicColor = prefs[KEY_DYNAMIC_COLOR] ?: true,
-            forceDarkTheme = prefs[KEY_FORCE_DARK] ?: false,
+            // Migrated from the old dynamic_color/force_dark booleans for existing installs;
+            // new keys take precedence once the user picks a theme explicitly.
+            colorTheme = prefs[KEY_COLOR_THEME]
+                ?.let { name -> AppColorTheme.entries.firstOrNull { it.name == name } }
+                ?: if (prefs[KEY_DYNAMIC_COLOR] == true) AppColorTheme.DYNAMIC else AppColorTheme.DAKILS_MUSIC,
+            darkThemeOption = prefs[KEY_DARK_THEME_OPTION]
+                ?.let { name -> DarkThemeOption.entries.firstOrNull { it.name == name } }
+                ?: if (prefs[KEY_FORCE_DARK] == true) DarkThemeOption.DARK else DarkThemeOption.FOLLOW_SYSTEM,
+            pureBlack = prefs[KEY_PURE_BLACK] ?: false,
             gaplessPlayback = prefs[KEY_GAPLESS] ?: true,
             autoPauseOnZeroVolume = prefs[KEY_AUTO_PAUSE_ZERO_VOLUME] ?: true,
             autoResumeOnVolumeRestored = prefs[KEY_AUTO_RESUME_VOLUME] ?: true,
@@ -55,11 +64,16 @@ class SettingsRepositoryImpl(
         )
     }
 
-    override suspend fun setDynamicColor(enabled: Boolean) =
-        edit(KEY_DYNAMIC_COLOR, enabled)
+    override suspend fun setColorTheme(theme: AppColorTheme) {
+        dataStore.edit { it[KEY_COLOR_THEME] = theme.name }
+    }
 
-    override suspend fun setForceDarkTheme(enabled: Boolean) =
-        edit(KEY_FORCE_DARK, enabled)
+    override suspend fun setDarkThemeOption(option: DarkThemeOption) {
+        dataStore.edit { it[KEY_DARK_THEME_OPTION] = option.name }
+    }
+
+    override suspend fun setPureBlack(enabled: Boolean) =
+        edit(KEY_PURE_BLACK, enabled)
 
     override suspend fun setGaplessPlayback(enabled: Boolean) =
         edit(KEY_GAPLESS, enabled)
@@ -131,8 +145,12 @@ class SettingsRepositoryImpl(
     }
 
     private companion object {
+        // Legacy keys, kept only as a fallback for the read-time migration above.
         val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val KEY_FORCE_DARK = booleanPreferencesKey("force_dark")
+        val KEY_COLOR_THEME = stringPreferencesKey("color_theme")
+        val KEY_DARK_THEME_OPTION = stringPreferencesKey("dark_theme_option")
+        val KEY_PURE_BLACK = booleanPreferencesKey("pure_black")
         val KEY_GAPLESS = booleanPreferencesKey("gapless_playback")
         val KEY_AUTO_PAUSE_ZERO_VOLUME = booleanPreferencesKey("auto_pause_zero_volume")
         val KEY_AUTO_RESUME_VOLUME = booleanPreferencesKey("auto_resume_volume")

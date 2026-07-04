@@ -1,21 +1,36 @@
 package pl.dakil.music.presentation.settings
 
+import android.os.Build
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -25,6 +40,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -38,7 +56,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,15 +66,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
+import pl.dakil.music.domain.model.AppColorTheme
+import pl.dakil.music.domain.model.DarkThemeOption
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.albumAuthorModeNameRes
+import pl.dakil.music.presentation.components.colorThemeNameRes
+import pl.dakil.music.presentation.components.darkThemeOptionNameRes
 import pl.dakil.music.presentation.components.queueRemoveModeNameRes
 import pl.dakil.music.presentation.components.statDefaultRangeNameRes
 import pl.dakil.music.presentation.components.statMetricNameRes
 import pl.dakil.music.presentation.components.weekdayNameRes
+import pl.dakil.music.ui.theme.colorSchemeFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,17 +117,50 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             SectionHeader(stringResource(R.string.settings_section_theme))
+            val availableThemes = remember {
+                AppColorTheme.entries.filter {
+                    it != AppColorTheme.DYNAMIC || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                }
+            }
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(availableThemes.size) { index ->
+                    val theme = availableThemes[index]
+                    ThemeColorSwatch(
+                        theme = theme,
+                        isSelected = theme == settings.colorTheme,
+                        onClick = { viewModel.setColorTheme(theme) },
+                    )
+                }
+            }
+
+            SectionHeader(stringResource(R.string.settings_dark_mode))
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                DarkThemeOption.entries.forEachIndexed { index, option ->
+                    SegmentedButton(
+                        selected = option == settings.darkThemeOption,
+                        onClick = { viewModel.setDarkThemeOption(option) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = DarkThemeOption.entries.size,
+                        ),
+                    ) {
+                        Text(stringResource(darkThemeOptionNameRes(option)))
+                    }
+                }
+            }
             SwitchRow(
-                title = stringResource(R.string.settings_dynamic_color),
-                summary = stringResource(R.string.settings_dynamic_color_summary),
-                checked = settings.dynamicColor,
-                onCheckedChange = viewModel::setDynamicColor,
-            )
-            SwitchRow(
-                title = stringResource(R.string.settings_theme),
-                summary = stringResource(R.string.settings_theme_summary),
-                checked = settings.forceDarkTheme,
-                onCheckedChange = viewModel::setForceDarkTheme,
+                title = stringResource(R.string.settings_pure_black),
+                summary = stringResource(R.string.settings_pure_black_summary),
+                checked = settings.pureBlack,
+                onCheckedChange = viewModel::setPureBlack,
+                enabled = settings.darkThemeOption != DarkThemeOption.LIGHT,
             )
 
             SectionHeader(stringResource(R.string.settings_section_navigation))
@@ -438,6 +496,66 @@ private fun NavigationRow(
             )
         },
     )
+}
+
+@Composable
+private fun ThemeColorSwatch(
+    theme: AppColorTheme,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val isDark = isSystemInDarkTheme()
+    val scheme = colorSchemeFor(colorTheme = theme, darkTheme = isDark)
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(76.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .then(
+                    if (isSelected) {
+                        Modifier.border(
+                            width = 3.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(if (isSelected) 6.dp else 0.dp)
+                .clip(CircleShape)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawArc(scheme.primary, startAngle = 180f, sweepAngle = 180f, useCenter = true)
+                drawArc(scheme.secondaryContainer, startAngle = 90f, sweepAngle = 90f, useCenter = true)
+                drawArc(scheme.tertiaryContainer, startAngle = 0f, sweepAngle = 90f, useCenter = true)
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = scheme.onPrimary,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                        .size(20.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = stringResource(colorThemeNameRes(theme)),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
+    }
 }
 
 private const val DISABLED_ALPHA = 0.38f
