@@ -6,6 +6,13 @@
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/palinkiewicz/music">
     <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60" />
   </a>
+  <p align="center">
+    <img src="https://img.shields.io/badge/Min%20SDK-29-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Min SDK" />
+    <img src="https://img.shields.io/badge/Target%20SDK-36-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Target SDK" />
+    <img src="https://img.shields.io/badge/Language-Kotlin%20100%25-7F52FF?style=for-the-badge" alt="Language" />
+    <img src="https://img.shields.io/github/repo-size/palinkiewicz/dakil-music?style=for-the-badge&color=blue" alt="Repository Size" />
+    <img src="https://img.shields.io/github/v/release/palinkiewicz/dakil-music?style=for-the-badge&color=orange" alt="Latest Release" />
+  </p>
 </div>
 
 **Music** is a professional, enterprise-grade, and privacy-respecting Free and Open Source Software (FOSS) local audio player for Android. Built entirely from the ground up using **Jetpack Compose** and **AndroidX Media3**, it provides a lightning-fast, modern, and deterministic media experience without any remote tracking, advertisements, or telemetry.
