@@ -211,8 +211,8 @@
     <string name="dark_mode_dark">Ciemny</string>
     <string name="settings_pure_black">Głęboka czerń OLED</string>
     <string name="settings_pure_black_summary">Całkowicie czarne tło w trybie ciemnym, oszczędza baterię na ekranach OLED</string>
-    <string name="theme_name_dakils_music">Dakil\'s Music</string>
-    <string name="theme_name_dynamic">Dynamiczny</string>
+    <string name="theme_name_dakils_music">Muzyka Dakil\'a</string>
+    <string name="theme_name_dynamic">Kolory systemu</string>
     <string name="theme_name_ocean">Ocean</string>
     <string name="theme_name_lavender">Lawenda</string>
     <string name="theme_name_sunset">Zachód słońca</string>
