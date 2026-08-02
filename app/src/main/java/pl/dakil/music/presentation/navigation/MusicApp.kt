@@ -41,6 +41,7 @@ import pl.dakil.music.presentation.history.ListeningHistoryScreen
 import pl.dakil.music.presentation.library.LibraryCategoryScreen
 import pl.dakil.music.presentation.library.LibraryScreen
 import pl.dakil.music.presentation.lyrics.LyricsScreen
+import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.presentation.more.AboutDialog
 import pl.dakil.music.presentation.more.MoreScreen
 import pl.dakil.music.presentation.more.MoreViewModel
@@ -147,7 +148,7 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                         icon = {
                             if (item == NavItem.NOW_PLAYING) {
                                 NowPlayingNavIcon(
-                                    albumArtUri = nowPlaying.song?.albumArtUri,
+                                    artModel = nowPlaying.song?.coverArtModel(),
                                     hasSong = nowPlaying.song != null,
                                     progress = progress,
                                 )

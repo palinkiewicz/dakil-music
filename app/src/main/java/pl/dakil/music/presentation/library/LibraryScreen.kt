@@ -311,6 +311,7 @@ fun LibraryScreen(
                             gridState = albumsGridState,
                             onSortSelect = viewModel::selectAlbumSort,
                             onClick = onAlbumClick,
+                            coverArtVersion = coverArtVersion,
                         )
                         NavItem.ARTISTS -> PerformersList(
                             performers = performers,
@@ -606,6 +607,7 @@ fun LibraryCategoryScreen(
                     val albumColumns by viewModel.albumColumns.collectAsStateWithLifecycle()
                     val albumCornerDp by viewModel.albumCornerDp.collectAsStateWithLifecycle()
                     val albumSort by viewModel.albumSort.collectAsStateWithLifecycle()
+                    val albumCoverArtVersion by viewModel.coverArtVersion.collectAsStateWithLifecycle()
                     AlbumsGrid(
                         albums = albums,
                         columns = albumColumns,
@@ -614,6 +616,7 @@ fun LibraryCategoryScreen(
                         gridState = rememberLazyGridState(),
                         onSortSelect = viewModel::selectAlbumSort,
                         onClick = onAlbumClick,
+                        coverArtVersion = albumCoverArtVersion,
                     )
                 }
                 NavItem.ARTISTS -> {
@@ -750,7 +753,7 @@ private fun SearchResultsList(
                     },
                     leadingContent = {
                         AlbumArt(
-                            model = album.artworkUri,
+                            model = album.coverArtModel(coverArtVersion),
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.size(48.dp),
                         )
@@ -874,6 +877,7 @@ private fun AlbumsGrid(
     gridState: LazyGridState,
     onSortSelect: (AlbumSortOption) -> Unit,
     onClick: (Long) -> Unit,
+    coverArtVersion: Int = 0,
 ) {
     if (albums.isEmpty()) {
         EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
@@ -900,14 +904,14 @@ private fun AlbumsGrid(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(albums, key = { it.id }) { album ->
-                AlbumCard(album, cornerDp, onClick)
+                AlbumCard(album, cornerDp, onClick, coverArtVersion)
             }
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit) {
+private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit, coverArtVersion: Int = 0) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -916,7 +920,7 @@ private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit) {
             .padding(8.dp),
     ) {
         AlbumArt(
-            model = album.artworkUri,
+            model = album.coverArtModel(coverArtVersion),
             shape = RoundedCornerShape(cornerDp.dp),
             modifier = Modifier
                 .fillMaxWidth()

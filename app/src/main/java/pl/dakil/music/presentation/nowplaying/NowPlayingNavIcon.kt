@@ -1,6 +1,5 @@
 package pl.dakil.music.presentation.nowplaying
 
-import android.net.Uri
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -23,13 +22,13 @@ import pl.dakil.music.presentation.components.AlbumArt
 
 /**
  * Bottom-bar icon for the Now Playing tab. With nothing loaded it is the plain
- * play-circle glyph; while a track is loaded it becomes the album-art thumbnail
+ * play-circle glyph; while a track is loaded it becomes the cover-art thumbnail
  * encircled by a progress ring that animates toward the end of the song — giving an
  * at-a-glance sense of how much time is left.
  */
 @Composable
 fun NowPlayingNavIcon(
-    albumArtUri: Uri?,
+    artModel: Any?,
     hasSong: Boolean,
     progress: Float,
     modifier: Modifier = Modifier,
@@ -56,7 +55,7 @@ fun NowPlayingNavIcon(
             strokeCap = StrokeCap.Round,
         )
         AlbumArt(
-            model = albumArtUri,
+            model = artModel,
             shape = CircleShape,
             modifier = Modifier.size(16.dp),
         )

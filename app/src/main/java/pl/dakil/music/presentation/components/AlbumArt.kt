@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import pl.dakil.music.R
 import pl.dakil.music.data.coverart.EmbeddedArt
+import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Song
 
 /**
@@ -31,6 +32,14 @@ import pl.dakil.music.domain.model.Song
  */
 fun Song.coverArtModel(version: Int = 0): Any? =
     if (individualCoverArt) EmbeddedArt(uri, version) else albumArtUri
+
+/**
+ * The Coil model to render an album's cover art: the embedded art of its first track
+ * when the album is in individual-cover-art mode, otherwise the shared MediaStore art.
+ * Mirrors [Song.coverArtModel] so an album tile and the album's own screen agree.
+ */
+fun Album.coverArtModel(version: Int = 0): Any? =
+    if (individualCoverArt && coverSongUri != null) EmbeddedArt(coverSongUri, version) else artworkUri
 
 /**
  * Album artwork with a graceful placeholder. Coil resolves the given [model] (a

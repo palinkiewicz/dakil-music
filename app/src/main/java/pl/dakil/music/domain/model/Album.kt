@@ -11,6 +11,13 @@ data class Album(
     /** Single-line display of [authors]; the album's author per the active mode. */
     val artist: String,
     val artworkUri: Uri?,
+    /**
+     * Uri of the album's representative track (its first song), whose embedded picture
+     * stands in for the album when [individualCoverArt] is set.
+     */
+    val coverSongUri: Uri? = null,
+    /** True when the album's effective cover-art mode is individual, not shared. */
+    val individualCoverArt: Boolean = false,
     val songCount: Int,
     val durationMs: Long = 0L,
     /** Release year, or 0 when none of the album's songs carry a year tag. */

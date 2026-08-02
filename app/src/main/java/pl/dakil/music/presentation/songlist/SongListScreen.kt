@@ -250,6 +250,7 @@ fun SongListScreen(
                             albums = authoredAlbums,
                             cornerShape = RoundedCornerShape(cornerDp),
                             onAlbumClick = onAlbumClick,
+                            coverArtVersion = coverArtVersion,
                         )
                     }
                     item(key = "songs_subheader") {
@@ -813,6 +814,7 @@ private fun AuthoredAlbumsSection(
     albums: List<Album>,
     cornerShape: androidx.compose.ui.graphics.Shape,
     onAlbumClick: (Long) -> Unit,
+    coverArtVersion: Int = 0,
 ) {
     Column {
         SectionSubheader(stringResource(R.string.albums_authored_section))
@@ -828,7 +830,7 @@ private fun AuthoredAlbumsSection(
                         .padding(4.dp),
                 ) {
                     AlbumArt(
-                        model = album.artworkUri,
+                        model = album.coverArtModel(coverArtVersion),
                         shape = cornerShape,
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                     )

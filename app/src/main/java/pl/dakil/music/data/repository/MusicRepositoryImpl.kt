@@ -59,13 +59,19 @@ class MusicRepositoryImpl(
         val realAlbums = withAlbum.groupBy { it.albumId }
             .map { (albumId, albumSongs) ->
                 val first = albumSongs.first()
-                val mode = ruleByKey[AlbumKey.of(albumSongs)]?.authorMode ?: settings.albumAuthorMode
+                val rule = ruleByKey[AlbumKey.of(albumSongs)]
+                val mode = rule?.authorMode ?: settings.albumAuthorMode
                 val authors = AlbumAuthors.authors(albumSongs, mode)
+                val coverMode = rule?.coverArtMode ?: settings.albumCoverArtMode
                 Album(
                     id = albumId,
                     title = first.album,
                     artist = authors.joinToString(", "),
                     artworkUri = first.albumArtUri,
+                    // Same track the album screen shows as its header art (songs are
+                    // ordered by track number there), so both surfaces agree.
+                    coverSongUri = albumSongs.minByOrNull { it.trackNumber }?.uri,
+                    individualCoverArt = coverMode == AlbumCoverArtMode.INDIVIDUAL,
                     songCount = albumSongs.size,
                     durationMs = albumSongs.sumOf { it.durationMs },
                     year = albumSongs.maxOf { it.year },
@@ -83,6 +89,9 @@ class MusicRepositoryImpl(
                 title = "",
                 artist = "",
                 artworkUri = null,
+                // The "No album" screen lists its songs by title, so its first one is the header art.
+                coverSongUri = withoutAlbum.minByOrNull { it.title.lowercase() }?.uri,
+                individualCoverArt = settings.albumCoverArtMode == AlbumCoverArtMode.INDIVIDUAL,
                 songCount = withoutAlbum.size,
                 durationMs = withoutAlbum.sumOf { it.durationMs },
             )
