@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.repository.ExternalAudioResolver
 import pl.dakil.music.domain.util.ArtistSplitter
+import pl.dakil.music.domain.util.MojibakeRepair
 
 /**
  * Resolves an externally supplied audio [Uri] (ACTION_VIEW from a file manager or
@@ -41,10 +42,19 @@ class UriAudioResolver(private val context: Context) : ExternalAudioResolver {
         val meta = runCatching {
             MediaMetadataRetriever().use { retriever ->
                 retriever.setDataSource(context, uri)
+                // MediaMetadataRetriever shares the native extractor that can mangle
+                // valid UTF-8 tags into mojibake, so repair its text the same way the
+                // MediaStore rows are repaired.
                 RetrievedMeta(
-                    title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
-                    artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
-                    album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
+                    title = retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                        ?.let(MojibakeRepair::repair),
+                    artist = retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                        ?.let(MojibakeRepair::repair),
+                    album = retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
+                        ?.let(MojibakeRepair::repair),
                     durationMs = retriever
                         .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                         ?.toLongOrNull() ?: 0L,

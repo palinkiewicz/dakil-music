@@ -9,7 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.model.SongFileInfo
+import pl.dakil.music.domain.util.AlbumIdCanonicalizer
 import pl.dakil.music.domain.util.ArtistSplitter
+import pl.dakil.music.domain.util.MojibakeRepair
 import androidx.core.net.toUri
 
 /**
@@ -71,16 +73,17 @@ class MediaStoreDataSource(private val context: Context) {
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
                     val albumId = cursor.getLong(albumIdCol)
-                    val rawArtist = cursor.getString(artistCol).orEmptyArtist()
+                    val rawArtist = cursor.getString(artistCol).orEmptyArtist().repaired()
                     val uri = ContentUris.withAppendedId(collection, id)
 
 
                     songs += Song(
                         id = id,
                         uri = uri,
-                        title = cursor.getString(titleCol) ?: "",
+                        title = (cursor.getString(titleCol) ?: "").repaired(),
                         artists = ArtistSplitter.split(rawArtist),
                         rawArtist = rawArtist,
+                        // Left raw; repaired below, where the whole library is visible.
                         album = cursor.getString(albumCol).orEmptyAlbum(),
                         albumId = albumId,
                         albumArtUri = albumArtUri(albumId),
@@ -88,14 +91,31 @@ class MediaStoreDataSource(private val context: Context) {
                         // TRACK is encoded as DDDTTT (disc*1000 + track); keep just the track part.
                         trackNumber = (cursor.getInt(trackCol) % 1000),
                         year = cursor.getInt(yearCol),
-                        genre = if (genreCol >= 0) cursor.getString(genreCol).orEmpty() else "",
+                        genre = if (genreCol >= 0) {
+                            cursor.getString(genreCol).orEmpty().repaired()
+                        } else {
+                            ""
+                        },
                         mimeType = cursor.getString(mimeCol) ?: "audio/*",
                         dateAddedSeconds = cursor.getLong(dateCol),
                     )
                 }
             }
 
-        songs
+        // Album text needs the whole library in hand: repairing a name splits nothing
+        // by itself, but MediaStore keyed the album's id off the mangled spelling, so
+        // the tracks it damaged must also be moved onto the intact album's id.
+        val canonicalAlbumIds = AlbumIdCanonicalizer.canonicalIds(
+            songs.map { it.albumId to it.album },
+        )
+        songs.map { song ->
+            val albumId = canonicalAlbumIds[song.albumId] ?: song.albumId
+            song.copy(
+                album = song.album.repaired(),
+                albumId = albumId,
+                albumArtUri = albumArtUri(albumId),
+            )
+        }
     }
 
     /**
@@ -172,6 +192,14 @@ class MediaStoreDataSource(private val context: Context) {
 
     private fun albumArtUri(albumId: Long): Uri =
         ContentUris.withAppendedId(ALBUM_ART_BASE_URI, albumId)
+
+    /**
+     * Undoes the platform extractor's charset misdetection, which can leave a
+     * perfectly valid UTF-8 tag indexed as mojibake (`Nic siÄ™ nie staĹ‚o`). The
+     * file itself is fine — only this index is damaged — so the repair belongs here,
+     * at the point the damaged strings enter the app. A no-op for everything else.
+     */
+    private fun String.repaired() = MojibakeRepair.repair(this)
 
     private fun String?.orEmptyArtist() = if (isUnknownTag()) "" else this!!
 
