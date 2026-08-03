@@ -23,6 +23,7 @@ import pl.dakil.music.domain.repository.MusicRepository
 import pl.dakil.music.domain.repository.SettingsRepository
 import pl.dakil.music.domain.util.AlbumAuthors
 import pl.dakil.music.domain.util.AlbumKey
+import pl.dakil.music.domain.util.CanonicalNames
 
 /**
  * Caches the MediaStore scan in memory and exposes derived collections. Albums and
@@ -100,24 +101,19 @@ class MusicRepositoryImpl(
         listOfNotNull(noAlbum) + realAlbums
     }
 
+    // Both lists group case-insensitively, because the lookups they lead to
+    // (songsForPerformer / songsForGenre) match that way: keying these by exact case
+    // would list one artist twice, each entry showing a count that disagreed with the
+    // songs it opened.
     override val performers: Flow<List<Performer>> = _songs.map { songs ->
-        val counts = HashMap<String, Int>()
-        for (song in songs) {
-            for (artist in song.artists) {
-                counts[artist] = (counts[artist] ?: 0) + 1
-            }
-        }
-        counts.map { (name, count) -> Performer(name, count) }
+        CanonicalNames.counts(songs.flatMap { it.artists })
+            .map { (name, count) -> Performer(name, count) }
             .sortedBy { it.name.lowercase() }
     }
 
     override val genres: Flow<List<Genre>> = _songs.map { songs ->
-        val counts = HashMap<String, Int>()
-        for (song in songs) {
-            val genre = song.genre.trim()
-            if (genre.isNotEmpty()) counts[genre] = (counts[genre] ?: 0) + 1
-        }
-        counts.map { (name, count) -> Genre(name, count) }
+        CanonicalNames.counts(songs.map { it.genre.trim() })
+            .map { (name, count) -> Genre(name, count) }
             .sortedBy { it.name.lowercase() }
     }
 

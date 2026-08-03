@@ -3,6 +3,7 @@ package pl.dakil.music.data.playback
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import pl.dakil.music.domain.model.Song
+import pl.dakil.music.domain.util.CanonicalNames
 
 /**
  * Builds the browsable content hierarchy exposed to media browsers such as Android
@@ -104,18 +105,18 @@ object MediaBrowseTree {
             }
             .sortedBy { it.mediaMetadata.title?.toString()?.lowercase() }
 
+    // Folder names group case-insensitively to match the children lookups below,
+    // which compare with ignoreCase — otherwise one artist browses as two folders
+    // that both open the same songs.
     private fun artistFolders(songs: List<Song>): List<MediaItem> =
-        songs.flatMap { it.artists }
-            .distinct()
+        CanonicalNames.counts(songs.flatMap { it.artists }).keys
             .sortedBy { it.lowercase() }
             .map { name ->
                 browsableItem("$ARTIST_PREFIX$name", name, mediaType = MediaMetadata.MEDIA_TYPE_ARTIST)
             }
 
     private fun genreFolders(songs: List<Song>): List<MediaItem> =
-        songs.map { it.genre.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
+        CanonicalNames.counts(songs.map { it.genre.trim() }).keys
             .sortedBy { it.lowercase() }
             .map { name ->
                 browsableItem("$GENRE_PREFIX$name", name, mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_GENRES)
