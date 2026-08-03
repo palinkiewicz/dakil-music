@@ -91,7 +91,7 @@ object MediaBrowseTree {
     }
 
     private fun albumFolders(songs: List<Song>): List<MediaItem> =
-        songs.filter { it.album.isNotBlank() }
+        songs.filter { it.album.isNotBlank() && !it.treatedAsNoAlbum }
             .groupBy { it.albumId }
             .map { (albumId, albumSongs) ->
                 val first = albumSongs.first()

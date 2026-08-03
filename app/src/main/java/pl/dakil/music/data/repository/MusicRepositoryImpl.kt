@@ -54,12 +54,18 @@ class MusicRepositoryImpl(
         settingsRepository.settings,
         albumRuleRepository.rules,
     ) { songs, settings, rules ->
-        val (withoutAlbum, withAlbum) = songs.partition { it.album.isBlank() }
         val ruleByKey = rules.associateBy { it.albumKey }
+        val groups = songs.filter { it.album.isNotBlank() }.groupBy { it.albumId }
+        // Albums the user hid fold into "No album" rather than getting an entry.
+        val (hidden, listed) = groups.values.partition {
+            ruleByKey[AlbumKey.of(it)]?.treatAsNoAlbum == true
+        }
+        val withoutAlbum = songs.filter { it.album.isBlank() } + hidden.flatten()
 
-        val realAlbums = withAlbum.groupBy { it.albumId }
-            .map { (albumId, albumSongs) ->
+        val realAlbums = listed
+            .map { albumSongs ->
                 val first = albumSongs.first()
+                val albumId = first.albumId
                 val rule = ruleByKey[AlbumKey.of(albumSongs)]
                 val mode = rule?.authorMode ?: settings.albumAuthorMode
                 val authors = AlbumAuthors.authors(albumSongs, mode)
@@ -124,9 +130,11 @@ class MusicRepositoryImpl(
 
     override fun songsForAlbum(albumId: Long): Flow<List<Song>> = annotatedSongs.map { songs ->
         if (albumId == NO_ALBUM_ID) {
-            songs.filter { it.album.isBlank() }.sortedBy { it.title.lowercase() }
+            songs.filter { it.album.isBlank() || it.treatedAsNoAlbum }
+                .sortedBy { it.title.lowercase() }
         } else {
-            songs.filter { it.albumId == albumId }.sortedBy { it.trackNumber }
+            songs.filter { it.albumId == albumId && !it.treatedAsNoAlbum }
+                .sortedBy { it.trackNumber }
         }
     }
 
@@ -149,18 +157,23 @@ class MusicRepositoryImpl(
 
     override suspend fun fileInfo(songs: List<Song>): List<SongFileInfo> = dataSource.fileInfo(songs)
 
-    /** Sets [Song.individualCoverArt] per the effective cover-art mode of each song's album. */
+    /**
+     * Sets [Song.individualCoverArt] per the effective cover-art mode of each song's
+     * album, and [Song.treatedAsNoAlbum] for albums the user chose to hide.
+     */
     private fun annotate(songs: List<Song>, settings: AppSettings, rules: List<AlbumRule>): List<Song> {
         val ruleByKey = rules.associateBy { it.albumKey }
         // Group once so every song of an album resolves to the same (deterministic) key.
-        val modeByAlbumId = songs.filter { it.album.isNotBlank() }
+        val ruleByAlbumId = songs.filter { it.album.isNotBlank() }
             .groupBy { it.albumId }
-            .mapValues { (_, albumSongs) ->
-                ruleByKey[AlbumKey.of(albumSongs)]?.coverArtMode ?: settings.albumCoverArtMode
-            }
+            .mapValues { (_, albumSongs) -> ruleByKey[AlbumKey.of(albumSongs)] }
         return songs.map { song ->
-            val mode = if (song.album.isBlank()) settings.albumCoverArtMode else modeByAlbumId[song.albumId]
-            song.copy(individualCoverArt = mode == AlbumCoverArtMode.INDIVIDUAL)
+            val rule = if (song.album.isBlank()) null else ruleByAlbumId[song.albumId]
+            val mode = rule?.coverArtMode ?: settings.albumCoverArtMode
+            song.copy(
+                individualCoverArt = mode == AlbumCoverArtMode.INDIVIDUAL,
+                treatedAsNoAlbum = rule?.treatAsNoAlbum == true,
+            )
         }
     }
 }

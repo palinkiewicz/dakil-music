@@ -176,6 +176,8 @@ fun SongListScreen(
     val source = viewModel.source
     val title = headerTitle(source, state.songs, userPlaylists)
     val isAlbum = source is SongListSource.AlbumSource
+    val isNoAlbumSource = source is SongListSource.AlbumSource &&
+        source.albumId == pl.dakil.music.domain.model.NO_ALBUM_ID
     val isPerformer = source is SongListSource.PerformerSource
     val isUserPlaylist = source is SongListSource.UserPlaylistSource
     val isFavorites = source is SongListSource.PlaylistSource &&
@@ -378,18 +380,28 @@ fun SongListScreen(
                 onBack = onBack,
                 onAddToQueue = viewModel::addAllToQueue,
                 onAddToPlaylist = if (canAddToPlaylist) viewModel::startAddSongToPlaylist else null,
+                // "No album" is synthetic: it has no shared art and no album key of its
+                // own, and the songs under it may come from several real albums, so
+                // album-wide editing there would rewrite whichever album happened to
+                // sort first.
                 onEdit = when {
-                    isAlbum -> viewModel::openAlbumEdit
+                    isAlbum -> if (isNoAlbumSource) null else viewModel::openAlbumEdit
                     isPerformer -> viewModel::openArtistEdit
                     isUserPlaylist -> viewModel::openPlaylistEdit
                     else -> null
                 },
-                onChangeCoverArt = if (isAlbum) {
+                onChangeCoverArt = if (isAlbum && !isNoAlbumSource) {
                     { launchImagePicker(forAlbum = true) }
                 } else {
                     null
                 },
                 albumHasArt = currentAlbum?.artworkUri != null,
+                // Not offered on "No album" itself — it is already the destination.
+                onTreatAsNoAlbum = if (isAlbum && !isNoAlbumSource) {
+                    viewModel::treatAlbumAsNoAlbum
+                } else {
+                    null
+                },
                 onRemove = if (isUserPlaylist) viewModel::promptRemovePlaylist else null,
                 modifier = Modifier.align(Alignment.TopStart),
             )
@@ -585,6 +597,7 @@ private fun CollapsingTopBar(
     onEdit: (() -> Unit)?,
     onChangeCoverArt: (() -> Unit)?,
     albumHasArt: Boolean,
+    onTreatAsNoAlbum: (() -> Unit)?,
     onRemove: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -598,7 +611,8 @@ private fun CollapsingTopBar(
     )
     val contentColor = if (collapsed) MaterialTheme.colorScheme.onSurface else Color.White
     var menuExpanded by remember { mutableStateOf(false) }
-    val hasMenu = onEdit != null || onChangeCoverArt != null || onRemove != null
+    val hasMenu = onEdit != null || onChangeCoverArt != null ||
+        onTreatAsNoAlbum != null || onRemove != null
 
     TopAppBar(
         title = {
@@ -652,6 +666,12 @@ private fun CollapsingTopBar(
                                         ),
                                     )
                                 },
+                                onClick = { menuExpanded = false; it() },
+                            )
+                        }
+                        onTreatAsNoAlbum?.let {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_treat_as_no_album)) },
                                 onClick = { menuExpanded = false; it() },
                             )
                         }

@@ -373,8 +373,10 @@
     <string name="action_remove">Remove</string>
     <string name="action_change_cover_art">Change cover art</string>
     <string name="action_add_cover_art">Add cover art</string>
+    <string name="action_treat_as_no_album">Treat as \"No album\"</string>
     <string name="action_remove_from_playlist">Remove from playlist</string>
     <string name="snackbar_removed_from_playlist">Removed from playlist</string>
+    <string name="snackbar_treated_as_no_album">Album moved to \"No album\"</string>
     <string name="song_search_hint">Search songs…</string>
     <string name="albums_authored_section">Albums authored</string>
     <string name="songs_section">Songs</string>
@@ -406,6 +408,7 @@
     <!-- Album rules screen -->
     <string name="album_rules_empty">No albums have custom rules yet</string>
     <string name="album_rules_cover_art_label">Custom cover art</string>
+    <string name="album_rules_no_album_label">Treated as \"No album\"</string>
     <string name="album_rules_delete">Remove rule</string>
 
     <!-- New sort options -->

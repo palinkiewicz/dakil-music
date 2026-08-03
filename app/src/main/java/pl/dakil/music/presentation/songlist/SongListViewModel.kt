@@ -437,6 +437,23 @@ class SongListViewModel(
         }
     }
 
+    /**
+     * Hides the current album, moving its songs under "No album". The file tags are
+     * untouched — only a rule is stored — and it is undone from the album-rules
+     * screen. Any cover-art/author override is dropped with it: the album no longer
+     * has an entry for those to apply to. The screen we are on is about to stop
+     * existing, so leave it.
+     */
+    fun treatAlbumAsNoAlbum() {
+        if (source !is SongListSource.AlbumSource) return
+        val albumKey = AlbumKey.of(uiState.value.songs)
+        viewModelScope.launch {
+            container.upsertAlbumRule(AlbumRule(albumKey, treatAsNoAlbum = true))
+            _events.send(SongListEvent.Message(R.string.snackbar_treated_as_no_album))
+            _events.send(SongListEvent.NavigateBack)
+        }
+    }
+
     fun openArtistEdit() {
         (source as? SongListSource.PerformerSource)?.let { _dialog.value = SongDialog.EditArtist(it.name) }
     }

@@ -362,8 +362,10 @@
     <string name="action_remove">Usuń</string>
     <string name="action_change_cover_art">Zmień okładkę</string>
     <string name="action_add_cover_art">Dodaj okładkę</string>
+    <string name="action_treat_as_no_album">Traktuj jako \"Brak albumu\"</string>
     <string name="action_remove_from_playlist">Usuń z playlisty</string>
     <string name="snackbar_removed_from_playlist">Usunięto z playlisty</string>
+    <string name="snackbar_treated_as_no_album">Album przeniesiony do \"Brak albumu\"</string>
     <string name="song_search_hint">Szukaj utworów…</string>
     <string name="albums_authored_section">Albumy artysty</string>
     <string name="songs_section">Utwory</string>
@@ -397,6 +399,7 @@
     <!-- Album rules screen -->
     <string name="album_rules_empty">Żaden album nie ma jeszcze własnych reguł</string>
     <string name="album_rules_cover_art_label">Własna okładka</string>
+    <string name="album_rules_no_album_label">Traktowany jako \"Brak albumu\"</string>
     <string name="album_rules_delete">Usuń regułę</string>
 
     <!-- New sort options -->

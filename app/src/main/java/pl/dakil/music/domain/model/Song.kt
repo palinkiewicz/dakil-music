@@ -30,6 +30,12 @@ data class Song(
      * the song's album; consumed only by the UI ([albumArtUri] is left untouched).
      */
     val individualCoverArt: Boolean = false,
+    /**
+     * When true, this song belongs to an album the user chose to hide (see
+     * [AlbumRule.treatAsNoAlbum]) and is listed under "No album" instead. Set by the
+     * repository; [album] keeps the song's real tag, so only the grouping changes.
+     */
+    val treatedAsNoAlbum: Boolean = false,
 ) {
     /** Convenience for single-line UI rendering of all performers. */
     val artistsLabel: String get() = artists.joinToString(", ")

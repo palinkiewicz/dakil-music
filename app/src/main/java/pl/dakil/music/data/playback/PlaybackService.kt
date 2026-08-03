@@ -158,7 +158,9 @@ class PlaybackService : MediaLibraryService() {
             .launchIn(serviceScope)
 
         // Cache the library for the browse tree and tell browsers when it changes.
-        container.musicRepository.songs
+        // Annotated, so albums the user hid into "No album" don't linger as browse
+        // folders that the in-app library no longer shows.
+        container.musicRepository.annotatedSongs
             .onEach { songs ->
                 librarySongs = songs
                 notifyBrowseChildrenChanged()

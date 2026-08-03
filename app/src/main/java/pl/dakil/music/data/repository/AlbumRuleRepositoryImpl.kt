@@ -48,6 +48,7 @@ class AlbumRuleRepositoryImpl(
             val obj = JSONObject().put("albumKey", rule.albumKey)
             rule.coverArtMode?.let { obj.put("coverArtMode", it.name) }
             rule.authorMode?.let { obj.put("authorMode", it.name) }
+            if (rule.treatAsNoAlbum) obj.put("treatAsNoAlbum", true)
             array.put(obj)
         }
         return array.toString()
@@ -65,6 +66,7 @@ class AlbumRuleRepositoryImpl(
                         ?.let { name -> AlbumCoverArtMode.entries.firstOrNull { it.name == name } },
                     authorMode = obj.optString("authorMode").takeIf { it.isNotEmpty() }
                         ?.let { name -> AlbumAuthorMode.entries.firstOrNull { it.name == name } },
+                    treatAsNoAlbum = obj.optBoolean("treatAsNoAlbum"),
                 ).takeUnless { it.isEmpty }
             }
         }.getOrDefault(emptyList())

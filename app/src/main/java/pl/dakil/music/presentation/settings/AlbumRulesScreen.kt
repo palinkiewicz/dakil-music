@@ -73,12 +73,19 @@ fun AlbumRulesScreen(
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
                 items(rules, key = { it.rule.albumKey }) { item ->
-                    val parts = buildList {
-                        item.rule.coverArtMode?.let {
-                            add(stringResource(R.string.album_rules_cover_art_label))
-                        }
-                        item.rule.authorMode?.let {
-                            add(stringResource(albumAuthorModeNameRes(it)))
+                    // A hidden album has no entry for a cover-art or author override to
+                    // apply to, so those are never stored alongside it and listing them
+                    // here would only be noise.
+                    val parts = if (item.rule.treatAsNoAlbum) {
+                        listOf(stringResource(R.string.album_rules_no_album_label))
+                    } else {
+                        buildList {
+                            item.rule.coverArtMode?.let {
+                                add(stringResource(R.string.album_rules_cover_art_label))
+                            }
+                            item.rule.authorMode?.let {
+                                add(stringResource(albumAuthorModeNameRes(it)))
+                            }
                         }
                     }
                     ListItem(
