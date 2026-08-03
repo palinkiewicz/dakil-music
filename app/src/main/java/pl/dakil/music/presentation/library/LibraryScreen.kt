@@ -868,6 +868,24 @@ private fun ViewMoreButton(onClick: () -> Unit) {
     }
 }
 
+/**
+ * Runs [scrollToTop] when [sort] *changes*, and deliberately not on the first
+ * composition. Re-sorting should land the user at the top of the new order, but
+ * opening an album and coming back also recomposes these lists from scratch — with
+ * their scroll position already restored — and an unconditional effect would throw
+ * that position away every time.
+ */
+@Composable
+private fun <T> ScrollToTopWhenSortChanges(sort: T, scrollToTop: suspend () -> Unit) {
+    var appliedSort by remember { mutableStateOf(sort) }
+    LaunchedEffect(sort) {
+        if (sort != appliedSort) {
+            appliedSort = sort
+            scrollToTop()
+        }
+    }
+}
+
 @Composable
 private fun AlbumsGrid(
     albums: List<Album>,
@@ -883,7 +901,7 @@ private fun AlbumsGrid(
         EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
         return
     }
-    LaunchedEffect(sort) { gridState.scrollToItem(0) }
+    ScrollToTopWhenSortChanges(sort) { gridState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
         sortChips = {
@@ -961,7 +979,7 @@ private fun PerformersList(
         EmptyState(stringResource(R.string.library_empty_performers), Icons.Rounded.Person)
         return
     }
-    LaunchedEffect(sort) { listState.scrollToItem(0) }
+    ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
         sortChips = {
@@ -1007,7 +1025,7 @@ private fun GenresList(
         EmptyState(stringResource(R.string.library_empty_genres), Icons.Rounded.Category)
         return
     }
-    LaunchedEffect(sort) { listState.scrollToItem(0) }
+    ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
         sortChips = {
@@ -1053,7 +1071,7 @@ private fun PlaylistsList(
     onRename: (UserPlaylist) -> Unit,
     onDelete: (UserPlaylist) -> Unit,
 ) {
-    LaunchedEffect(sort) { listState.scrollToItem(0) }
+    ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
 
     ScrollAwareSortHeader(
         sortChips = {
