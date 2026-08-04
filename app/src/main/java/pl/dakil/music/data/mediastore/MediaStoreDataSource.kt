@@ -26,8 +26,9 @@ class MediaStoreDataSource(private val context: Context) {
     suspend fun queryAudio(): List<Song> = withContext(Dispatchers.IO) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
-        // GENRE as a media column only exists from API 30 (R).
+        // GENRE and ALBUM_ARTIST as media columns only exist from API 30 (R).
         val hasGenreColumn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        val hasAlbumArtistColumn = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
         val projection = buildList {
             add(MediaStore.Audio.Media._ID)
@@ -41,6 +42,7 @@ class MediaStoreDataSource(private val context: Context) {
             add(MediaStore.Audio.Media.MIME_TYPE)
             add(MediaStore.Audio.Media.DATE_ADDED)
             if (hasGenreColumn) add(MediaStore.Audio.Media.GENRE)
+            if (hasAlbumArtistColumn) add(MediaStore.Audio.Media.ALBUM_ARTIST)
         }.toTypedArray()
 
         // Only real music tracks with a positive duration (skips 0-length stubs).
@@ -49,6 +51,9 @@ class MediaStoreDataSource(private val context: Context) {
         val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
 
         val songs = ArrayList<Song>()
+        // The album artist lives only here: it identifies albums, but no screen shows
+        // it, so it stays out of Song rather than riding along unused.
+        val albumTracks = ArrayList<AlbumIdCanonicalizer.Track>()
 
         context.contentResolver.query(collection, projection, selection, null, sortOrder)
             ?.use { cursor ->
@@ -67,24 +72,42 @@ class MediaStoreDataSource(private val context: Context) {
                 } else {
                     -1
                 }
+                val albumArtistCol = if (hasAlbumArtistColumn) {
+                    cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
+                } else {
+                    -1
+                }
 
                 songs.ensureCapacity(cursor.count)
+                albumTracks.ensureCapacity(cursor.count)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
                     val albumId = cursor.getLong(albumIdCol)
                     val rawArtist = cursor.getString(artistCol).orEmptyArtist().repaired()
+                    val artists = ArtistSplitter.split(rawArtist)
                     val uri = ContentUris.withAppendedId(collection, id)
+                    // Left raw; repaired below, where the whole library is visible.
+                    val rawAlbum = cursor.getString(albumCol).orEmptyAlbum()
 
+                    albumTracks += AlbumIdCanonicalizer.Track(
+                        albumId = albumId,
+                        rawAlbum = rawAlbum,
+                        albumArtist = if (albumArtistCol >= 0) {
+                            cursor.getString(albumArtistCol).orEmptyArtist().repaired()
+                        } else {
+                            ""
+                        },
+                        artists = artists,
+                    )
 
                     songs += Song(
                         id = id,
                         uri = uri,
                         title = (cursor.getString(titleCol) ?: "").repaired(),
-                        artists = ArtistSplitter.split(rawArtist),
+                        artists = artists,
                         rawArtist = rawArtist,
-                        // Left raw; repaired below, where the whole library is visible.
-                        album = cursor.getString(albumCol).orEmptyAlbum(),
+                        album = rawAlbum,
                         albumId = albumId,
                         albumArtUri = albumArtUri(albumId),
                         durationMs = cursor.getLong(durationCol),
@@ -102,12 +125,10 @@ class MediaStoreDataSource(private val context: Context) {
                 }
             }
 
-        // Album text needs the whole library in hand: repairing a name splits nothing
-        // by itself, but MediaStore keyed the album's id off the mangled spelling, so
-        // the tracks it damaged must also be moved onto the intact album's id.
-        val canonicalAlbumIds = AlbumIdCanonicalizer.canonicalIds(
-            songs.map { it.albumId to it.album },
-        )
+        // Album identity needs the whole library in hand: MediaStore hands out one id
+        // per (mangled or intact) spelling and per album-artist-or-directory, so the
+        // halves of a split album can only be found once every track has been read.
+        val canonicalAlbumIds = AlbumIdCanonicalizer.canonicalIds(albumTracks)
         songs.map { song ->
             val albumId = canonicalAlbumIds[song.albumId] ?: song.albumId
             song.copy(
