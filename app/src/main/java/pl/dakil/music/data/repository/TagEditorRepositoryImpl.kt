@@ -153,13 +153,12 @@ class TagEditorRepositoryImpl(
             // extension, so a misnamed file gets the wrong reader and fails (an MP4 read as
             // MP3 throws "No audio header found"). Re-detect from the actual magic bytes and
             // re-point the working copy at the right extension when the two disagree.
-            sniffExtension(temp)?.let { real ->
-                if (!temp.name.endsWith(".$real", ignoreCase = true)) {
-                    val retyped = File.createTempFile("tag_", ".$real", workDir)
-                    temp.copyTo(retyped, overwrite = true)
-                    temp.delete()
-                    temp = retyped
-                }
+            val container = ContainerSniffer.extensionOf(temp)
+            if (container != null && !temp.name.endsWith(".$container", ignoreCase = true)) {
+                val retyped = File.createTempFile("tag_", ".$container", workDir)
+                temp.copyTo(retyped, overwrite = true)
+                temp.delete()
+                temp = retyped
             }
 
             // 1b. Heal stale MP4 data references frozen in by earlier edits (see helper).
@@ -211,6 +210,14 @@ class TagEditorRepositoryImpl(
                 tag.setField(artwork)
             }
             audioFile.commit()
+
+            // 2a. Last line of defence: a rewrite that lost the container it started with
+            // destroyed the audio, and streaming it back would overwrite the only good copy
+            // the user has. Detection beats trust here — the writer reports success either
+            // way — so re-sniff and refuse the file rather than hand back rubble.
+            if (container != null && ContainerSniffer.extensionOf(temp) != container) {
+                throw UnsupportedFileException("Rewrite did not preserve the $container container")
+            }
 
             // 3. Stream the rewritten bytes back over the original file (needs write grant).
             resolver.openOutputStream(song.uri, "wt")?.use { out ->
@@ -336,27 +343,6 @@ class TagEditorRepositoryImpl(
             runCatching { context.contentResolver.update(uri, values, null, null) }
         }
     }
-
-    /**
-     * Detects the real container from [file]'s leading magic bytes, independent of its
-     * (possibly wrong) name, returning the extension JAudiotagger should use to pick a
-     * reader. Returns null for unrecognized bytes so the name-based guess stands.
-     */
-    private fun sniffExtension(file: File): String? = runCatching {
-        val head = ByteArray(12)
-        val read = file.inputStream().use { it.read(head) }
-        if (read < 8) return@runCatching null
-        fun matches(offset: Int, magic: String) =
-            magic.indices.all { offset + it < read && head[offset + it] == magic[it].code.toByte() }
-        when {
-            matches(4, "ftyp") -> "m4a"  // ISO base media: MP4 / M4A (incl. fragmented/DASH)
-            matches(0, "fLaC") -> "flac"
-            matches(0, "OggS") -> "ogg"
-            matches(0, "ID3") -> "mp3"
-            head[0] == 0xFF.toByte() && (head[1].toInt() and 0xE0) == 0xE0 -> "mp3"  // MPEG sync
-            else -> null
-        }
-    }.getOrNull()
 
     /** Best-effort extension lookup so JAudiotagger can detect the container format. */
     private fun fileExtension(song: Song): String {
