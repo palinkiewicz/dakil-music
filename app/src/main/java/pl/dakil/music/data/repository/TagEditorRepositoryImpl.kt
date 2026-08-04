@@ -83,23 +83,30 @@ class TagEditorRepositoryImpl(
             if (effective.isEmpty()) return@withContext TagWriteResult.Success
 
             try {
+                val written = ArrayList<SongTagEdit>(effective.size)
                 val scannedPaths = ArrayList<String>(effective.size)
                 var skipped = 0
-                effective.forEach { (song, edit) ->
+                effective.forEach { entry ->
                     try {
-                        writeOne(song, edit)
-                        filePath(song.uri)?.let(scannedPaths::add)
+                        writeOne(entry.song, entry.edit)
+                        written += entry
+                        filePath(entry.song.uri)?.let(scannedPaths::add)
                     } catch (skip: UnsupportedFileException) {
                         // A file we must not (or cannot) rewrite without destroying it.
                         // Leave it untouched and keep going so the rest of the batch saves.
-                        Log.w("TagEditor", "Skipping ${song.uri}: ${skip.message}")
+                        Log.w("TagEditor", "Skipping ${entry.song.uri}: ${skip.message}")
                         skipped++
                     }
                 }
-                // Writing the bytes schedules an async MediaStore rescan that overwrites
-                // our index update. Force it and *wait* so a subsequent library query
-                // reflects every edit — otherwise the last-written file races and is missed.
+                // Writing the bytes schedules an async MediaStore rescan. Force it and
+                // *wait* so a subsequent library query reflects every edit — otherwise the
+                // last-written file races and is missed.
                 awaitMediaScan(scannedPaths)
+                // Only now mirror the edits into the index: a scan recomputes every column
+                // from the file, so anything written before it is discarded. Doing it after
+                // also covers the fields the extractor will not surface at all, without the
+                // app ever having to read embedded tags at query time.
+                written.forEach { (song, edit) -> updateIndex(song.uri, edit) }
                 // Every requested file was unsafe to write — surface that as a failure.
                 if (scannedPaths.isEmpty() && skipped > 0) {
                     TagWriteResult.Error(UnsupportedFileException("No file could be written"))
@@ -193,7 +200,12 @@ class TagEditorRepositoryImpl(
             edit.artist?.let { tag.setField(FieldKey.ARTIST, it) }
             edit.album?.let { tag.setField(FieldKey.ALBUM, it) }
             edit.genre?.let { tag.setField(FieldKey.GENRE, it) }
-            edit.year?.let { tag.setField(FieldKey.YEAR, it) }
+            edit.year?.let {
+                tag.setField(FieldKey.YEAR, it)
+                // The field JAudiotagger picks for YEAR is one the platform extractor
+                // does not read on mp3/flac/ogg, so mirror it into one it does.
+                ScannerVisibleYear.write(tag, it)
+            }
             edit.trackNumber?.let { tag.setField(FieldKey.TRACK, it) }
             // A single LYRICS field per container; prefer the synced LRC (recognized as
             // synced by most players, and still readable as plain) over plain text.
@@ -223,9 +235,6 @@ class TagEditorRepositoryImpl(
             resolver.openOutputStream(song.uri, "wt")?.use { out ->
                 temp.inputStream().use { it.copyTo(out) }
             } ?: error("Cannot write ${song.uri}")
-
-            // 4. Mirror the changes into the MediaStore index for instant UI consistency.
-            updateIndex(song.uri, edit)
         } finally {
             temp.delete()
         }
