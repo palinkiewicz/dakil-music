@@ -20,7 +20,8 @@ data class AlbumRule(
      * still derived from, so the rule stays findable and reversible.
      *
      * [coverArtMode] and [authorMode] are meaningless while this is set, since the
-     * album has no entry of its own to carry them.
+     * album has no entry of its own to carry them: the songs move under "No album",
+     * which always shows individual cover art regardless of the global setting.
      */
     val treatAsNoAlbum: Boolean = false,
 ) {

@@ -98,7 +98,8 @@ class MusicRepositoryImpl(
                 artworkUri = null,
                 // The "No album" screen lists its songs by title, so its first one is the header art.
                 coverSongUri = withoutAlbum.minByOrNull { it.title.lowercase() }?.uri,
-                individualCoverArt = settings.albumCoverArtMode == AlbumCoverArtMode.INDIVIDUAL,
+                // Its songs come from unrelated releases, so never a shared cover.
+                individualCoverArt = true,
                 songCount = withoutAlbum.size,
                 durationMs = withoutAlbum.sumOf { it.durationMs },
             )
@@ -159,7 +160,8 @@ class MusicRepositoryImpl(
 
     /**
      * Sets [Song.individualCoverArt] per the effective cover-art mode of each song's
-     * album, and [Song.treatedAsNoAlbum] for albums the user chose to hide.
+     * album — always on for songs that end up under "No album", which groups unrelated
+     * releases — and [Song.treatedAsNoAlbum] for albums the user chose to hide.
      */
     private fun annotate(songs: List<Song>, settings: AppSettings, rules: List<AlbumRule>): List<Song> {
         val ruleByKey = rules.associateBy { it.albumKey }
@@ -169,9 +171,11 @@ class MusicRepositoryImpl(
             .mapValues { (_, albumSongs) -> ruleByKey[AlbumKey.of(albumSongs)] }
         return songs.map { song ->
             val rule = if (song.album.isBlank()) null else ruleByAlbumId[song.albumId]
+            val noAlbum = song.album.isBlank() || rule?.treatAsNoAlbum == true
             val mode = rule?.coverArtMode ?: settings.albumCoverArtMode
             song.copy(
-                individualCoverArt = mode == AlbumCoverArtMode.INDIVIDUAL,
+                // "No album" is not one release, so its songs always show their own art.
+                individualCoverArt = noAlbum || mode == AlbumCoverArtMode.INDIVIDUAL,
                 treatedAsNoAlbum = rule?.treatAsNoAlbum == true,
             )
         }
