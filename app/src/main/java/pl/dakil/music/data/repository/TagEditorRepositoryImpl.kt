@@ -13,24 +13,13 @@ import android.webkit.MimeTypeMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.TagOptionSingleton
-import org.jaudiotagger.tag.images.AndroidArtwork
-import org.jaudiotagger.tag.reference.PictureTypes
-import org.jaudiotagger.audio.mp4.Flatten
-import org.jcodec.containers.mp4.MP4Util
-import org.jcodec.containers.mp4.boxes.Box
-import org.jcodec.containers.mp4.boxes.DataRefBox
-import org.jcodec.containers.mp4.boxes.NodeBox
-import org.jcodec.containers.mp4.boxes.UrlBox
 import pl.dakil.music.domain.model.Song
 import pl.dakil.music.domain.repository.SongTagEdit
 import pl.dakil.music.domain.repository.TagEdit
 import pl.dakil.music.domain.repository.TagEditorRepository
 import pl.dakil.music.domain.repository.TagWriteResult
 import java.io.File
-import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -49,17 +38,15 @@ class TagEditorRepositoryImpl(
     private val context: Context,
 ) : TagEditorRepository {
 
-    private companion object {
-        /** Scheme JCodec uses for absolute MP4 data references (see `Flatten.resolveDataRef`). */
-        const val FILE_URL_PREFIX = "file://"
-    }
-
     init {
         // JAudiotagger is noisy on the default logger; quiet it down.
         Logger.getLogger("org.jaudiotagger").level = Level.SEVERE
         // Use the Android image handler so artwork is read/written with Bitmap, not
         // the desktop javax.imageio path (which is absent on Android and would throw).
         TagOptionSingleton.getInstance().isAndroid = true
+        // Container-level options are shared with every other JAudiotagger caller in the
+        // process (the lyrics reader included), so put them in force from the start.
+        TagFileWriter.applyGlobalOptions()
     }
 
     /**
@@ -148,195 +135,26 @@ class TagEditorRepositoryImpl(
 
     private fun writeOne(song: Song, edit: TagEdit) {
         val resolver = context.contentResolver
-        var temp = File.createTempFile("tag_", ".${fileExtension(song)}", workDir)
+        val temp = File.createTempFile("tag_", ".${fileExtension(song)}", workDir)
+        var written: File? = null
         try {
             // 1. Pull the file into a private working copy JAudiotagger can read by path.
             resolver.openInputStream(song.uri)?.use { input ->
                 temp.outputStream().use { input.copyTo(it) }
             } ?: error("Cannot open ${song.uri}")
 
-            // 1a. The display name can lie about the container — e.g. a real MP4/M4A file
-            // saved with a ".mp3" name. JAudiotagger picks its reader purely from the file
-            // extension, so a misnamed file gets the wrong reader and fails (an MP4 read as
-            // MP3 throws "No audio header found"). Re-detect from the actual magic bytes and
-            // re-point the working copy at the right extension when the two disagree.
-            val container = ContainerSniffer.extensionOf(temp)
-            if (container != null && !temp.name.endsWith(".$container", ignoreCase = true)) {
-                val retyped = File.createTempFile("tag_", ".$container", workDir)
-                temp.copyTo(retyped, overwrite = true)
-                temp.delete()
-                temp = retyped
-            }
-
-            // 1b. Heal stale MP4 data references frozen in by earlier edits (see helper).
-            healStaleDataRefs(temp)
-
-            // 1c. JCodec's MP4 rewrite keeps only the last track, so editing an
-            // audio+text/video M4A would silently drop its audio. Reduce such files to
-            // their single audio track up front (the extra track is discarded) so the
-            // rewrite — and every future edit — is safe (see helper).
-            if (trackCount(temp) > 1) {
-                try {
-                    reduceToSingleAudioTrack(temp)
-                } catch (e: Exception) {
-                    // Never write a half-reduced file back over the original.
-                    throw UnsupportedFileException("Could not reduce multi-track file: ${e.message}")
-                }
-            }
-
-            // 2. Rewrite the embedded tags in place on the copy.
-            val audioFile = try {
-                AudioFileIO.read(temp)
-            } catch (e: Exception) {
-                // A file JAudiotagger cannot parse: an already-corrupted file (e.g. a
-                // previous edit dropped its audio track) or an unsupported container.
-                // Skip it rather than failing the whole batch — note the read can throw
-                // exceptions outside the CannotReadException hierarchy (e.g.
-                // InvalidAudioFrameException extends Exception directly).
-                throw UnsupportedFileException("Unreadable audio file: ${e.message}")
-            }
-            val tag = audioFile.tagOrCreateAndSetDefault
-            edit.title?.let { tag.setField(FieldKey.TITLE, it) }
-            edit.artist?.let { tag.setField(FieldKey.ARTIST, it) }
-            edit.album?.let { tag.setField(FieldKey.ALBUM, it) }
-            edit.genre?.let { tag.setField(FieldKey.GENRE, it) }
-            edit.year?.let {
-                tag.setField(FieldKey.YEAR, it)
-                // The field JAudiotagger picks for YEAR is one the platform extractor
-                // does not read on mp3/flac/ogg, so mirror it into one it does.
-                ScannerVisibleYear.write(tag, it)
-            }
-            edit.trackNumber?.let { tag.setField(FieldKey.TRACK, it) }
-            // A single LYRICS field per container; prefer the synced LRC (recognized as
-            // synced by most players, and still readable as plain) over plain text.
-            (edit.syncedLyrics ?: edit.plainLyrics)?.let { tag.setField(FieldKey.LYRICS, it) }
-            edit.artwork?.let { art ->
-                tag.deleteArtworkField()
-                val artwork = AndroidArtwork().apply {
-                    binaryData = art.bytes
-                    mimeType = art.mimeType
-                    pictureType = PictureTypes.DEFAULT_ID
-                    // Prime width/height from the bytes so FLAC/Vorbis pictures are valid.
-                    setImageFromData()
-                }
-                tag.setField(artwork)
-            }
-            audioFile.commit()
-
-            // 2a. Last line of defence: a rewrite that lost the container it started with
-            // destroyed the audio, and streaming it back would overwrite the only good copy
-            // the user has. Detection beats trust here — the writer reports success either
-            // way — so re-sniff and refuse the file rather than hand back rubble.
-            if (container != null && ContainerSniffer.extensionOf(temp) != container) {
-                throw UnsupportedFileException("Rewrite did not preserve the $container container")
-            }
+            // 2. Rewrite the tags on the copy. This may hand back a *different* file
+            // (a copy whose name misstated its container has to be renamed first), and
+            // it throws rather than return a file whose rewrite went wrong.
+            written = TagFileWriter.write(temp, edit, workDir)
 
             // 3. Stream the rewritten bytes back over the original file (needs write grant).
             resolver.openOutputStream(song.uri, "wt")?.use { out ->
-                temp.inputStream().use { it.copyTo(out) }
+                written.inputStream().use { it.copyTo(out) }
             } ?: error("Cannot write ${song.uri}")
         } finally {
             temp.delete()
-        }
-    }
-
-    /** Number of tracks in [file] if it is an MP4/M4A; 1 for non-MP4 (nothing to reduce). */
-    private fun trackCount(file: File): Int = runCatching {
-        RandomAccessFile(file, "r").use { raf ->
-            MP4Util.parseFullMovieChannel(raf.channel)?.moov?.tracks?.size ?: 1
-        }
-    }.getOrDefault(1)
-
-    /**
-     * Rewrites [working] in place keeping only its first audio track.
-     *
-     * JCodec's `ReplaceMP4Editor` (used by JAudiotagger's MP4 writer) collapses a moov
-     * down to a single track — it removes every `trak`, then re-adds only the last one —
-     * so editing a multi-track M4A (e.g. an "Official Video" file carrying audio + a
-     * text/subtitle track) would discard the audio. We pre-empt that by flattening the
-     * file to just its audio track; the chunk offsets still describe this file's layout,
-     * so pointing the track's data reference back at it lets `Flatten` re-read valid
-     * samples. The non-audio track is intentionally dropped.
-     */
-    private fun reduceToSingleAudioTrack(working: File) {
-        val movie = RandomAccessFile(working, "r").use { raf ->
-            MP4Util.parseFullMovieChannel(raf.channel)
-        } ?: return
-        val moov = movie.moov ?: return
-        val audio = moov.audioTracks.firstOrNull() ?: return // no audio: leave for the read guard
-        // Point the audio track's data reference at THIS file so Flatten can re-read its
-        // samples. setDataRef() refuses to overwrite an already-external ref (the stale
-        // frozen-path case), so reset the dref entries directly.
-        val dref = NodeBox.findFirstPath(audio, DataRefBox::class.java, Box.path("mdia.minf.dinf.dref"))
-        if (dref != null) {
-            dref.removeChildren(arrayOf("url ", "alis"))
-            dref.add(UrlBox.createUrlBox(FILE_URL_PREFIX + working.canonicalPath))
-        } else {
-            audio.setDataRef(FILE_URL_PREFIX + working.canonicalPath)
-        }
-        // Drop the track reference to the chapter/text track we're about to remove,
-        // otherwise players warn about a missing referenced track.
-        audio.removeChildren(arrayOf("tref"))
-        moov.removeChildren(arrayOf("trak"))
-        moov.add(audio)
-
-        val flattened = File.createTempFile("strip_", ".m4a", workDir)
-        try {
-            Flatten().flatten(movie, flattened)
-            flattened.copyTo(working, overwrite = true)
-        } finally {
-            flattened.delete()
-        }
-    }
-
-    /**
-     * Heals stale MP4/M4A data references frozen in by an earlier edit.
-     *
-     * When a cover/metadata edit grows the `moov` atom, JAudiotagger rewrites the file by
-     * *flattening* it, re-reading the audio samples through each track's data reference
-     * (`dref`). The flatten embeds the working file's absolute cache path into that
-     * reference and clears its "self-contained" flag. So once a file has been edited it
-     * permanently points its samples at a since-deleted cache temp, and every later edit
-     * fails with ENOENT when the flatten tries to re-read from that path. Worse, the
-     * frozen path can belong to a *different* app (e.g. the `.debug` build), which the
-     * release build has no permission to even create a file at — so dropping a placeholder
-     * copy there is impossible.
-     *
-     * The chunk offsets still describe *this* file's byte layout, so we instead repoint
-     * each stale `dref` back at [working] itself and re-flatten; the flatten then re-reads
-     * valid sample bytes from the working copy. `setDataRef()` refuses to overwrite an
-     * already-external ref, so the entries are reset directly. Healthy self-contained MP4s
-     * (and non-MP4 inputs) have no stale `file://` ref and are left untouched.
-     */
-    private fun healStaleDataRefs(working: File) {
-        val movie = RandomAccessFile(working, "r").use { raf ->
-            MP4Util.parseFullMovieChannel(raf.channel)
-        } ?: return
-        val moov = movie.moov ?: return
-        val drefPath = Box.path("mdia.minf.dinf.dref")
-        var healed = false
-        moov.tracks.forEach { trak ->
-            val dref = NodeBox.findFirstPath(trak, DataRefBox::class.java, drefPath)
-                ?: return@forEach
-            val stale = dref.boxes.any { box ->
-                val url = (box as? UrlBox)?.url ?: return@any false
-                url.startsWith(FILE_URL_PREFIX) &&
-                    !File(url.substring(FILE_URL_PREFIX.length)).exists()
-            }
-            if (stale) {
-                dref.removeChildren(arrayOf("url ", "alis"))
-                dref.add(UrlBox.createUrlBox(FILE_URL_PREFIX + working.canonicalPath))
-                healed = true
-            }
-        }
-        if (!healed) return
-
-        val flattened = File.createTempFile("heal_", ".m4a", workDir)
-        try {
-            Flatten().flatten(movie, flattened)
-            flattened.copyTo(working, overwrite = true)
-        } finally {
-            flattened.delete()
+            if (written != null && written != temp) written.delete()
         }
     }
 
@@ -378,6 +196,3 @@ class TagEditorRepositoryImpl(
             else -> null
         }
 }
-
-/** A file that can't be tag-edited without corrupting it, so the write is skipped. */
-private class UnsupportedFileException(message: String) : Exception(message)

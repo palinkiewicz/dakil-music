@@ -32,6 +32,13 @@ class ContainerSnifferTest {
         (tagSize and 0x7F).toByte(),
     )
 
+    /**
+     * An Ogg page carrying [packet] as its first (and only) segment: 27 fixed header
+     * bytes, then one length byte per segment, then the packet itself.
+     */
+    private fun oggPage(packet: ByteArray) =
+        magic("OggS") + padding(22) + byteArrayOf(1, packet.size.toByte()) + packet
+
     /** FLAC frames start with 0xFFF8, which also satisfies the MPEG sync mask. */
     private fun flacAudio() = byteArrayOf(0xFF.toByte(), 0xF8.toByte(), 0x69, 0x18)
 
@@ -42,7 +49,37 @@ class ContainerSnifferTest {
 
     @Test
     fun detectsPlainOgg() {
-        assertEquals("ogg", sniff(magic("OggS"), padding(64)))
+        assertEquals("ogg", sniff(oggPage(magic("vorbis")), padding(64)))
+    }
+
+    /**
+     * Ogg is a container, not a codec. Opus lives in one too, and JAudiotagger reaches its
+     * (working) Opus reader only through the `.opus` extension — call the file "ogg" and
+     * the Vorbis reader rejects it, making the file unrewritable for no reason.
+     */
+    @Test
+    fun tellsOpusApartFromOggVorbis() {
+        assertEquals("opus", sniff(oggPage(magic("OpusHead")), padding(64)))
+    }
+
+    /** Anything else in an Ogg stream keeps the plain Ogg handling it had. */
+    @Test
+    fun treatsAnUnrecognizedOggCodecAsOgg() {
+        assertEquals("ogg", sniff(oggPage(magic("theora")), padding(64)))
+    }
+
+    @Test
+    fun tellsOpusApartEvenBehindAnId3Tag() {
+        assertEquals(
+            "opus",
+            sniff(id3Header(300), padding(300), oggPage(magic("OpusHead")), padding(64)),
+        )
+    }
+
+    /** A page header too short to hold its own segment table decides nothing. */
+    @Test
+    fun fallsBackToOggWhenThePageHeaderIsCutOff() {
+        assertEquals("ogg", sniff(magic("OggS"), padding(8)))
     }
 
     @Test
@@ -73,7 +110,10 @@ class ContainerSnifferTest {
 
     @Test
     fun looksPastAnId3TagToFindOgg() {
-        assertEquals("ogg", sniff(id3Header(300), padding(300), magic("OggS"), padding(64)))
+        assertEquals(
+            "ogg",
+            sniff(id3Header(300), padding(300), oggPage(magic("vorbis")), padding(64)),
+        )
     }
 
     /** The flags byte can declare a 10-byte footer, which shifts where the audio starts. */
