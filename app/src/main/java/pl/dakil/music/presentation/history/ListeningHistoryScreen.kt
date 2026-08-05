@@ -1,5 +1,6 @@
 package pl.dakil.music.presentation.history
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -115,6 +116,11 @@ fun ListeningHistoryScreen(
                     permissionLauncher.launch(IntentSenderRequest.Builder(event.intentSender).build())
             }
         }
+    }
+
+    // Back leaves the selection mode first instead of leaving the screen.
+    BackHandler(enabled = state.inSelectionMode) {
+        viewModel.clearSelection()
     }
 
     Scaffold(

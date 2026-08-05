@@ -1,5 +1,6 @@
 package pl.dakil.music.presentation.songlist
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -171,6 +172,11 @@ fun SongListScreen(
                 is SongListEvent.NavigateBack -> onBack()
             }
         }
+    }
+
+    // Back leaves the selection mode first instead of leaving the screen.
+    BackHandler(enabled = state.inSelectionMode) {
+        viewModel.clearSelection()
     }
 
     val source = viewModel.source
