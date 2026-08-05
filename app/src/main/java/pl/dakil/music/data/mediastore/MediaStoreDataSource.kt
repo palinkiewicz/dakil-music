@@ -23,6 +23,8 @@ import androidx.core.net.toUri
  */
 class MediaStoreDataSource(private val context: Context) {
 
+    private val bitrateProbe by lazy { AudioBitrateProbe(context) }
+
     suspend fun queryAudio(): List<Song> = withContext(Dispatchers.IO) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
@@ -141,8 +143,14 @@ class MediaStoreDataSource(private val context: Context) {
 
     /**
      * Queries MediaStore for the filesystem details of [songs]. [MediaStore.Audio.Media.BITRATE]
-     * only exists from API 30 (R); below that — or when MediaStore reports no value — the
-     * bitrate is estimated from the file size and duration.
+     * only exists from API 30 (R), and even there it is often absent, so the real bitrate is
+     * probed from the file itself by [AudioBitrateProbe]; MediaStore's column, then the
+     * size/duration estimate, are only fallbacks (that estimate counts the tag block — an
+     * embedded cover can inflate it wildly — and is meaningless for a lossless container).
+     *
+     * The probe reads the file, so it only runs for a **single** song — the one case the file
+     * information dialog shows a bitrate; a multi-selection (which only sums size and duration)
+     * keeps the cheap MediaStore value rather than touching every selected file.
      */
     suspend fun fileInfo(songs: List<Song>): List<SongFileInfo> = withContext(Dispatchers.IO) {
         if (songs.isEmpty()) return@withContext emptyList()
@@ -183,10 +191,15 @@ class MediaStoreDataSource(private val context: Context) {
                     val path = if (dataCol >= 0) cursor.getString(dataCol) else null
                     val size = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L
                     val durationSeconds = song.durationMs / 1000.0
-                    val bitrate = when {
+                    val indexedBitrate = when {
                         bitrateCol >= 0 && !cursor.isNull(bitrateCol) -> cursor.getInt(bitrateCol)
                         durationSeconds > 0 -> (size * 8 / durationSeconds).toInt()
                         else -> 0
+                    }
+                    val bitrate = if (songs.size == 1) {
+                        bitrateProbe.bitrateBps(song.uri, path, indexedBitrate)
+                    } else {
+                        indexedBitrate
                     }
                     result += SongFileInfo(
                         song = song,
