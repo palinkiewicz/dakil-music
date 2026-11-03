@@ -47,6 +47,7 @@ replay_10
 shuffle
 skip_next
 skip_previous
+swipe_left
 speed
 timer
 volume_off
@@ -84,6 +85,7 @@ insights
 inventory_2
 light_mode
 palette
+rule
 rounded_corner
 schedule
 settings

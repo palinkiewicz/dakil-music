@@ -7,7 +7,6 @@
     <string name="nav_more">More</string>
 
     <!-- Navigation customization -->
-    <string name="settings_section_navigation">Navigation</string>
     <string name="settings_navigation">Customize navigation</string>
     <string name="settings_navigation_summary">Reorder and show or hide the bottom bar, library tabs and More entries</string>
     <string name="nav_tab_bottom_bar">Bottom bar</string>
@@ -170,7 +169,6 @@
     <string name="decompose_apply">Apply</string>
 
     <!-- More / settings -->
-    <string name="more_title">More</string>
     <string name="more_settings">Settings</string>
     <string name="more_settings_summary">App configuration and playback options</string>
     <string name="more_backup">Backup &amp; restore</string>
@@ -216,13 +214,9 @@
     <string name="settings_album_columns_summary">Number of columns shown in the album grid</string>
     <string name="settings_queue_remove_mode">Queue remove style</string>
     <string name="settings_queue_remove_mode_summary">How to remove a song from the play queue</string>
-    <string name="queue_remove_mode_menu">Long-press menu</string>
-    <string name="queue_remove_mode_button">Remove button</string>
-    <string name="queue_remove_mode_swipe">Swipe to remove</string>
 
     <!-- Backup & restore -->
     <string name="backup_title">Backup &amp; restore</string>
-    <string name="backup_full_section">Full backup</string>
     <string name="backup_full_title">All app data</string>
     <string name="backup_full_summary">A single .zip with every item below</string>
     <string name="backup_individual_section">Individual data</string>
@@ -465,4 +459,26 @@
     <string name="sort_by">Sort by</string>
     <string name="action_play">Play</string>
     <string name="action_shuffle">Shuffle</string>
+    <!-- Settings (redesign) -->
+    <string name="settings_section_personalize">Personalize</string>
+    <string name="settings_section_music">Music</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_feel">Feel</string>
+    <string name="settings_section_sorting">Sorting</string>
+    <string name="settings_section_recording">Recording</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_summary">Colors, dark mode and feel</string>
+    <string name="settings_library_summary">Grid, covers, album authors and rules</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_playback_summary">Player, queue and lyrics</string>
+    <string name="settings_statistics_summary">Listening history and statistics defaults</string>
+    <string name="settings_off_badge">Off</string>
+    <string name="settings_haptics">Haptic feedback</string>
+    <string name="settings_haptics_summary">Subtle vibrations when toggling, dragging and confirming</string>
+    <string name="settings_player_art_colors">Colors from album art</string>
+    <string name="settings_player_art_colors_summary">Tint the player and album pages with the cover\'s colors</string>
+    <string name="more_tagline">Your own music, played beautifully. No account, no streaming — everything stays on this device.</string>
+    <string name="queue_remove_short_menu">Menu</string>
+    <string name="queue_remove_short_button">Button</string>
+    <string name="queue_remove_short_swipe">Swipe</string>
 </resources>

@@ -6,7 +6,6 @@
     <string name="nav_more">Więcej</string>
 
     <!-- Dostosowanie nawigacji -->
-    <string name="settings_section_navigation">Nawigacja</string>
     <string name="settings_navigation">Dostosuj nawigację</string>
     <string name="settings_navigation_summary">Zmień kolejność oraz pokaż lub ukryj elementy dolnego paska, kart biblioteki i ekranu Więcej</string>
     <string name="nav_tab_bottom_bar">Dolny pasek</string>
@@ -161,7 +160,6 @@
     <string name="decompose_preview">Podgląd</string>
     <string name="decompose_apply">Zastosuj</string>
 
-    <string name="more_title">Więcej</string>
     <string name="more_settings">Ustawienia</string>
     <string name="more_settings_summary">Konfiguracja aplikacji i opcje odtwarzania</string>
     <string name="more_backup">Kopia zapasowa</string>
@@ -182,7 +180,6 @@
 
     <!-- Kopia zapasowa -->
     <string name="backup_title">Kopia zapasowa</string>
-    <string name="backup_full_section">Pełna kopia zapasowa</string>
     <string name="backup_full_title">Wszystkie dane aplikacji</string>
     <string name="backup_full_summary">Pojedynczy plik .zip ze wszystkimi pozycjami poniżej</string>
     <string name="backup_individual_section">Poszczególne dane</string>
@@ -224,9 +221,6 @@
     <string name="settings_album_columns_summary">Liczba kolumn wyświetlanych w siatce albumów</string>
     <string name="settings_queue_remove_mode">Sposób usuwania z kolejki</string>
     <string name="settings_queue_remove_mode_summary">Jak usuwać utwór z kolejki odtwarzania</string>
-    <string name="queue_remove_mode_menu">Menu po przytrzymaniu</string>
-    <string name="queue_remove_mode_button">Przycisk usuwania</string>
-    <string name="queue_remove_mode_swipe">Przesuń, aby usunąć</string>
 
     <string name="about_title">O aplikacji Muzyka</string>
     <string name="about_version">Wersja %1$s</string>
@@ -460,4 +454,26 @@
     <string name="sort_by">Sortuj według</string>
     <string name="action_play">Odtwórz</string>
     <string name="action_shuffle">Losowo</string>
+    <!-- Settings (redesign) -->
+    <string name="settings_section_personalize">Personalizacja</string>
+    <string name="settings_section_music">Muzyka</string>
+    <string name="settings_section_data">Dane</string>
+    <string name="settings_section_feel">Wrażenia</string>
+    <string name="settings_section_sorting">Sortowanie</string>
+    <string name="settings_section_recording">Zapisywanie</string>
+    <string name="settings_appearance">Wygląd</string>
+    <string name="settings_appearance_summary">Kolory, tryb ciemny i wrażenia</string>
+    <string name="settings_library_summary">Siatka, okładki, autorzy albumów i reguły</string>
+    <string name="settings_playback">Odtwarzanie</string>
+    <string name="settings_playback_summary">Odtwarzacz, kolejka i teksty</string>
+    <string name="settings_statistics_summary">Historia słuchania i domyślne statystyki</string>
+    <string name="settings_off_badge">Wył.</string>
+    <string name="settings_haptics">Reakcje haptyczne</string>
+    <string name="settings_haptics_summary">Delikatne wibracje przy przełączaniu, przeciąganiu i potwierdzaniu</string>
+    <string name="settings_player_art_colors">Kolory z okładki</string>
+    <string name="settings_player_art_colors_summary">Barwi odtwarzacz i strony albumów kolorami okładki</string>
+    <string name="more_tagline">Twoja własna muzyka, odtwarzana pięknie. Bez konta, bez streamingu — wszystko zostaje na tym urządzeniu.</string>
+    <string name="queue_remove_short_menu">Menu</string>
+    <string name="queue_remove_short_button">Przycisk</string>
+    <string name="queue_remove_short_swipe">Przesunięcie</string>
 </resources>

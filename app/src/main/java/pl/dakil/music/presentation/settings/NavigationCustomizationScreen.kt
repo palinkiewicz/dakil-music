@@ -1,31 +1,24 @@
 package pl.dakil.music.presentation.settings
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -38,14 +31,24 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.ReorderableToggleList
 import pl.dakil.music.presentation.components.ToggleRow
 import pl.dakil.music.presentation.navigation.navItemUi
+import pl.dakil.music.ui.designsystem.BackButton
+import pl.dakil.music.ui.designsystem.CollapsingScaffold
+import pl.dakil.music.ui.designsystem.ConnectedToggleRow
+import pl.dakil.music.ui.designsystem.ToggleOption
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.theme.Spacing
 
-private enum class NavTab(@param:StringRes val titleRes: Int, val component: NavComponent) {
-    BOTTOM_BAR(R.string.nav_tab_bottom_bar, NavComponent.BOTTOM_BAR),
-    LIBRARY_TABS(R.string.nav_tab_library, NavComponent.LIBRARY_TABS),
-    MORE_SCREEN(R.string.nav_tab_more, NavComponent.MORE_SCREEN),
+private enum class NavTab(@param:StringRes val titleRes: Int, val component: NavComponent, val symbol: AppSymbol) {
+    BOTTOM_BAR(R.string.nav_tab_bottom_bar, NavComponent.BOTTOM_BAR, AppSymbols.DockToBottom),
+    LIBRARY_TABS(R.string.nav_tab_library, NavComponent.LIBRARY_TABS, AppSymbols.LibraryMusic),
+    MORE_SCREEN(R.string.nav_tab_more, NavComponent.MORE_SCREEN, AppSymbols.MoreHoriz),
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/**
+ * Customizes the three navigation surfaces. A connected toggle row picks the surface; each page
+ * is a reorderable list of on/off tiles.
+ */
 @Composable
 fun NavigationCustomizationScreen(
     onBack: () -> Unit,
@@ -57,33 +60,19 @@ fun NavigationCustomizationScreen(
     val pagerState = rememberPagerState { tabs.size }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
+    CollapsingScaffold(
+        title = stringResource(R.string.settings_navigation),
+        subtitle = stringResource(R.string.settings_navigation_summary),
+        navigationIcon = { BackButton(onBack) },
         modifier = modifier,
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_navigation)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
-                },
-            )
-        },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(stringResource(tab.titleRes)) },
-                    )
-                }
-            }
+            ConnectedToggleRow(
+                options = tabs.map { ToggleOption(it, stringResource(it.titleRes), it.symbol) },
+                selected = tabs[pagerState.currentPage],
+                onSelect = { tab -> scope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
+                modifier = Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.s),
+            )
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 val component = tabs[page].component
                 ReorderableToggleList(

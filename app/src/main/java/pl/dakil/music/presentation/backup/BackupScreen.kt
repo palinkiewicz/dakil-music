@@ -2,49 +2,61 @@ package pl.dakil.music.presentation.backup
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.Upload
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.BackupCategory
 import pl.dakil.music.presentation.AppViewModelProvider
+import pl.dakil.music.presentation.settings.SectionHeader
+import pl.dakil.music.presentation.settings.SettingRow
+import pl.dakil.music.ui.designsystem.BackButton
+import pl.dakil.music.ui.designsystem.CollapsingScaffold
+import pl.dakil.music.ui.designsystem.PageColumn
+import pl.dakil.music.ui.designsystem.SegmentedGroup
+import pl.dakil.music.ui.designsystem.ShapedIcon
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,91 +99,121 @@ fun BackupScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+    CollapsingScaffold(
+        title = stringResource(R.string.backup_title),
+        navigationIcon = { BackButton(onBack) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.backup_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back))
-                    }
-                },
-            )
-        },
+        modifier = modifier,
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            item { SectionHeader(stringResource(R.string.backup_full_section)) }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.backup_full_title)) },
-                    supportingContent = { Text(stringResource(R.string.backup_full_summary)) },
-                    trailingContent = {
-                        ImportExportActions(
-                            enabled = !busy,
-                            onExport = { exportFullLauncher.launch("music-backup.zip") },
-                            onImport = { importFullLauncher.launch(arrayOf("application/zip", "*/*")) },
-                        )
-                    },
-                )
-            }
+        PageColumn(padding, spacing = Spacing.xs) {
+            FullBackupCard(
+                busy = busy,
+                onExport = { exportFullLauncher.launch("music-backup.zip") },
+                onImport = { importFullLauncher.launch(arrayOf("application/zip", "*/*")) },
+                modifier = Modifier.padding(top = Spacing.s),
+            )
 
-            item { HorizontalDivider() }
-            item { SectionHeader(stringResource(R.string.backup_individual_section)) }
-
-            items(BackupCategory.entries) { category ->
-                ListItem(
-                    headlineContent = { Text(stringResource(category.labelRes())) },
-                    supportingContent = { Text(category.fileName) },
-                    trailingContent = {
-                        ImportExportActions(
-                            enabled = !busy,
-                            onExport = {
-                                pendingCategory = category
-                                exportCategoryLauncher.launch(category.fileName)
-                            },
-                            onImport = {
-                                pendingCategory = category
-                                importCategoryLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "*/*"))
-                            },
-                        )
-                    },
-                )
+            SectionHeader(stringResource(R.string.backup_individual_section))
+            SegmentedGroup {
+                BackupCategory.entries.forEach { category ->
+                    SettingRow(
+                        title = stringResource(category.labelRes()),
+                        summary = category.fileName,
+                        leading = { ShapedIcon(category.symbol()) },
+                        trailing = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        pendingCategory = category
+                                        exportCategoryLauncher.launch(category.fileName)
+                                    },
+                                    enabled = !busy,
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    AppIcon(AppSymbols.Upload, contentDescription = stringResource(R.string.backup_export))
+                                }
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        pendingCategory = category
+                                        importCategoryLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "*/*"))
+                                    },
+                                    enabled = !busy,
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    AppIcon(AppSymbols.Download, contentDescription = stringResource(R.string.backup_import))
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
 }
 
+/** The headline action: everything in one zip, out or back in. Shows progress while busy. */
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-    )
-}
-
-@Composable
-private fun ImportExportActions(
-    enabled: Boolean,
+private fun FullBackupCard(
+    busy: Boolean,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        IconButton(onClick = onExport, enabled = enabled) {
-            Icon(Icons.Rounded.Upload, contentDescription = stringResource(R.string.backup_export))
-        }
-        IconButton(onClick = onImport, enabled = enabled) {
-            Icon(Icons.Rounded.Download, contentDescription = stringResource(R.string.backup_import))
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(Spacing.xl), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+                AnimatedContent(busy, label = "backupBusy") { working ->
+                    if (working) {
+                        LoadingIndicator(Modifier.size(56.dp))
+                    } else {
+                        ShapedIcon(
+                            symbol = AppSymbols.Inventory2,
+                            polygon = MaterialShapes.Cookie9Sided,
+                            size = 56.dp,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.backup_full_title), style = MaterialTheme.typography.titleLargeEmphasized)
+                    Text(stringResource(R.string.backup_full_summary), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Button(onClick = onExport, enabled = !busy, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) {
+                    AppIcon(AppSymbols.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(Spacing.s))
+                    Text(stringResource(R.string.backup_export), maxLines = 1)
+                }
+                FilledTonalButton(
+                    onClick = onImport,
+                    enabled = !busy,
+                    shapes = ButtonDefaults.shapes(),
+                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    AppIcon(AppSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(Spacing.s))
+                    Text(stringResource(R.string.backup_import), maxLines = 1)
+                }
+            }
         }
     }
+}
+
+private fun BackupCategory.symbol(): AppSymbol = when (this) {
+    BackupCategory.SETTINGS -> AppSymbols.Settings
+    BackupCategory.FAVORITES -> AppSymbols.Favorite
+    BackupCategory.PLAYLISTS -> AppSymbols.QueueMusic
+    BackupCategory.ALBUM_RULES -> AppSymbols.Rule
+    BackupCategory.LYRICS_ALIGNMENT -> AppSymbols.Lyrics
+    BackupCategory.SORT -> AppSymbols.Sort
 }
 
 private fun BackupCategory.labelRes(): Int = when (this) {

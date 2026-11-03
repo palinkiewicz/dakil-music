@@ -74,7 +74,11 @@ import pl.dakil.music.presentation.nowplaying.rememberPlayerSheetState
 import pl.dakil.music.presentation.settings.AlbumRulesScreen
 import pl.dakil.music.presentation.settings.NavigationCustomizationScreen
 import pl.dakil.music.presentation.settings.NavigationCustomizationViewModel
+import pl.dakil.music.presentation.settings.AppearanceSettingsScreen
+import pl.dakil.music.presentation.settings.LibrarySettingsScreen
+import pl.dakil.music.presentation.settings.PlaybackSettingsScreen
 import pl.dakil.music.presentation.settings.SettingsScreen
+import pl.dakil.music.presentation.settings.StatisticsSettingsScreen
 import pl.dakil.music.presentation.songlist.SongListScreen
 import pl.dakil.music.presentation.songlist.SystemPlaylistSongListScreen
 import pl.dakil.music.presentation.statistics.StatisticsScreen
@@ -100,6 +104,7 @@ private fun activeNavItem(currentRoute: String?, bottomItems: List<NavItem>): Na
         currentRoute?.startsWith(Routes.SONG_LIST) == true -> Routes.LIBRARY
         currentRoute in setOf(
             Routes.SETTINGS, Routes.ALBUM_RULES, Routes.NAVIGATION,
+            Routes.SETTINGS_APPEARANCE, Routes.SETTINGS_LIBRARY, Routes.SETTINGS_PLAYBACK, Routes.SETTINGS_STATISTICS,
             Routes.LISTENING_HISTORY, Routes.STATISTICS, Routes.BACKUP,
         ) -> Routes.MORE
         else -> currentRoute
@@ -299,9 +304,27 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                         composable(Routes.SETTINGS) {
                             SettingsScreen(
                                 onBack = { navController.popBackStack() },
-                                onOpenAlbumRules = { navController.navigate(Routes.ALBUM_RULES) },
+                                onOpenAppearance = { navController.navigate(Routes.SETTINGS_APPEARANCE) },
+                                onOpenLibrary = { navController.navigate(Routes.SETTINGS_LIBRARY) },
+                                onOpenPlayback = { navController.navigate(Routes.SETTINGS_PLAYBACK) },
+                                onOpenStatistics = { navController.navigate(Routes.SETTINGS_STATISTICS) },
                                 onOpenNavigation = { navController.navigate(Routes.NAVIGATION) },
                             )
+                        }
+                        composable(Routes.SETTINGS_APPEARANCE) {
+                            AppearanceSettingsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.SETTINGS_LIBRARY) {
+                            LibrarySettingsScreen(
+                                onBack = { navController.popBackStack() },
+                                onOpenAlbumRules = { navController.navigate(Routes.ALBUM_RULES) },
+                            )
+                        }
+                        composable(Routes.SETTINGS_PLAYBACK) {
+                            PlaybackSettingsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.SETTINGS_STATISTICS) {
+                            StatisticsSettingsScreen(onBack = { navController.popBackStack() })
                         }
                         composable(Routes.ALBUM_RULES) {
                             AlbumRulesScreen(onBack = { navController.popBackStack() })
