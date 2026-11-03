@@ -3,6 +3,7 @@ package pl.dakil.music.data.repository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,6 +37,21 @@ class NavigationConfigRepositoryImpl(
         }
     }
 
+    override suspend fun upgradeLegacyDefaults(miniPlayerShown: Boolean) {
+        dataStore.edit { prefs ->
+            if ((prefs[LAYOUT_VERSION] ?: 1) >= CURRENT_LAYOUT_VERSION) return@edit
+            val current = NavConfig(NavComponent.entries.associateWith { readEntries(prefs, it) })
+            val upgraded = NavDefaults.upgradeLegacyDefaults(current, miniPlayerShown)
+            // A component never saved already reads as the current defaults; only saved ones move.
+            for (component in NavComponent.entries) {
+                if (prefs[keyFor(component)] != null && upgraded.entries(component) != current.entries(component)) {
+                    prefs[keyFor(component)] = encode(upgraded.entries(component))
+                }
+            }
+            prefs[LAYOUT_VERSION] = CURRENT_LAYOUT_VERSION
+        }
+    }
+
     private fun readEntries(prefs: Preferences, component: NavComponent): List<NavEntry> {
         val stored = prefs[keyFor(component)]?.let(::decode) ?: emptyList()
         return NavDefaults.reconcile(component, stored)
@@ -52,4 +68,10 @@ class NavigationConfigRepositoryImpl(
         }
 
     private fun keyFor(component: NavComponent) = stringPreferencesKey("nav_${component.name}")
+
+    private companion object {
+        /** 2: the mini player bar's defaults (Library · Statistics · More). */
+        const val CURRENT_LAYOUT_VERSION = 2
+        val LAYOUT_VERSION = intPreferencesKey("nav_layout_version")
+    }
 }
