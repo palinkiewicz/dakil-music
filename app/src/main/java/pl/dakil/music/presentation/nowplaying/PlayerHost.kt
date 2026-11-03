@@ -2,7 +2,11 @@ package pl.dakil.music.presentation.nowplaying
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.MutatePriority
+import androidx.compose.foundation.MutatorMutex
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -25,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,29 +74,52 @@ private val MiniCorner: Dp = 20.dp
 /** Fling speed (px/s) beyond which a release expands or collapses regardless of position. */
 private const val FLING_VELOCITY = 1200f
 
-/** How far the sheet is open: 0 is the mini player, 1 the full player. */
+/**
+ * How far the sheet is open: 0 is the mini player, 1 the full player.
+ *
+ * Dragging writes [value] synchronously, straight from the gesture. Animations run under a
+ * [MutatorMutex], so a new touch (user input priority) cancels a running settle, and a settle is
+ * never cancelled by stray drag updates landing after the finger has lifted — which is what froze
+ * the sheet mid-way when each drag delta was applied in its own coroutine.
+ */
 @Stable
 class PlayerSheetState(initiallyExpanded: Boolean = false) {
-    internal val progress = Animatable(if (initiallyExpanded) 1f else 0f)
+    internal var value by mutableFloatStateOf(if (initiallyExpanded) 1f else 0f)
+        private set
+
+    /** Where the sheet is headed or resting. */
+    internal var targetValue by mutableFloatStateOf(value)
+        private set
+
+    private val mutex = MutatorMutex()
 
     /** Where the sheet is headed (or resting); true once it's on its way to the full player. */
-    val isExpanded: Boolean get() = progress.targetValue == 1f
+    val isExpanded: Boolean get() = targetValue == 1f
 
     /**
      * The live open fraction, for anything that follows the sheet. Clamped: the expressive spring
      * overshoots its targets, which geometry (corner radii, insets) must not follow.
      */
-    val fraction: Float get() = progress.value.coerceIn(0f, 1f)
+    val fraction: Float get() = value.coerceIn(0f, 1f)
 
-    internal var spec: androidx.compose.animation.core.FiniteAnimationSpec<Float>? = null
+    internal var spec: FiniteAnimationSpec<Float> = spring()
 
-    suspend fun expand() {
-        progress.animateTo(1f, spec ?: androidx.compose.animation.core.spring())
+    /** Follows a drag or a predictive-back gesture; call only while no animation should run. */
+    internal fun snapTo(newValue: Float) {
+        value = newValue.coerceIn(0f, 1f)
     }
 
-    suspend fun collapse() {
-        progress.animateTo(0f, spec ?: androidx.compose.animation.core.spring())
+    /** Takes the sheet over for a gesture, cancelling any running animation. */
+    internal suspend fun stopAnimation() = mutex.mutate(MutatePriority.UserInput) {}
+
+    internal suspend fun animateTo(target: Float, initialVelocity: Float = 0f) = mutex.mutate {
+        targetValue = target
+        animate(value, target, initialVelocity, spec) { v, _ -> value = v }
     }
+
+    suspend fun expand() = animateTo(1f)
+
+    suspend fun collapse() = animateTo(0f)
 }
 
 /** Survives rotation and process recreation, so an open player stays open. */
@@ -123,12 +151,18 @@ fun PlayerHost(
     sheet.spec = MaterialTheme.motionScheme.defaultSpatialSpec()
 
     // Nothing to play: fold the sheet away.
-    LaunchedEffect(state.song == null) { if (state.song == null) sheet.progress.snapTo(0f) }
+    LaunchedEffect(state.song == null) {
+        if (state.song == null) {
+            sheet.stopAnimation()
+            sheet.snapTo(0f)
+        }
+    }
 
-    val expandedTarget by remember { derivedStateOf { sheet.progress.targetValue == 1f } }
+    val expandedTarget by remember { derivedStateOf { sheet.targetValue == 1f } }
     PredictiveBackHandler(enabled = expandedTarget && state.song != null) { events ->
         try {
-            events.collect { event -> sheet.progress.snapTo(1f - event.progress * 0.12f) }
+            sheet.stopAnimation()
+            events.collect { event -> sheet.snapTo(1f - event.progress * 0.12f) }
             scope.launch { sheet.collapse() }
         } catch (e: CancellationException) {
             scope.launch { sheet.expand() }
@@ -153,35 +187,33 @@ fun PlayerHost(
             val collapsedTop = fullH - with(density) { dockBottom.toPx() } - dockGap - miniH
             val travel by rememberUpdatedState(collapsedTop.coerceAtLeast(1f))
 
-            val dragState = rememberDraggableState { delta ->
-                scope.launch { sheet.progress.snapTo((sheet.progress.value - delta / travel).coerceIn(0f, 1f)) }
-            }
-            val settle: suspend (Float) -> Unit = { velocity ->
+            // Synchronous: the sheet follows the finger in the same frame the delta arrives.
+            val dragState = rememberDraggableState { delta -> sheet.snapTo(sheet.value - delta / travel) }
+            fun settle(velocity: Float) {
                 val target = when {
                     velocity < -FLING_VELOCITY -> 1f
                     velocity > FLING_VELOCITY -> 0f
-                    sheet.progress.value > 0.5f -> 1f
+                    sheet.value > 0.5f -> 1f
                     else -> 0f
                 }
-                if (target != sheet.progress.value) haptics.tick()
-                sheet.progress.animateTo(
-                    target,
-                    sheet.spec ?: androidx.compose.animation.core.spring(),
-                    initialVelocity = -velocity / travel,
-                )
+                if (target != sheet.value) haptics.tick()
+                // In the host's scope, not the dragged node's: the node the drag started on (the
+                // mini player, say) can leave composition mid-animation and would cancel it.
+                scope.launch { sheet.animateTo(target, initialVelocity = -velocity / travel) }
             }
             val dragModifier = Modifier.draggable(
                 state = dragState,
                 orientation = Orientation.Vertical,
+                onDragStarted = { sheet.stopAnimation() },
                 onDragStopped = { velocity -> settle(velocity) },
             )
 
-            val showFull by remember { derivedStateOf { sheet.progress.value > 0f } }
-            val showMini by remember { derivedStateOf { sheet.progress.value < 1f } }
+            val showFull by remember { derivedStateOf { sheet.value > 0f } }
+            val showMini by remember { derivedStateOf { sheet.value < 1f } }
             var sheetCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
             var artSlot by remember { mutableStateOf<LayoutCoordinates?>(null) }
             val flying by remember {
-                derivedStateOf { sheet.progress.value in 0.001f..0.999f && artSlot != null && showFull }
+                derivedStateOf { sheet.value in 0.001f..0.999f && artSlot != null && showFull }
             }
 
             ArtTheme(artModel = song.coverArtModel()) {
