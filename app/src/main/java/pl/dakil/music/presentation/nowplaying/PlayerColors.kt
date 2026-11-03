@@ -3,9 +3,11 @@ package pl.dakil.music.presentation.nowplaying
 import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,8 +77,11 @@ fun ArtTheme(artModel: Any?, content: @Composable () -> Unit) {
         motionScheme = MaterialTheme.motionScheme,
         shapes = MaterialTheme.shapes,
         typography = MaterialTheme.typography,
-        content = content,
-    )
+    ) {
+        // Content drawn straight on the themed background (no Surface in between) must still get
+        // this scheme's ink, or text falls back to black.
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
+    }
 }
 
 @Composable

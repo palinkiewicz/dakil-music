@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,8 +71,8 @@ private const val FLING_VELOCITY = 1200f
 
 /** How far the sheet is open: 0 is the mini player, 1 the full player. */
 @Stable
-class PlayerSheetState {
-    internal val progress = Animatable(0f)
+class PlayerSheetState(initiallyExpanded: Boolean = false) {
+    internal val progress = Animatable(if (initiallyExpanded) 1f else 0f)
 
     /** Where the sheet is headed (or resting); true once it's on its way to the full player. */
     val isExpanded: Boolean get() = progress.targetValue == 1f
@@ -92,8 +94,11 @@ class PlayerSheetState {
     }
 }
 
+/** Survives rotation and process recreation, so an open player stays open. */
 @Composable
-fun rememberPlayerSheetState(): PlayerSheetState = remember { PlayerSheetState() }
+fun rememberPlayerSheetState(): PlayerSheetState = rememberSaveable(
+    saver = Saver(save = { it.isExpanded }, restore = { PlayerSheetState(initiallyExpanded = it) }),
+) { PlayerSheetState() }
 
 /**
  * The player layer drawn above the app: a mini player docked over the navigation bar that opens

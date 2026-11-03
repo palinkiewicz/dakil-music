@@ -1,6 +1,5 @@
 package pl.dakil.music.presentation.songlist
 
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -63,11 +62,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -601,27 +598,18 @@ private fun SongListHero(
                     .fillMaxWidth(0.72f)
                     .aspectRatio(1f),
             ) {
-                // A soft halo of the cover's own colors behind it (blur needs API 31).
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    AlbumArt(
-                        model = visual.model,
-                        shape = shape,
-                        modifier = Modifier
-                            .matchParentSize()
-                            .graphicsLayer {
-                                scaleX = 1.04f
-                                scaleY = 1.08f
-                                translationY = 12.dp.toPx()
-                                alpha = 0.55f
-                            }
-                            .blur(36.dp, BlurredEdgeTreatment.Unbounded),
-                    )
-                }
+                // A soft glow in the cover's own (themed) primary rather than a grey drop shadow.
                 AlbumArt(
                     model = visual.model,
                     shape = shape,
                     modifier = Modifier
                         .matchParentSize()
+                        .shadow(
+                            elevation = 24.dp,
+                            shape = shape,
+                            ambientColor = MaterialTheme.colorScheme.primary,
+                            spotColor = MaterialTheme.colorScheme.primary,
+                        )
                         .then(if (visual.sharedKey != null) Modifier.sharedElement(visual.sharedKey, shape) else Modifier),
                 )
             }

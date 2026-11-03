@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -166,90 +167,107 @@ fun FullPlayer(
                 modifier = dragModifier,
             )
 
-            BoxWithConstraints(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                val side = minOf(maxWidth - Spacing.xl * 2, maxHeight - Spacing.l)
-                AnimatedContent(
-                    targetState = showLyrics && lyricsState != null,
-                    transitionSpec = {
-                        (fadeIn(motion.defaultEffectsSpec()) +
-                            scaleIn(motion.defaultSpatialSpec(), initialScale = 0.92f)) togetherWith
-                            (fadeOut(motion.fastEffectsSpec()) +
-                                scaleOut(motion.fastSpatialSpec(), targetScale = 0.92f))
-                    },
-                    label = "artOrLyrics",
-                ) { lyricsShown ->
-                    if (lyricsShown && lyricsState != null) {
-                        LaunchedEffect(Unit) { onArtSlotPlaced(null) }
-                        LyricsPane(
-                            state = lyricsState,
-                            onSeekLine = { lyricsViewModel?.onSeekToLine(it) },
-                            onSearchLrclib = if (lyricsState.lrclibEnabled) {
-                                { openSheet = PlayerSheetKind.LRCLIB }
+            // Portrait stacks the cover over the controls; a wide window (landscape phone,
+            // tablet) puts them side by side.
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val wide = maxWidth >= 600.dp && maxWidth > maxHeight
+                val artArea: @Composable (Modifier) -> Unit = { artModifier ->
+                    BoxWithConstraints(
+                        modifier = artModifier,
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val side = minOf(maxWidth - Spacing.xl * 2, maxHeight - Spacing.l)
+                        AnimatedContent(
+                            targetState = showLyrics && lyricsState != null,
+                            transitionSpec = {
+                                (fadeIn(motion.defaultEffectsSpec()) +
+                                    scaleIn(motion.defaultSpatialSpec(), initialScale = 0.92f)) togetherWith
+                                    (fadeOut(motion.fastEffectsSpec()) +
+                                        scaleOut(motion.fastSpatialSpec(), targetScale = 0.92f))
+                            },
+                            label = "artOrLyrics",
+                        ) { lyricsShown ->
+                            if (lyricsShown && lyricsState != null) {
+                                LaunchedEffect(Unit) { onArtSlotPlaced(null) }
+                                LyricsPane(
+                                    state = lyricsState,
+                                    onSeekLine = { lyricsViewModel?.onSeekToLine(it) },
+                                    onSearchLrclib = if (lyricsState.lrclibEnabled) {
+                                        { openSheet = PlayerSheetKind.LRCLIB }
+                                    } else {
+                                        null
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                             } else {
-                                null
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        ArtPager(
-                            state = state,
-                            side = side,
-                            artVisible = artVisible,
-                            onArtSlotPlaced = onArtSlotPlaced,
-                            onSkipTo = {
-                                haptics.tick()
-                                viewModel.onQueueItemClick(it)
-                            },
-                            modifier = dragModifier,
-                        )
+                                ArtPager(
+                                    state = state,
+                                    side = side,
+                                    artVisible = artVisible,
+                                    onArtSlotPlaced = onArtSlotPlaced,
+                                    onSkipTo = {
+                                        haptics.tick()
+                                        viewModel.onQueueItemClick(it)
+                                    },
+                                    modifier = dragModifier,
+                                )
+                            }
+                        }
+                    }
+                }
+                val controls: @Composable () -> Unit = {
+                    SongInfo(
+                        song = song,
+                        index = state.currentIndex,
+                        isFavorite = state.isCurrentFavorite,
+                        onToggleFavorite = viewModel::onToggleFavorite,
+                        modifier = dragModifier.padding(horizontal = Spacing.xl),
+                    )
+                    Spacer(Modifier.height(Spacing.s))
+                    TimeBar(
+                        positionMs = state.positionMs,
+                        durationMs = state.durationMs,
+                        onSeek = viewModel::onSeek,
+                        isPlaying = state.isPlaying,
+                        modifier = Modifier.padding(horizontal = Spacing.xl),
+                    )
+                    Spacer(Modifier.height(Spacing.s))
+                    TransportRow(
+                        state = state,
+                        onPlayPause = viewModel::onPlayPause,
+                        onPrevious = viewModel::onPrevious,
+                        onNext = viewModel::onNext,
+                        onToggleShuffle = viewModel::onToggleShuffle,
+                        onCycleRepeat = viewModel::onCycleRepeat,
+                        modifier = Modifier.padding(horizontal = Spacing.l),
+                    )
+                    Spacer(Modifier.height(Spacing.l))
+                    ToolsRow(
+                        state = state,
+                        lyricsAvailable = lyricsCard.visible,
+                        showLyrics = showLyrics,
+                        equalizerOn = equalizer.capabilities.available && equalizer.settings.masterEnabled,
+                        onToggleLyrics = {
+                            haptics.toggle(!showLyrics)
+                            showLyrics = !showLyrics
+                        },
+                        onOpen = { openSheet = it },
+                        modifier = Modifier.padding(horizontal = Spacing.l),
+                    )
+                    Spacer(Modifier.height(Spacing.l))
+                }
+                if (wide) {
+                    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                        artArea(Modifier.weight(1f).fillMaxHeight())
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) { controls() }
+                    }
+                } else {
+                    Column(Modifier.fillMaxSize()) {
+                        artArea(Modifier.weight(1f).fillMaxWidth())
+                        controls()
                     }
                 }
             }
-
-            SongInfo(
-                song = song,
-                index = state.currentIndex,
-                isFavorite = state.isCurrentFavorite,
-                onToggleFavorite = viewModel::onToggleFavorite,
-                modifier = dragModifier.padding(horizontal = Spacing.xl),
-            )
-            Spacer(Modifier.height(Spacing.s))
-            TimeBar(
-                positionMs = state.positionMs,
-                durationMs = state.durationMs,
-                onSeek = viewModel::onSeek,
-                isPlaying = state.isPlaying,
-                modifier = Modifier.padding(horizontal = Spacing.xl),
-            )
-            Spacer(Modifier.height(Spacing.s))
-            TransportRow(
-                state = state,
-                onPlayPause = viewModel::onPlayPause,
-                onPrevious = viewModel::onPrevious,
-                onNext = viewModel::onNext,
-                onToggleShuffle = viewModel::onToggleShuffle,
-                onCycleRepeat = viewModel::onCycleRepeat,
-                modifier = Modifier.padding(horizontal = Spacing.l),
-            )
-            Spacer(Modifier.height(Spacing.l))
-            ToolsRow(
-                state = state,
-                lyricsAvailable = lyricsCard.visible,
-                showLyrics = showLyrics,
-                equalizerOn = equalizer.capabilities.available && equalizer.settings.masterEnabled,
-                onToggleLyrics = {
-                    haptics.toggle(!showLyrics)
-                    showLyrics = !showLyrics
-                },
-                onOpen = { openSheet = it },
-                modifier = Modifier.padding(horizontal = Spacing.l),
-            )
-            Spacer(Modifier.height(Spacing.l))
         }
 
         SnackbarHost(
