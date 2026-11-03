@@ -88,7 +88,6 @@
 
     <!-- Detail screen actions -->
     <string name="action_play_all">Play all</string>
-    <string name="action_shuffle_play">Shuffle and play</string>
     <string name="action_add_to_queue">Add to queue</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="action_more">More options</string>
@@ -455,4 +454,15 @@
     <string name="player_queue_position">%1$d of %2$d</string>
     <string name="player_go_to_album">Go to album</string>
     <string name="player_go_to_artist">Go to artist</string>
+    <plurals name="album_count">
+        <item quantity="one">%d album</item>
+        <item quantity="other">%d albums</item>
+    </plurals>
+    <plurals name="artist_count">
+        <item quantity="one">%d artist</item>
+        <item quantity="other">%d artists</item>
+    </plurals>
+    <string name="sort_by">Sort by</string>
+    <string name="action_play">Play</string>
+    <string name="action_shuffle">Shuffle</string>
 </resources>

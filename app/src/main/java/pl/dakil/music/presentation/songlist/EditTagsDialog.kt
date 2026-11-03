@@ -1,16 +1,18 @@
 package pl.dakil.music.presentation.songlist
 
+import androidx.compose.foundation.layout.Row
+import pl.dakil.music.ui.designsystem.FormSheet
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,59 +49,45 @@ fun EditTagsDialog(
     var track by rememberSaveable(key) { mutableStateOf(seed?.trackNumber.nonZeroOrEmpty()) }
     var year by rememberSaveable(key) { mutableStateOf(seed?.year.nonZeroOrEmpty()) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_tags_title)) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
-                if (multi) {
-                    Text(
-                        text = stringResource(R.string.edit_tags_multi_notice, songs.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                TagField(title, { title = it }, R.string.edit_tags_field_title)
-                TagField(artist, { artist = it }, R.string.edit_tags_field_artist)
-                TagField(genre, { genre = it }, R.string.edit_tags_field_genre)
-                TagField(album, { album = it }, R.string.edit_tags_field_album)
-                TagField(
-                    track, { track = it.filter(Char::isDigit) },
-                    R.string.edit_tags_field_track, numeric = true,
-                )
-                TagField(
-                    year, { year = it.filter(Char::isDigit) },
-                    R.string.edit_tags_field_year, numeric = true,
-                )
-            }
+    FormSheet(
+        title = stringResource(R.string.edit_tags_title),
+        symbol = AppSymbols.Label,
+        supportingText = if (multi) stringResource(R.string.edit_tags_multi_notice, songs.size) else null,
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.edit_tags_cancel),
+        confirmLabel = stringResource(R.string.edit_tags_save),
+        onConfirm = {
+            onSave(
+                buildEdit(
+                    multi = multi,
+                    seed = seed,
+                    title = title,
+                    artist = artist,
+                    genre = genre,
+                    album = album,
+                    track = track,
+                    year = year,
+                ),
+            )
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(
-                    buildEdit(
-                        multi = multi,
-                        seed = seed,
-                        title = title,
-                        artist = artist,
-                        genre = genre,
-                        album = album,
-                        track = track,
-                        year = year,
-                    ),
-                )
-            }) {
-                Text(stringResource(R.string.edit_tags_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.edit_tags_cancel))
-            }
-        },
-    )
+    ) {
+        TagField(title, { title = it }, R.string.edit_tags_field_title)
+        TagField(artist, { artist = it }, R.string.edit_tags_field_artist)
+        TagField(album, { album = it }, R.string.edit_tags_field_album)
+        TagField(genre, { genre = it }, R.string.edit_tags_field_genre)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            TagField(
+                track, { track = it.filter(Char::isDigit) },
+                R.string.edit_tags_field_track, numeric = true,
+                modifier = Modifier.weight(1f),
+            )
+            TagField(
+                year, { year = it.filter(Char::isDigit) },
+                R.string.edit_tags_field_year, numeric = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
 }
 
 @Composable
@@ -108,6 +96,7 @@ private fun TagField(
     onValueChange: (String) -> Unit,
     labelRes: Int,
     numeric: Boolean = false,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     OutlinedTextField(
         value = value,
@@ -119,7 +108,8 @@ private fun TagField(
         } else {
             KeyboardOptions.Default
         },
-        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier,
     )
 }
 

@@ -1,6 +1,8 @@
 package pl.dakil.music.presentation.navigation
 
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +24,7 @@ import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,8 +78,17 @@ import pl.dakil.music.presentation.settings.SettingsScreen
 import pl.dakil.music.presentation.songlist.SongListScreen
 import pl.dakil.music.presentation.songlist.SystemPlaylistSongListScreen
 import pl.dakil.music.presentation.statistics.StatisticsScreen
+import pl.dakil.music.presentation.components.LocalIsPlaying
+import pl.dakil.music.ui.designsystem.LocalNavAnimatedScope
+import pl.dakil.music.ui.designsystem.LocalSharedTransitionScope
 import pl.dakil.music.ui.designsystem.icon.AnimatedAppIcon
 import pl.dakil.music.ui.designsystem.rememberHaptics
+
+/** Exposes the destination's transition scope to shared elements inside it. */
+@Composable
+private fun AnimatedContentScope.Destination(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalNavAnimatedScope provides this, content = content)
+}
 
 private fun routeOf(item: NavItem) = (navItemUi(item).action as? NavAction.Route)?.route
 
@@ -225,137 +237,150 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                 }
             },
         ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = Routes.LIBRARY,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding)
-                    // Paint the screen background so nothing flashes through the cross-fades.
-                    .background(MaterialTheme.colorScheme.surface),
-                // Switching between bottom-bar tabs plays Material fade-through (no direction);
-                // pushed destinations play the spring-driven Material 3 shared-axis X.
-                enterTransition = {
-                    if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughEnter()
-                    else NavTransitions.pushEnter()
-                },
-                exitTransition = {
-                    if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughExit()
-                    else NavTransitions.pushExit()
-                },
-                popEnterTransition = {
-                    if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughEnter()
-                    else NavTransitions.popEnter()
-                },
-                popExitTransition = {
-                    if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughExit()
-                    else NavTransitions.popExit()
-                },
-            ) {
-                composable(Routes.LIBRARY) {
-                    LibraryScreen(
-                        modifier = Modifier.statusBarsPadding(),
-                        onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
-                        onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
-                        onGenreClick = { navController.navigate(Routes.genreSongs(it)) },
-                        onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
-                        onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
-                        onReselect = remember { reselectFlow.filter { it == Routes.LIBRARY }.map {} },
-                    )
-                }
-                composable(Routes.MORE) {
-                    MoreScreen(
-                        onOpen = { item ->
-                            if (item == NavItem.NOW_PLAYING) {
-                                onNavItem(item)
-                                return@MoreScreen
-                            }
-                            val route = routeOf(item) ?: return@MoreScreen
-                            if (item == NavItem.LIBRARY) navigateTopLevel(route) else navController.navigate(route)
-                        },
-                        onReselect = remember { reselectFlow.filter { it == Routes.MORE }.map {} },
-                    )
-                }
-                composable(Routes.SETTINGS) {
-                    SettingsScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenAlbumRules = { navController.navigate(Routes.ALBUM_RULES) },
-                        onOpenNavigation = { navController.navigate(Routes.NAVIGATION) },
-                    )
-                }
-                composable(Routes.ALBUM_RULES) {
-                    AlbumRulesScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.NAVIGATION) {
-                    NavigationCustomizationScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.LISTENING_HISTORY) {
-                    ListeningHistoryScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.STATISTICS) {
-                    StatisticsScreen(onBack = { navController.popBackStack() })
-                }
-                composable(Routes.BACKUP) {
-                    BackupScreen(onBack = { navController.popBackStack() })
-                }
-                composable(
-                    route = Routes.SONG_LIST_PATTERN,
-                    arguments = listOf(
-                        navArgument(Routes.ARG_SOURCE_TYPE) { type = NavType.StringType },
-                        navArgument(Routes.ARG_SOURCE_ARG) { type = NavType.StringType },
-                    ),
+            SharedTransitionLayout {
+                CompositionLocalProvider(
+                    LocalSharedTransitionScope provides this,
+                    LocalIsPlaying provides nowPlaying.isPlaying,
                 ) {
-                    SongListScreen(
-                        onBack = { navController.popBackStack() },
-                        onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
-                    )
-                }
-                // Standalone library-category screens (bottom-bar / More shortcuts).
-                val categoryRoutes = mapOf(
-                    Routes.ALBUMS to NavItem.ALBUMS,
-                    Routes.ARTISTS to NavItem.ARTISTS,
-                    Routes.GENRES to NavItem.GENRES,
-                    Routes.PLAYLISTS to NavItem.PLAYLISTS,
-                )
-                categoryRoutes.forEach { (route, category) ->
-                    composable(route) { entry ->
-                        // A bottom-bar tab lands directly on top of the start destination, so it
-                        // has no parent to go back to; reached from More it sits above More.
-                        val showBack = remember(entry) {
-                            navController.previousBackStackEntry?.destination?.route !=
-                                navController.graph.findStartDestination().route
+                    NavHost(
+                        navController = navController,
+                        startDestination = Routes.LIBRARY,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .consumeWindowInsets(innerPadding)
+                            // Paint the screen background so nothing flashes through the cross-fades.
+                            .background(MaterialTheme.colorScheme.surface),
+                        // Switching between bottom-bar tabs plays Material fade-through (no direction);
+                        // pushed destinations play the spring-driven Material 3 shared-axis X.
+                        enterTransition = {
+                            if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughEnter()
+                            else NavTransitions.pushEnter()
+                        },
+                        exitTransition = {
+                            if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughExit()
+                            else NavTransitions.pushExit()
+                        },
+                        popEnterTransition = {
+                            if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughEnter()
+                            else NavTransitions.popEnter()
+                        },
+                        popExitTransition = {
+                            if (initialState.isTabRoot() && targetState.isTabRoot()) NavTransitions.fadeThroughExit()
+                            else NavTransitions.popExit()
+                        },
+                    ) {
+                        composable(Routes.LIBRARY) {
+                            Destination {
+                                LibraryScreen(
+                                    modifier = Modifier.statusBarsPadding(),
+                                    onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
+                                    onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
+                                    onGenreClick = { navController.navigate(Routes.genreSongs(it)) },
+                                    onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
+                                    onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
+                                    onReselect = remember { reselectFlow.filter { it == Routes.LIBRARY }.map {} },
+                                )
+                            }
                         }
-                        LibraryCategoryScreen(
-                            category = category,
-                            onBack = { navController.popBackStack() },
-                            onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
-                            onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
-                            onGenreClick = { navController.navigate(Routes.genreSongs(it)) },
-                            onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
-                            onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
-                            modifier = Modifier.statusBarsPadding(),
-                            showBack = showBack,
-                        )
-                    }
-                }
-                // Dedicated Favourites / All songs shortcuts (bottom-bar / More).
-                val systemPlaylistRoutes = mapOf(
-                    Routes.FAVOURITES to SystemPlaylist.FAVORITES,
-                    Routes.ALL_SONGS to SystemPlaylist.ALL_SONGS,
-                )
-                systemPlaylistRoutes.forEach { (route, playlist) ->
-                    composable(route) { entry ->
-                        val showBack = remember(entry) {
-                            navController.previousBackStackEntry?.destination?.route !=
-                                navController.graph.findStartDestination().route
+                        composable(Routes.MORE) {
+                            MoreScreen(
+                                onOpen = { item ->
+                                    if (item == NavItem.NOW_PLAYING) {
+                                        onNavItem(item)
+                                        return@MoreScreen
+                                    }
+                                    val route = routeOf(item) ?: return@MoreScreen
+                                    if (item == NavItem.LIBRARY) navigateTopLevel(route) else navController.navigate(route)
+                                },
+                                onReselect = remember { reselectFlow.filter { it == Routes.MORE }.map {} },
+                            )
                         }
-                        SystemPlaylistSongListScreen(
-                            playlist = playlist,
-                            onBack = { navController.popBackStack() },
-                            onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
-                            showBack = showBack,
+                        composable(Routes.SETTINGS) {
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() },
+                                onOpenAlbumRules = { navController.navigate(Routes.ALBUM_RULES) },
+                                onOpenNavigation = { navController.navigate(Routes.NAVIGATION) },
+                            )
+                        }
+                        composable(Routes.ALBUM_RULES) {
+                            AlbumRulesScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.NAVIGATION) {
+                            NavigationCustomizationScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.LISTENING_HISTORY) {
+                            ListeningHistoryScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.STATISTICS) {
+                            StatisticsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(Routes.BACKUP) {
+                            BackupScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable(
+                            route = Routes.SONG_LIST_PATTERN,
+                            arguments = listOf(
+                                navArgument(Routes.ARG_SOURCE_TYPE) { type = NavType.StringType },
+                                navArgument(Routes.ARG_SOURCE_ARG) { type = NavType.StringType },
+                            ),
+                        ) {
+                            Destination {
+                                SongListScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
+                                )
+                            }
+                        }
+                        // Standalone library-category screens (bottom-bar / More shortcuts).
+                        val categoryRoutes = mapOf(
+                            Routes.ALBUMS to NavItem.ALBUMS,
+                            Routes.ARTISTS to NavItem.ARTISTS,
+                            Routes.GENRES to NavItem.GENRES,
+                            Routes.PLAYLISTS to NavItem.PLAYLISTS,
                         )
+                        categoryRoutes.forEach { (route, category) ->
+                            composable(route) { entry ->
+                                // A bottom-bar tab lands directly on top of the start destination, so it
+                                // has no parent to go back to; reached from More it sits above More.
+                                val showBack = remember(entry) {
+                                    navController.previousBackStackEntry?.destination?.route !=
+                                        navController.graph.findStartDestination().route
+                                }
+                                Destination {
+                                    LibraryCategoryScreen(
+                                        category = category,
+                                        onBack = { navController.popBackStack() },
+                                        onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
+                                        onPerformerClick = { navController.navigate(Routes.performerSongs(it)) },
+                                        onGenreClick = { navController.navigate(Routes.genreSongs(it)) },
+                                        onPlaylistClick = { navController.navigate(Routes.playlistSongs(it)) },
+                                        onUserPlaylistClick = { navController.navigate(Routes.userPlaylistSongs(it)) },
+                                        modifier = Modifier.statusBarsPadding(),
+                                        showBack = showBack,
+                                    )
+                                }
+                            }
+                        }
+                        // Dedicated Favourites / All songs shortcuts (bottom-bar / More).
+                        val systemPlaylistRoutes = mapOf(
+                            Routes.FAVOURITES to SystemPlaylist.FAVORITES,
+                            Routes.ALL_SONGS to SystemPlaylist.ALL_SONGS,
+                        )
+                        systemPlaylistRoutes.forEach { (route, playlist) ->
+                            composable(route) { entry ->
+                                val showBack = remember(entry) {
+                                    navController.previousBackStackEntry?.destination?.route !=
+                                        navController.graph.findStartDestination().route
+                                }
+                                SystemPlaylistSongListScreen(
+                                    playlist = playlist,
+                                    onBack = { navController.popBackStack() },
+                                    onAlbumClick = { navController.navigate(Routes.albumSongs(it)) },
+                                    showBack = showBack,
+                                )
+                            }
+                        }
                     }
                 }
             }

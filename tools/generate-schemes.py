@@ -54,12 +54,19 @@ VARIANTS = {
 }
 
 
+# Presets whose secondary and tertiary roles still come from TonalSpot: Content's are as loud as
+# its primary (tertiary even turns error-red), so tonal buttons and chips would all compete.
+CALM_SECONDARY = {"DakilsMusic"}
+
+
 def scheme_block(name: str, seed: int, dark: bool) -> str:
     scheme = VARIANTS.get(name, SchemeTonalSpot)(Hct.from_int(seed), dark, 0.0)
+    calm = SchemeTonalSpot(Hct.from_int(seed), dark, 0.0)
     builder = "darkColorScheme" if dark else "lightColorScheme"
     lines = [f"internal val {name}{'Dark' if dark else 'Light'} = {builder}("]
     for role in ROLES:
-        argb = getattr(MaterialDynamicColors, role).get_argb(scheme) & 0xFFFFFFFF
+        source = calm if name in CALM_SECONDARY and ("econdary" in role or "ertiary" in role) else scheme
+        argb = getattr(MaterialDynamicColors, role).get_argb(source) & 0xFFFFFFFF
         lines.append(f"    {role} = Color(0x{argb:08X}),")
     lines.append(")")
     return "\n".join(lines)

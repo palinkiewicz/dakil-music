@@ -1,5 +1,8 @@
 package pl.dakil.music.presentation.songlist
 
+import pl.dakil.music.ui.designsystem.FormSheet
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.designsystem.rememberHaptics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,13 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,89 +60,75 @@ fun DecomposeTitleDialog(
         TitleDecomposer.decompose(previewSong.title, options)
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.decompose_title)) },
-        text = {
+    FormSheet(
+        title = stringResource(R.string.decompose_title),
+        symbol = AppSymbols.CallSplit,
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.edit_tags_cancel),
+        confirmLabel = stringResource(R.string.decompose_apply),
+        confirmEnabled = result.artists.isNotEmpty(),
+        onConfirm = { onApply(options) },
+    ) {
+        if (songs.size > 1) {
+            Text(
+                text = stringResource(R.string.decompose_multi_notice, songs.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        LabeledValue(stringResource(R.string.decompose_original), previewSong.title)
+
+        OutlinedTextField(
+            value = mainSeparator,
+            onValueChange = { mainSeparator = it },
+            label = { Text(stringResource(R.string.decompose_main_separator)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        SwitchRow(
+            label = stringResource(R.string.decompose_authors_before),
+            checked = authorsBefore,
+            onCheckedChange = { authorsBefore = it },
+        )
+        SwitchRow(
+            label = stringResource(R.string.decompose_extract_feat),
+            checked = extractFeat,
+            onCheckedChange = { extractFeat = it },
+        )
+        OutlinedTextField(
+            value = removeAfter,
+            onValueChange = { removeAfter = it },
+            label = { Text(stringResource(R.string.decompose_remove_after)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // Live preview.
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
             ) {
-                if (songs.size > 1) {
-                    Text(
-                        text = stringResource(R.string.decompose_multi_notice, songs.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                LabeledValue(stringResource(R.string.decompose_original), previewSong.title)
-
-                OutlinedTextField(
-                    value = mainSeparator,
-                    onValueChange = { mainSeparator = it },
-                    label = { Text(stringResource(R.string.decompose_main_separator)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    text = stringResource(R.string.decompose_preview),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                SwitchRow(
-                    label = stringResource(R.string.decompose_authors_before),
-                    checked = authorsBefore,
-                    onCheckedChange = { authorsBefore = it },
+                LabeledValue(
+                    stringResource(R.string.edit_tags_field_title),
+                    result.title.ifBlank { "—" },
                 )
-                SwitchRow(
-                    label = stringResource(R.string.decompose_extract_feat),
-                    checked = extractFeat,
-                    onCheckedChange = { extractFeat = it },
+                LabeledValue(
+                    stringResource(R.string.edit_tags_field_artist),
+                    result.artists.joinToString(", ").ifBlank { "—" },
                 )
-                OutlinedTextField(
-                    value = removeAfter,
-                    onValueChange = { removeAfter = it },
-                    label = { Text(stringResource(R.string.decompose_remove_after)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // Live preview.
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.decompose_preview),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        LabeledValue(
-                            stringResource(R.string.edit_tags_field_title),
-                            result.title.ifBlank { "—" },
-                        )
-                        LabeledValue(
-                            stringResource(R.string.edit_tags_field_artist),
-                            result.artists.joinToString(", ").ifBlank { "—" },
-                        )
-                    }
-                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onApply(options) },
-                enabled = result.artists.isNotEmpty(),
-            ) {
-                Text(stringResource(R.string.decompose_apply))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.edit_tags_cancel))
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable
@@ -158,6 +145,7 @@ private fun LabeledValue(label: String, value: String) {
 
 @Composable
 private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val haptics = rememberHaptics()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
@@ -168,6 +156,6 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
             fontWeight = FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = { haptics.toggle(it); onCheckedChange(it) })
     }
 }

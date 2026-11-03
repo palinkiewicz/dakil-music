@@ -36,12 +36,13 @@ private val seedCache = LruCache<Any, Color>(64)
 private const val SEED_SAMPLE_PX = 96
 
 /**
- * Themes [content] with a scheme built from [artModel]'s dominant color (Material's Content style,
- * which keeps the cover's own hue in the containers). The scheme cross-fades as songs change.
+ * Themes [content] (the player, album pages) with a scheme built from [artModel]'s dominant color
+ * (Material's Content style, which keeps the cover's own hue in the containers). The scheme
+ * cross-fades as songs change.
  * Falls back to the app theme when the user turned art colors off or the art has no usable color.
  */
 @Composable
-fun PlayerTheme(artModel: Any?, content: @Composable () -> Unit) {
+fun ArtTheme(artModel: Any?, content: @Composable () -> Unit) {
     val enabled = LocalPlayerArtColors.current
     val dark = LocalDarkTheme.current
     val pureBlack = LocalPureBlack.current
@@ -52,7 +53,20 @@ fun PlayerTheme(artModel: Any?, content: @Composable () -> Unit) {
         if (seed == null) {
             appScheme
         } else {
+            // Content keeps the cover's hue in primary; secondaries and tertiaries come from
+            // TonalSpot so tonal controls stay calm instead of all competing as accents.
+            val calm = dynamicColorScheme(seedColor = seed, isDark = dark, isAmoled = false, style = PaletteStyle.TonalSpot)
             dynamicColorScheme(seedColor = seed, isDark = dark, isAmoled = false, style = PaletteStyle.Content)
+                .copy(
+                    secondary = calm.secondary,
+                    onSecondary = calm.onSecondary,
+                    secondaryContainer = calm.secondaryContainer,
+                    onSecondaryContainer = calm.onSecondaryContainer,
+                    tertiary = calm.tertiary,
+                    onTertiary = calm.onTertiary,
+                    tertiaryContainer = calm.tertiaryContainer,
+                    onTertiaryContainer = calm.onTertiaryContainer,
+                )
                 .let { if (pureBlack) it.toPureBlack() else it }
         }
     }

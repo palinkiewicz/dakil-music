@@ -83,7 +83,6 @@
     <string name="no_album">Brak albumu</string>
 
     <string name="action_play_all">Odtwórz wszystko</string>
-    <string name="action_shuffle_play">Odtwórz losowo</string>
     <string name="action_add_to_queue">Dodaj do kolejki</string>
     <string name="action_add_to_playlist">Dodaj do playlisty</string>
     <string name="action_more">Więcej opcji</string>
@@ -446,4 +445,19 @@
     <string name="player_queue_position">%1$d z %2$d</string>
     <string name="player_go_to_album">Przejdź do albumu</string>
     <string name="player_go_to_artist">Przejdź do wykonawcy</string>
+    <plurals name="album_count">
+        <item quantity="one">%d album</item>
+        <item quantity="few">%d albumy</item>
+        <item quantity="many">%d albumów</item>
+        <item quantity="other">%d albumu</item>
+    </plurals>
+    <plurals name="artist_count">
+        <item quantity="one">%d wykonawca</item>
+        <item quantity="few">%d wykonawców</item>
+        <item quantity="many">%d wykonawców</item>
+        <item quantity="other">%d wykonawcy</item>
+    </plurals>
+    <string name="sort_by">Sortuj według</string>
+    <string name="action_play">Odtwórz</string>
+    <string name="action_shuffle">Losowo</string>
 </resources>

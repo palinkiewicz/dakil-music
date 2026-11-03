@@ -99,7 +99,7 @@ fun rememberPlayerSheetState(): PlayerSheetState = remember { PlayerSheetState()
  * The player layer drawn above the app: a mini player docked over the navigation bar that opens
  * into the full player. One surface grows from the dock to the whole screen while the cover flies
  * from the mini player's thumbnail into its place in the full player. Drag it, fling it, or use
- * (predictive) back to close. Themed from the cover art via [PlayerTheme].
+ * (predictive) back to close. Themed from the cover art via [ArtTheme].
  *
  * [dockBottom] is the height of whatever sits under the dock (the navigation bar, insets included).
  */
@@ -179,7 +179,7 @@ fun PlayerHost(
                 derivedStateOf { sheet.progress.value in 0.001f..0.999f && artSlot != null && showFull }
             }
 
-            PlayerTheme(artModel = song.coverArtModel()) {
+            ArtTheme(artModel = song.coverArtModel()) {
                 val miniColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 val fullColor = MaterialTheme.colorScheme.surface
                 val miniCornerPx = with(density) { MiniCorner.toPx() }
