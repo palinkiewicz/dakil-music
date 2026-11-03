@@ -103,6 +103,14 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.updateSettings.setDisplayLyrics(enabled)
     }
 
+    fun setHapticsEnabled(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setHapticsEnabled(enabled)
+    }
+
+    fun setPlayerArtColors(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setPlayerArtColors(enabled)
+    }
+
     fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = viewModelScope.launch {
         container.updateSettings.setFetchMissingLyricsFromLrclib(enabled)
     }

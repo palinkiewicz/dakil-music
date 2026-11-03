@@ -37,4 +37,6 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setNowPlayingCornerRoundnessDp(dp: Int) = repository.setNowPlayingCornerRoundnessDp(dp)
     suspend fun setDisplayLyrics(enabled: Boolean) = repository.setDisplayLyrics(enabled)
     suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = repository.setFetchMissingLyricsFromLrclib(enabled)
+    suspend fun setHapticsEnabled(enabled: Boolean) = repository.setHapticsEnabled(enabled)
+    suspend fun setPlayerArtColors(enabled: Boolean) = repository.setPlayerArtColors(enabled)
 }

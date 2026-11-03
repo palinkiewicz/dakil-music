@@ -44,6 +44,8 @@ class QuickPlayerActivity : ComponentActivity() {
                 colorTheme = settings.colorTheme,
                 darkThemeOption = settings.darkThemeOption,
                 pureBlack = settings.pureBlack,
+                hapticsEnabled = settings.hapticsEnabled,
+                playerArtColors = settings.playerArtColors,
             ) {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 QuickPlayerScreen(

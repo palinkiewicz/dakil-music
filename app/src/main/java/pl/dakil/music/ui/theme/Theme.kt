@@ -28,6 +28,12 @@ import pl.dakil.music.domain.model.DarkThemeOption
 /** Whether the resolved app theme is dark, which can differ from the system setting. */
 val LocalDarkTheme = staticCompositionLocalOf { false }
 
+/** Whether dark surfaces are pure black (OLED); art-derived player schemes honour it too. */
+val LocalPureBlack = staticCompositionLocalOf { false }
+
+/** Whether the player takes its colors from the current cover art. */
+val LocalPlayerArtColors = staticCompositionLocalOf { true }
+
 // Pure black variant for OLED screens, applied on top of any dark scheme.
 internal fun ColorScheme.toPureBlack() = copy(
     background = Color.Black,
@@ -75,6 +81,7 @@ fun MusicTheme(
     darkThemeOption: DarkThemeOption = DarkThemeOption.FOLLOW_SYSTEM,
     pureBlack: Boolean = false,
     hapticsEnabled: Boolean = true,
+    playerArtColors: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (darkThemeOption) {
@@ -104,6 +111,8 @@ fun MusicTheme(
     val haptics = if (hapticsEnabled) LocalHapticFeedback.current else NoHapticFeedback
     CompositionLocalProvider(
         LocalDarkTheme provides darkTheme,
+        LocalPureBlack provides (darkTheme && pureBlack),
+        LocalPlayerArtColors provides playerArtColors,
         LocalHapticFeedback provides haptics,
     ) {
         MaterialExpressiveTheme(

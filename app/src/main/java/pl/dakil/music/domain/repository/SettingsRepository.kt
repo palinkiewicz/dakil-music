@@ -55,6 +55,10 @@ interface SettingsRepository {
     suspend fun setDisplayLyrics(enabled: Boolean)
 
     suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean)
+
+    suspend fun setHapticsEnabled(enabled: Boolean)
+
+    suspend fun setPlayerArtColors(enabled: Boolean)
 }
 
 data class AppSettings(
@@ -93,4 +97,8 @@ data class AppSettings(
     val displayLyrics: Boolean = true,
     /** Fall back to the lrclib.net API when a song has no embedded lyrics. */
     val fetchMissingLyricsFromLrclib: Boolean = true,
+    /** Subtle vibrations on toggles, drags and confirmations. */
+    val hapticsEnabled: Boolean = true,
+    /** Tint the player with colors taken from the current song's cover art. */
+    val playerArtColors: Boolean = true,
 )
