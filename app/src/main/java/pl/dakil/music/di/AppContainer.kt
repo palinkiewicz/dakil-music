@@ -68,6 +68,7 @@ import pl.dakil.music.domain.usecase.ImportHistoryUseCase
 import pl.dakil.music.domain.usecase.MergeHistoryUseCase
 import pl.dakil.music.domain.usecase.ObserveHistoryChangesUseCase
 import pl.dakil.music.domain.usecase.ObserveNavigationConfigUseCase
+import pl.dakil.music.domain.usecase.UpgradeLegacyNavigationUseCase
 import pl.dakil.music.domain.usecase.UpdateNavComponentUseCase
 import pl.dakil.music.domain.usecase.PropagateRetagToHistoryUseCase
 import pl.dakil.music.domain.usecase.ReconcileHistoryUseCase
@@ -255,6 +256,7 @@ class AppContainer(context: Context) {
 
     val observeNavigationConfig = ObserveNavigationConfigUseCase(navigationConfigRepository)
     val updateNavComponent = UpdateNavComponentUseCase(navigationConfigRepository)
+    private val upgradeLegacyNavigation = UpgradeLegacyNavigationUseCase(navigationConfigRepository, settingsRepository)
 
     val observeAudioEffects = ObserveAudioEffectsUseCase(audioEffectsRepository)
     val updateAudioEffects = UpdateAudioEffectsUseCase(audioEffectsRepository)
@@ -292,6 +294,7 @@ class AppContainer(context: Context) {
     )
 
     init {
+        appScope.launch { upgradeLegacyNavigation() }
         // Self-heal history whenever the library (re)loads: re-link records whose
         // song was deleted and re-added under a new MediaStore id.
         appScope.launch {

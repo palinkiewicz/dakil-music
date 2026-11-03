@@ -4,116 +4,96 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.zIndex
-import kotlin.math.roundToInt
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.Color
-import androidx.annotation.StringRes
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.LazyListState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import pl.dakil.music.R
 import pl.dakil.music.domain.model.Album
 import pl.dakil.music.domain.model.Genre
@@ -126,18 +106,42 @@ import pl.dakil.music.domain.model.SystemPlaylist
 import pl.dakil.music.domain.model.UserPlaylist
 import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
-import pl.dakil.music.presentation.components.aspectRatioSquare
-import pl.dakil.music.presentation.components.coverArtModel
+import pl.dakil.music.presentation.components.ArtistAvatar
 import pl.dakil.music.presentation.components.FileInfoDialog
-import pl.dakil.music.presentation.components.SelectionTopBar
-import pl.dakil.music.presentation.components.clickableRow
+import pl.dakil.music.presentation.components.NoAlbumArt
+import pl.dakil.music.presentation.components.SelectionChrome
+import pl.dakil.music.presentation.components.SongLeading
+import pl.dakil.music.presentation.components.SongRow
+import pl.dakil.music.presentation.components.coverArtModel
+import pl.dakil.music.presentation.components.formatDuration
 import pl.dakil.music.presentation.components.shareSongs
+import pl.dakil.music.presentation.components.stableIndex
+import pl.dakil.music.presentation.components.tonalPairFor
 import pl.dakil.music.presentation.navigation.navItemUi
 import pl.dakil.music.presentation.playlist.AddToPlaylistDialog
 import pl.dakil.music.presentation.playlist.PlaylistNameDialog
 import pl.dakil.music.presentation.songlist.DecomposeTitleDialog
 import pl.dakil.music.presentation.songlist.EditTagsDialog
 import pl.dakil.music.presentation.songlist.SystemPlaylistSongListScreen
+import pl.dakil.music.ui.designsystem.AppMenu
+import pl.dakil.music.ui.designsystem.AppMenuGroup
+import pl.dakil.music.ui.designsystem.AppMenuItem
+import pl.dakil.music.ui.designsystem.BackButton
+import pl.dakil.music.ui.designsystem.CollapsingScaffold
+import pl.dakil.music.ui.designsystem.EmptyState
+import pl.dakil.music.ui.designsystem.FormSheet
+import pl.dakil.music.ui.designsystem.ShapedIcon
+import pl.dakil.music.ui.designsystem.entrance
+import pl.dakil.music.ui.designsystem.icon.AnimatedAppIcon
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.designsystem.pressScale
+import pl.dakil.music.ui.designsystem.rememberHaptics
+import pl.dakil.music.ui.designsystem.segmentedItemShape
+import pl.dakil.music.ui.designsystem.sharedElement
+import pl.dakil.music.ui.theme.SegmentedShapes
+import pl.dakil.music.ui.theme.Spacing
 
 @StringRes
 fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
@@ -145,7 +149,13 @@ fun systemPlaylistNameRes(playlist: SystemPlaylist): Int = when (playlist) {
     SystemPlaylist.FAVORITES -> R.string.playlist_favorites
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+/** Shared-element key of an album's cover, matched by the album page's header. */
+fun albumArtKey(albumId: Long) = "album-art-$albumId"
+
+/** Items further down than this don't play the entrance cascade (they'd wait too long). */
+private const val ENTRANCE_ITEMS = 12
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     onAlbumClick: (Long) -> Unit,
@@ -163,7 +173,7 @@ fun LibraryScreen(
     // Hoisted so re-tapping the Library tab can scroll the visible page to the top.
     val albumsGridState = rememberLazyGridState()
     val performersListState = rememberLazyListState()
-    val genresListState = rememberLazyListState()
+    val genresGridState = rememberLazyGridState()
     val playlistsListState = rememberLazyListState()
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
@@ -183,9 +193,13 @@ fun LibraryScreen(
     val coverArtVersion by viewModel.coverArtVersion.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
+    val haptics = rememberHaptics()
     val context = LocalContext.current
     val resources = LocalResources.current
+    val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var searchActive by rememberSaveable { mutableStateOf(false) }
+    val searching = searchActive || query.isNotEmpty()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -223,6 +237,12 @@ fun LibraryScreen(
         )
     }
 
+    fun closeSearch() {
+        viewModel.clearQuery()
+        searchActive = false
+        focusManager.clearFocus()
+    }
+
     // Back exits search instead of leaving the app — but only once the keyboard is
     // down. While the IME is up, back is left to the system so it closes the keyboard
     // first. Covers button, gesture and predictive back alike.
@@ -230,21 +250,21 @@ fun LibraryScreen(
     BackHandler(enabled = selectedSongIds.isNotEmpty()) {
         viewModel.clearSelection()
     }
-    BackHandler(enabled = selectedSongIds.isEmpty() && query.isNotEmpty() && !imeVisible) {
-        viewModel.clearQuery()
+    BackHandler(enabled = selectedSongIds.isEmpty() && searching && !imeVisible) {
+        closeSearch()
     }
 
     // Re-tapping the Library tab exits an active search, otherwise scrolls the
     // currently visible page back to the top.
     LaunchedEffect(onReselect) {
         onReselect.collect {
-            if (viewModel.query.value.isNotEmpty()) {
-                viewModel.clearQuery()
+            if (viewModel.query.value.isNotEmpty() || searchActive) {
+                closeSearch()
             } else {
                 when (tabs.getOrNull(pagerState.currentPage)) {
                     NavItem.ALBUMS -> albumsGridState.animateScrollToItem(0)
                     NavItem.ARTISTS -> performersListState.animateScrollToItem(0)
-                    NavItem.GENRES -> genresListState.animateScrollToItem(0)
+                    NavItem.GENRES -> genresGridState.animateScrollToItem(0)
                     NavItem.PLAYLISTS -> playlistsListState.animateScrollToItem(0)
                     else -> Unit
                 }
@@ -252,137 +272,145 @@ fun LibraryScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        TextField(
-            value = query,
-            onValueChange = viewModel::onQueryChange,
-            placeholder = { Text(stringResource(R.string.search_hint)) },
-            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = viewModel::clearQuery) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.search_clear),
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            shape = CircleShape,
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-
-        if (query.isBlank()) {
-            // Keep the selected page valid when the tab set shrinks via customization.
-            LaunchedEffect(tabs.size) {
-                if (pagerState.currentPage >= tabs.size && tabs.isNotEmpty()) {
-                    pagerState.scrollToPage(tabs.size - 1)
-                }
-            }
-            if (tabs.isEmpty()) {
-                EmptyState(stringResource(R.string.library_no_tabs), Icons.Rounded.LibraryMusic)
-            } else {
-                LibraryTabRow(
-                    tabs = tabs,
-                    selectedIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1),
-                    onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
-                    modifier = Modifier.zIndex(2f),
-                )
-
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                ) { page ->
-                    when (tabs[page]) {
-                        NavItem.ALBUMS -> AlbumsGrid(
-                            albums = albums,
-                            columns = albumColumns,
-                            cornerDp = albumCornerDp,
-                            sort = albumSort,
-                            gridState = albumsGridState,
-                            onSortSelect = viewModel::selectAlbumSort,
-                            onClick = onAlbumClick,
-                            coverArtVersion = coverArtVersion,
-                        )
-                        NavItem.ARTISTS -> PerformersList(
-                            performers = performers,
-                            sort = artistSort,
-                            listState = performersListState,
-                            onSortSelect = viewModel::selectArtistSort,
-                            onClick = onPerformerClick,
-                        )
-                        NavItem.GENRES -> GenresList(
-                            genres = genres,
-                            sort = genreSort,
-                            listState = genresListState,
-                            onSortSelect = viewModel::selectGenreSort,
-                            onClick = onGenreClick,
-                        )
-                        NavItem.PLAYLISTS -> PlaylistsCategory(
-                            viewModel = viewModel,
-                            listState = playlistsListState,
-                            onSystemClick = onPlaylistClick,
-                            onUserClick = onUserPlaylistClick,
-                        )
-                        NavItem.FAVOURITES -> EmbeddedSystemPlaylist(SystemPlaylist.FAVORITES)
-                        NavItem.ALL_SONGS -> EmbeddedSystemPlaylist(SystemPlaylist.ALL_SONGS)
-                        else -> Unit
-                    }
-                }
-            }
-        } else {
-            SearchResultsList(
-                results = searchResults,
-                selectedSongIds = selectedSongIds,
-                onSongClick = viewModel::onSongClick,
-                onSongLongClick = viewModel::onSongLongClick,
-                onAlbumClick = onAlbumClick,
-                onPerformerClick = onPerformerClick,
-                onPlaylistClick = onPlaylistClick,
-                onUserPlaylistClick = onUserPlaylistClick,
-                query = query,
-                coverArtVersion = coverArtVersion,
-                modifier = Modifier.fillMaxSize(),
-            )
+    // A tick as the pager settles on another tab, however it got there.
+    LaunchedEffect(pagerState) {
+        var last = pagerState.settledPage
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            if (page != last) haptics.tick()
+            last = page
         }
     }
 
-        // Selection overlay covers the search bar while songs are picked for a bulk action.
-        if (selectedSongIds.isNotEmpty()) {
-            val selectedSongs = searchResults.songs.filter { it.id in selectedSongIds }
-            SelectionTopBar(
-                selectedCount = selectedSongIds.size,
-                allSelectedFavorite = selectedSongIds.isNotEmpty() &&
-                    selectedSongIds.all { it in favoriteIds },
-                singleSelectionHasArt = selectedSongs.size == 1 &&
-                    selectedSongs.first().albumArtUri != null,
-                showRemoveFromPlaylist = false,
-                onClose = viewModel::clearSelection,
-                onSelectAll = viewModel::selectAll,
-                onToggleFavorites = viewModel::toggleFavoritesForSelection,
-                onAddToQueue = viewModel::addSelectionToQueue,
-                onAddToPlaylist = viewModel::startAddToPlaylist,
-                onEditTags = viewModel::startEditTags,
-                onDecompose = viewModel::startDecompose,
-                onChangeCoverArt = { imagePicker.launch(arrayOf("image/png", "image/jpeg")) },
-                onRemoveFromPlaylist = {},
-                onShare = {
-                    shareSongs(context, selectedSongs)
-                    viewModel.clearSelection()
-                },
-                onShowInfo = viewModel::startFileInfo,
-                modifier = Modifier.align(Alignment.TopStart),
+    // The first screenful cascades in once; later recompositions (scrolling back up,
+    // returning from an album) don't replay it.
+    var cascadeDone by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(1_200)
+        cascadeDone = true
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            LibraryHeader(
+                searching = searching,
+                query = query,
+                subtitle = librarySubtitle(albums.size, performers.size),
+                onQueryChange = viewModel::onQueryChange,
+                onOpenSearch = { searchActive = true },
+                onCloseSearch = ::closeSearch,
             )
+
+            AnimatedContent(
+                targetState = query.isBlank(),
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "libraryBody",
+            ) { browsing ->
+                if (browsing) {
+                    // Keep the selected page valid when the tab set shrinks via customization.
+                    LaunchedEffect(tabs.size) {
+                        if (pagerState.currentPage >= tabs.size && tabs.isNotEmpty()) {
+                            pagerState.scrollToPage(tabs.size - 1)
+                        }
+                    }
+                    if (tabs.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            EmptyState(AppSymbols.LibraryMusic, stringResource(R.string.library_no_tabs))
+                        }
+                    } else {
+                        Column(Modifier.fillMaxSize()) {
+                            LibraryTabs(
+                                tabs = tabs,
+                                selectedIndex = pagerState.currentPage.coerceIn(0, tabs.size - 1),
+                                onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
+                            )
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                beyondViewportPageCount = 1,
+                            ) { page ->
+                                when (tabs[page]) {
+                                    NavItem.ALBUMS -> AlbumsGrid(
+                                        albums = albums,
+                                        columns = albumColumns,
+                                        cornerDp = albumCornerDp,
+                                        sort = albumSort,
+                                        gridState = albumsGridState,
+                                        onSortSelect = viewModel::selectAlbumSort,
+                                        onClick = onAlbumClick,
+                                        coverArtVersion = coverArtVersion,
+                                        cascade = !cascadeDone,
+                                    )
+                                    NavItem.ARTISTS -> PerformersList(
+                                        performers = performers,
+                                        sort = artistSort,
+                                        listState = performersListState,
+                                        onSortSelect = viewModel::selectArtistSort,
+                                        onClick = onPerformerClick,
+                                    )
+                                    NavItem.GENRES -> GenresGrid(
+                                        genres = genres,
+                                        sort = genreSort,
+                                        gridState = genresGridState,
+                                        onSortSelect = viewModel::selectGenreSort,
+                                        onClick = onGenreClick,
+                                    )
+                                    NavItem.PLAYLISTS -> PlaylistsCategory(
+                                        viewModel = viewModel,
+                                        listState = playlistsListState,
+                                        onSystemClick = onPlaylistClick,
+                                        onUserClick = onUserPlaylistClick,
+                                    )
+                                    NavItem.FAVOURITES -> EmbeddedSystemPlaylist(SystemPlaylist.FAVORITES)
+                                    NavItem.ALL_SONGS -> EmbeddedSystemPlaylist(SystemPlaylist.ALL_SONGS)
+                                    else -> Unit
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    SearchResultsList(
+                        results = searchResults,
+                        selectedSongIds = selectedSongIds,
+                        favoriteIds = favoriteIds,
+                        onSongClick = viewModel::onSongClick,
+                        onSongLongClick = viewModel::onSongLongClick,
+                        onAlbumClick = onAlbumClick,
+                        onPerformerClick = onPerformerClick,
+                        onPlaylistClick = onPlaylistClick,
+                        onUserPlaylistClick = onUserPlaylistClick,
+                        query = query,
+                        coverArtVersion = coverArtVersion,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
+
+        // Selection chrome covers the header while songs are picked for a bulk action.
+        val selectedSongs = searchResults.songs.filter { it.id in selectedSongIds }
+        SelectionChrome(
+            visible = selectedSongIds.isNotEmpty(),
+            selectedCount = selectedSongIds.size,
+            allSelectedFavorite = selectedSongIds.isNotEmpty() && selectedSongIds.all { it in favoriteIds },
+            singleSelectionHasArt = selectedSongs.size == 1 && selectedSongs.first().albumArtUri != null,
+            showRemoveFromPlaylist = false,
+            onClose = viewModel::clearSelection,
+            onSelectAll = viewModel::selectAll,
+            onToggleFavorites = viewModel::toggleFavoritesForSelection,
+            onAddToQueue = viewModel::addSelectionToQueue,
+            onAddToPlaylist = viewModel::startAddToPlaylist,
+            onEditTags = viewModel::startEditTags,
+            onDecompose = viewModel::startDecompose,
+            onChangeCoverArt = { imagePicker.launch(arrayOf("image/png", "image/jpeg")) },
+            onRemoveFromPlaylist = {},
+            onShare = {
+                shareSongs(context, selectedSongs)
+                viewModel.clearSelection()
+            },
+            onShowInfo = viewModel::startFileInfo,
+            // The library sits below the status bar already.
+            windowInsets = WindowInsets(0, 0, 0, 0),
+        )
 
         SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
@@ -416,46 +444,134 @@ fun LibraryScreen(
     }
 }
 
-/**
- * Library tabs that fill the width evenly when they fit, and fall back to a
- * content-sized scrollable row only when there are too many to fit on screen.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LibraryTabRow(
+private fun librarySubtitle(albumCount: Int, artistCount: Int): String =
+    pluralStringResource(R.plurals.album_count, albumCount, albumCount) + "  ·  " +
+        pluralStringResource(R.plurals.artist_count, artistCount, artistCount)
+
+/**
+ * The top of the Library: a big rounded title with a search button that, when tapped, morphs the
+ * whole header into a search field (and back).
+ */
+@Composable
+private fun LibraryHeader(
+    searching: Boolean,
+    query: String,
+    subtitle: String,
+    onQueryChange: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedContent(
+        targetState = searching,
+        transitionSpec = {
+            (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith
+                fadeOut(motion.fastEffectsSpec()) using SizeTransform(clip = false)
+        },
+        label = "libraryHeader",
+    ) { inSearch ->
+        if (inSearch) {
+            val focusRequester = remember { FocusRequester() }
+            LaunchedEffect(Unit) { if (query.isEmpty()) focusRequester.requestFocus() }
+            TextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text(stringResource(R.string.search_hint)) },
+                leadingIcon = {
+                    IconButton(onClick = onCloseSearch, shapes = IconButtonDefaults.shapes()) {
+                        AppIcon(AppSymbols.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }, shapes = IconButtonDefaults.shapes()) {
+                            AppIcon(AppSymbols.Close, contentDescription = stringResource(R.string.search_clear))
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = CircleShape,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { }),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.l, vertical = Spacing.s)
+                    .focusRequester(focusRequester),
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = Spacing.xl, end = Spacing.l, top = Spacing.l, bottom = Spacing.s),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.library_title),
+                        style = MaterialTheme.typography.displaySmallEmphasized,
+                    )
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                FilledTonalIconButton(
+                    onClick = onOpenSearch,
+                    shapes = IconButtonDefaults.shapes(),
+                    modifier = Modifier.size(IconButtonDefaults.mediumContainerSize()),
+                ) {
+                    AppIcon(AppSymbols.Search, contentDescription = stringResource(R.string.search_hint))
+                }
+            }
+        }
+    }
+}
+
+private fun NavItem.tabSymbol(): AppSymbol = navItemUi(this).icon
+
+/**
+ * The library's sections as a scrolling row of pill toggles with icons. The selected pill fills
+ * and keeps itself in view as the pager moves.
+ */
+@Composable
+private fun LibraryTabs(
     tabs: List<NavItem>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val titles = tabs.map { stringResource(navItemUi(it).labelRes) }
-    val textMeasurer = rememberTextMeasurer()
-    val textStyle = MaterialTheme.typography.titleSmall
-    val density = LocalDensity.current
-
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        // A fixed TabRow splits the width evenly; only fit the tabs there when their
-        // natural widths (text + the tab's horizontal padding) all add up within it.
-        val availablePx = with(density) { maxWidth.toPx() }
-        val tabPaddingPx = with(density) { 32.dp.toPx() }
-        val neededPx = titles.sumOf { textMeasurer.measure(it, textStyle).size.width + tabPaddingPx.toInt() }
-        val fits = neededPx <= availablePx
-
-        val tabsContent: @Composable () -> Unit = {
-            titles.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedIndex == index,
-                    onClick = { onSelect(index) },
-                    text = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                )
-            }
+    val rowState = rememberLazyListState()
+    LaunchedEffect(selectedIndex) {
+        val visible = rowState.layoutInfo.visibleItemsInfo
+        val fullyVisible = visible.any {
+            it.index == selectedIndex && it.offset >= 0 &&
+                it.offset + it.size <= rowState.layoutInfo.viewportEndOffset
         }
-
-        if (fits) {
-            PrimaryTabRow(selectedTabIndex = selectedIndex) { tabsContent() }
-        } else {
-            PrimaryScrollableTabRow(selectedTabIndex = selectedIndex, edgePadding = 0.dp) {
-                tabsContent()
+        if (!fullyVisible) rowState.animateScrollToItem((selectedIndex - 1).coerceAtLeast(0))
+    }
+    LazyRow(
+        state = rowState,
+        contentPadding = PaddingValues(horizontal = Spacing.l, vertical = Spacing.s),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        itemsIndexed(tabs, key = { _, tab -> tab.name }) { index, tab ->
+            val checked = index == selectedIndex
+            ToggleButton(
+                checked = checked,
+                onCheckedChange = { if (!checked) onSelect(index) },
+            ) {
+                AnimatedAppIcon(tab.tabSymbol(), contentDescription = null, filled = checked, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(Spacing.s))
+                Text(stringResource(navItemUi(tab).labelRes), maxLines = 1)
             }
         }
     }
@@ -527,22 +643,17 @@ private fun PlaylistsCategory(
     }
 
     deleting?.let { playlist ->
-        AlertDialog(
-            onDismissRequest = { deleting = null },
-            title = { Text(stringResource(R.string.playlist_delete_title)) },
-            text = { Text(stringResource(R.string.playlist_delete_message, playlist.name)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deletePlaylist(playlist.id)
-                    deleting = null
-                }) {
-                    Text(stringResource(R.string.playlist_delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleting = null }) {
-                    Text(stringResource(R.string.edit_tags_cancel))
-                }
+        FormSheet(
+            title = stringResource(R.string.playlist_delete_title),
+            symbol = AppSymbols.Delete,
+            supportingText = stringResource(R.string.playlist_delete_message, playlist.name),
+            onDismiss = { deleting = null },
+            dismissLabel = stringResource(R.string.edit_tags_cancel),
+            confirmLabel = stringResource(R.string.playlist_delete),
+            destructive = true,
+            onConfirm = {
+                viewModel.deletePlaylist(playlist.id)
+                deleting = null
             },
         )
     }
@@ -566,7 +677,6 @@ private fun EmbeddedSystemPlaylist(playlist: SystemPlaylist) {
  * Standalone screen for a single library category (Albums / Artists / Genres /
  * Playlists), reached from a bottom-bar or More shortcut.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryCategoryScreen(
     category: NavItem,
@@ -581,24 +691,11 @@ fun LibraryCategoryScreen(
     showBack: Boolean = true,
     viewModel: LibraryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
-    Scaffold(
+    CollapsingScaffold(
+        title = stringResource(navItemUi(category).labelRes),
+        large = !showBack,
+        navigationIcon = { if (showBack) BackButton(onBack) },
         modifier = modifier,
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(navItemUi(category).labelRes)) },
-                navigationIcon = {
-                    if (showBack) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back),
-                            )
-                        }
-                    }
-                },
-            )
-        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (category) {
@@ -633,10 +730,10 @@ fun LibraryCategoryScreen(
                 NavItem.GENRES -> {
                     val genres by viewModel.genres.collectAsStateWithLifecycle()
                     val genreSort by viewModel.genreSort.collectAsStateWithLifecycle()
-                    GenresList(
+                    GenresGrid(
                         genres = genres,
                         sort = genreSort,
-                        listState = rememberLazyListState(),
+                        gridState = rememberLazyGridState(),
                         onSortSelect = viewModel::selectGenreSort,
                         onClick = onGenreClick,
                     )
@@ -655,11 +752,11 @@ fun LibraryCategoryScreen(
 
 private const val PAGE_SIZE = 4
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SearchResultsList(
     results: SearchResults,
     selectedSongIds: Set<Long>,
+    favoriteIds: Set<Long>,
     onSongClick: (Song) -> Unit,
     onSongLongClick: (Long) -> Unit,
     onAlbumClick: (Long) -> Unit,
@@ -677,173 +774,149 @@ private fun SearchResultsList(
     var playlistsVisible by rememberSaveable(query) { mutableIntStateOf(PAGE_SIZE) }
 
     if (results.isEmpty) {
-        EmptyState(stringResource(R.string.search_no_results), Icons.Rounded.Search)
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyState(AppSymbols.Search, stringResource(R.string.search_no_results), polygon = MaterialShapes.Sunny)
+        }
         return
     }
 
-    LazyColumn(modifier = modifier) {
+    val tile = MaterialTheme.colorScheme.surfaceContainerLow
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, bottom = 120.dp),
+        verticalArrangement = Arrangement.spacedBy(SegmentedShapes.gap),
+    ) {
         if (results.songs.isNotEmpty()) {
-            item(key = "header_songs") {
-                SectionHeader(stringResource(R.string.search_section_songs))
-            }
-            items(results.songs.take(songsVisible), key = { "song_${it.id}" }) { song ->
-                val selected = song.id in selectedSongIds
-                ListItem(
-                    colors = ListItemDefaults.colors(
-                        containerColor = if (selected) {
-                            MaterialTheme.colorScheme.secondaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                    ),
-                    headlineContent = {
-                        Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    },
-                    supportingContent = {
-                        Text(
-                            song.artists.takeIf { it.isNotEmpty() }?.joinToString(", ")
-                                ?: stringResource(R.string.unknown_artist),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    leadingContent = {
-                        if (selectionMode) {
-                            Checkbox(checked = selected, onCheckedChange = { onSongClick(song) })
-                        } else {
-                            AlbumArt(
-                                model = song.coverArtModel(coverArtVersion),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.size(48.dp),
-                            )
-                        }
-                    },
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onSongClick(song) },
-                        onLongClick = { onSongLongClick(song.id) },
-                    ),
+            item(key = "header_songs") { SectionHeader(stringResource(R.string.search_section_songs)) }
+            val shown = results.songs.take(songsVisible)
+            itemsIndexed(shown, key = { _, song -> "song_${song.id}" }) { index, song ->
+                SongRow(
+                    song = song,
+                    leading = SongLeading.Art(song.coverArtModel(coverArtVersion)),
+                    onClick = { onSongClick(song) },
+                    onLongClick = { onSongLongClick(song.id) },
+                    selectionMode = selectionMode,
+                    selected = song.id in selectedSongIds,
+                    favorite = song.id in favoriteIds,
+                    shape = segmentedItemShape(index, shown.size),
+                    restingColor = tile,
+                    modifier = Modifier.animateItem(),
                 )
             }
             if (results.songs.size > songsVisible) {
-                item(key = "more_songs") {
-                    ViewMoreButton { songsVisible += PAGE_SIZE }
-                }
+                item(key = "more_songs") { ViewMoreButton { songsVisible += PAGE_SIZE } }
             }
         }
 
         if (results.albums.isNotEmpty()) {
-            item(key = "header_albums") {
-                SectionHeader(stringResource(R.string.tab_albums))
-            }
-            items(results.albums.take(albumsVisible), key = { "album_${it.id}" }) { album ->
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            text = album.title.ifBlank { stringResource(R.string.unknown_album) },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+            item(key = "header_albums") { SectionHeader(stringResource(R.string.tab_albums)) }
+            val shown = results.albums.take(albumsVisible)
+            itemsIndexed(shown, key = { _, album -> "album_${album.id}" }) { index, album ->
+                ResultTile(
+                    title = album.title.ifBlank { stringResource(R.string.unknown_album) },
+                    subtitle = album.artist.ifBlank { stringResource(R.string.unknown_artist) },
+                    shape = segmentedItemShape(index, shown.size),
+                    onClick = { onAlbumClick(album.id) },
+                    leading = {
+                        if (album.isNoAlbum) {
+                            NoAlbumArt(shape = MaterialTheme.shapes.medium, modifier = Modifier.size(48.dp))
+                        } else {
+                            AlbumArt(
+                                model = album.coverArtModel(coverArtVersion),
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.size(48.dp),
+                            )
+                        }
                     },
-                    supportingContent = {
-                        Text(
-                            text = album.artist.ifBlank { stringResource(R.string.unknown_artist) },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    leadingContent = {
-                        AlbumArt(
-                            model = album.coverArtModel(coverArtVersion),
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.size(48.dp),
-                        )
-                    },
-                    modifier = Modifier.clickableRow { onAlbumClick(album.id) },
+                    modifier = Modifier.animateItem(),
                 )
             }
             if (results.albums.size > albumsVisible) {
-                item(key = "more_albums") {
-                    ViewMoreButton { albumsVisible += PAGE_SIZE }
-                }
+                item(key = "more_albums") { ViewMoreButton { albumsVisible += PAGE_SIZE } }
             }
         }
 
         if (results.artists.isNotEmpty()) {
-            item(key = "header_artists") {
-                SectionHeader(stringResource(R.string.tab_performers))
-            }
-            items(results.artists.take(artistsVisible), key = { "artist_${it.name}" }) { artist ->
-                ListItem(
-                    headlineContent = {
-                        Text(artist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    },
-                    supportingContent = {
-                        Text(
-                            pluralStringResource(
-                                R.plurals.song_count,
-                                artist.songCount,
-                                artist.songCount,
-                            ),
-                        )
-                    },
-                    leadingContent = {
-                        Icon(Icons.Rounded.Person, contentDescription = null)
-                    },
-                    modifier = Modifier.clickableRow { onPerformerClick(artist.name) },
+            item(key = "header_artists") { SectionHeader(stringResource(R.string.tab_performers)) }
+            val shown = results.artists.take(artistsVisible)
+            itemsIndexed(shown, key = { _, artist -> "artist_${artist.name}" }) { index, artist ->
+                ResultTile(
+                    title = artist.name,
+                    subtitle = pluralStringResource(R.plurals.song_count, artist.songCount, artist.songCount),
+                    shape = segmentedItemShape(index, shown.size),
+                    onClick = { onPerformerClick(artist.name) },
+                    leading = { ArtistAvatar(artist.name) },
+                    modifier = Modifier.animateItem(),
                 )
             }
             if (results.artists.size > artistsVisible) {
-                item(key = "more_artists") {
-                    ViewMoreButton { artistsVisible += PAGE_SIZE }
-                }
+                item(key = "more_artists") { ViewMoreButton { artistsVisible += PAGE_SIZE } }
             }
         }
 
         if (results.playlists.isNotEmpty()) {
-            item(key = "header_playlists") {
-                SectionHeader(stringResource(R.string.tab_playlists))
-            }
-            items(results.playlists.take(playlistsVisible), key = { "playlist_${it.systemType?.name ?: it.userPlaylist!!.id}" }) { playlist ->
+            item(key = "header_playlists") { SectionHeader(stringResource(R.string.tab_playlists)) }
+            val shown = results.playlists.take(playlistsVisible)
+            itemsIndexed(
+                shown,
+                key = { _, playlist -> "playlist_${playlist.systemType?.name ?: playlist.userPlaylist!!.id}" },
+            ) { index, playlist ->
                 val userPlaylist = playlist.userPlaylist
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            text = userPlaylist?.name
-                                ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            pluralStringResource(
-                                R.plurals.song_count,
-                                playlist.songCount,
-                                playlist.songCount,
-                            ),
-                        )
-                    },
-                    leadingContent = {
-                        Icon(
-                            imageVector = when {
-                                playlist.systemType == SystemPlaylist.FAVORITES -> Icons.Rounded.Favorite
-                                playlist.systemType == SystemPlaylist.ALL_SONGS -> Icons.Rounded.MusicNote
-                                else -> Icons.Rounded.QueueMusic
-                            },
-                            contentDescription = null,
-                        )
-                    },
-                    modifier = Modifier.clickableRow {
+                ResultTile(
+                    title = userPlaylist?.name ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
+                    subtitle = pluralStringResource(R.plurals.song_count, playlist.songCount, playlist.songCount),
+                    shape = segmentedItemShape(index, shown.size),
+                    onClick = {
                         if (userPlaylist != null) onUserPlaylistClick(userPlaylist.id)
                         else onPlaylistClick(playlist.systemType!!)
                     },
+                    leading = { PlaylistIcon(playlist) },
+                    modifier = Modifier.animateItem(),
                 )
             }
             if (results.playlists.size > playlistsVisible) {
-                item(key = "more_playlists") {
-                    ViewMoreButton { playlistsVisible += PAGE_SIZE }
-                }
+                item(key = "more_playlists") { ViewMoreButton { playlistsVisible += PAGE_SIZE } }
             }
+        }
+    }
+}
+
+/** A tappable tile in a segmented list: leading visual, title, subtitle, trailing content. */
+@Composable
+private fun ResultTile(
+    title: String,
+    subtitle: String,
+    shape: androidx.compose.ui.graphics.Shape,
+    onClick: () -> Unit,
+    leading: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        interactionSource = interaction,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            leading()
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            trailing?.invoke()
         }
     }
 }
@@ -852,9 +925,9 @@ private fun SearchResultsList(
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.labelLargeEmphasized,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(start = Spacing.s, top = Spacing.l, bottom = Spacing.s),
     )
 }
 
@@ -862,8 +935,11 @@ private fun SectionHeader(title: String) {
 private fun ViewMoreButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        shapes = ButtonDefaults.shapes(),
+        modifier = Modifier.padding(top = Spacing.s),
     ) {
+        AppIcon(AppSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(Spacing.s))
         Text(stringResource(R.string.search_view_more))
     }
 }
@@ -886,6 +962,14 @@ private fun <T> ScrollToTopWhenSortChanges(sort: T, scrollToTop: suspend () -> U
     }
 }
 
+/** The sort pill on its own line at the top of a page; scrolls away with the content. */
+@Composable
+private fun <T : Enum<T>> SortBar(options: List<T>, sort: SortState<T>, onSelect: (T) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
+        SortButton(options = options, sort = sort, onSelect = onSelect)
+    }
+}
+
 @Composable
 private fun AlbumsGrid(
     albums: List<Album>,
@@ -896,64 +980,79 @@ private fun AlbumsGrid(
     onSortSelect: (AlbumSortOption) -> Unit,
     onClick: (Long) -> Unit,
     coverArtVersion: Int = 0,
+    cascade: Boolean = false,
 ) {
     if (albums.isEmpty()) {
-        EmptyState(stringResource(R.string.library_empty_albums), Icons.Rounded.LibraryMusic)
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyState(AppSymbols.Album, stringResource(R.string.library_empty_albums))
+        }
         return
     }
     ScrollToTopWhenSortChanges(sort) { gridState.scrollToItem(0) }
 
-    ScrollAwareSortHeader(
-        sortChips = {
-            SortChipRow(options = AlbumSortOption.entries, sort = sort, onSelect = onSortSelect)
-        },
-    ) { topPadding ->
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Fixed(columns),
-            contentPadding = PaddingValues(
-                start = 8.dp,
-                end = 8.dp,
-                top = topPadding + 8.dp,
-                bottom = 16.dp,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(albums, key = { it.id }) { album ->
-                AlbumCard(album, cornerDp, onClick, coverArtVersion)
-            }
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Fixed(columns),
+        // Cards carry an 8dp inset of their own, so the gutters and gaps are trimmed to match.
+        contentPadding = PaddingValues(start = Spacing.s, end = Spacing.s, bottom = 120.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item(key = "sort", span = { GridItemSpan(maxLineSpan) }) {
+            Box(Modifier.padding(horizontal = Spacing.s)) { SortBar(AlbumSortOption.entries, sort, onSortSelect) }
+        }
+        itemsIndexed(albums, key = { _, album -> album.id }) { index, album ->
+            AlbumCard(
+                album = album,
+                cornerDp = cornerDp,
+                onClick = onClick,
+                coverArtVersion = coverArtVersion,
+                modifier = if (cascade && index < ENTRANCE_ITEMS) Modifier.entrance(index) else Modifier,
+            )
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit, coverArtVersion: Int = 0) {
+private fun AlbumCard(
+    album: Album,
+    cornerDp: Int,
+    onClick: (Long) -> Unit,
+    coverArtVersion: Int,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val artShape = RoundedCornerShape(cornerDp.dp)
+    // The rounded clip is only for the press ripple; the inner inset keeps both the cover's own
+    // corners (exactly as square as the setting says) and the text clear of it.
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .pressScale(interaction)
             .clip(MaterialTheme.shapes.large)
-            .clickableRow { onClick(album.id) }
-            .padding(8.dp),
+            .clickable(interactionSource = interaction, indication = ripple()) { onClick(album.id) }
+            .padding(Spacing.s),
     ) {
-        AlbumArt(
-            model = album.coverArtModel(coverArtVersion),
-            shape = RoundedCornerShape(cornerDp.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatioSquare(),
-        )
+        val coverModifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .sharedElement(albumArtKey(album.id), artShape)
+        if (album.isNoAlbum) {
+            NoAlbumArt(shape = artShape, modifier = coverModifier)
+        } else {
+            AlbumArt(model = album.coverArtModel(coverArtVersion), shape = artShape, modifier = coverModifier)
+        }
         Text(
             text = if (album.isNoAlbum) {
                 stringResource(R.string.no_album)
             } else {
                 album.title.ifBlank { stringResource(R.string.unknown_album) }
             },
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmallEmphasized,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = Spacing.s, start = Spacing.xs, end = Spacing.xs),
         )
         if (!album.isNoAlbum) {
             Text(
@@ -962,6 +1061,7 @@ private fun AlbumCard(album: Album, cornerDp: Int, onClick: (Long) -> Unit, cove
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = Spacing.xs),
             )
         }
     }
@@ -976,37 +1076,124 @@ private fun PerformersList(
     onClick: (String) -> Unit,
 ) {
     if (performers.isEmpty()) {
-        EmptyState(stringResource(R.string.library_empty_performers), Icons.Rounded.Person)
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyState(AppSymbols.Person, stringResource(R.string.library_empty_performers), polygon = MaterialShapes.Clover4Leaf)
+        }
         return
     }
     ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
 
-    ScrollAwareSortHeader(
-        sortChips = {
-            SortChipRow(options = ArtistSortOption.entries, sort = sort, onSelect = onSortSelect)
-        },
-    ) { topPadding ->
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(top = topPadding),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(performers, key = { it.name }) { performer ->
-                ListItem(
-                    headlineContent = { Text(performer.name) },
-                    supportingContent = {
-                        Text(
-                            pluralStringResource(
-                                R.plurals.song_count,
-                                performer.songCount,
-                                performer.songCount,
-                            ),
-                        )
-                    },
-                    leadingContent = {
-                        Icon(Icons.Rounded.Person, contentDescription = null)
-                    },
-                    modifier = Modifier.clickableRow { onClick(performer.name) },
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, bottom = 120.dp),
+        verticalArrangement = Arrangement.spacedBy(SegmentedShapes.gap),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item(key = "sort") { SortBar(ArtistSortOption.entries, sort, onSortSelect) }
+        itemsIndexed(performers, key = { _, performer -> performer.name }) { index, performer ->
+            ResultTile(
+                title = performer.name,
+                subtitle = pluralStringResource(R.plurals.song_count, performer.songCount, performer.songCount),
+                shape = segmentedItemShape(index, performers.size),
+                onClick = { onClick(performer.name) },
+                leading = { ArtistAvatar(performer.name) },
+                trailing = {
+                    AppIcon(AppSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                },
+            )
+        }
+    }
+}
+
+/** Genre shapes; a genre always gets the same one. */
+private val GenrePolygons = listOf(
+    MaterialShapes.Cookie4Sided,
+    MaterialShapes.Sunny,
+    MaterialShapes.Flower,
+    MaterialShapes.Clover8Leaf,
+    MaterialShapes.Burst,
+    MaterialShapes.Pill,
+    MaterialShapes.Arch,
+    MaterialShapes.Ghostish,
+)
+
+@Composable
+private fun GenresGrid(
+    genres: List<Genre>,
+    sort: SortState<GenreSortOption>,
+    gridState: LazyGridState,
+    onSortSelect: (GenreSortOption) -> Unit,
+    onClick: (String) -> Unit,
+) {
+    if (genres.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyState(AppSymbols.Category, stringResource(R.string.library_empty_genres), polygon = MaterialShapes.Burst)
+        }
+        return
+    }
+    ScrollToTopWhenSortChanges(sort) { gridState.scrollToItem(0) }
+
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Adaptive(minSize = 160.dp),
+        contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, bottom = 120.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item(key = "sort", span = { GridItemSpan(maxLineSpan) }) {
+            SortBar(GenreSortOption.entries, sort, onSortSelect)
+        }
+        itemsIndexed(genres, key = { _, genre -> genre.name }) { _, genre ->
+            GenreTile(genre = genre, onClick = { onClick(genre.name) })
+        }
+    }
+}
+
+/** A tonal tile for a genre with its shape peeking out of the corner. */
+@Composable
+private fun GenreTile(genre: Genre, onClick: () -> Unit) {
+    val (container, content) = tonalPairFor(genre.name)
+    val interaction = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        color = container,
+        contentColor = content,
+        shape = MaterialTheme.shapes.extraLarge,
+        interactionSource = interaction,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(112.dp)
+            .pressScale(interaction),
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            ShapedIcon(
+                symbol = AppSymbols.MusicNote,
+                polygon = GenrePolygons[stableIndex(genre.name, GenrePolygons.size)],
+                size = 72.dp,
+                iconSize = 28.dp,
+                containerColor = content.copy(alpha = 0.12f),
+                contentColor = content,
+                containerRotation = 15f,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(Spacing.s),
+            )
+            Column(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(Spacing.l),
+            ) {
+                Text(
+                    genre.name,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    pluralStringResource(R.plurals.song_count, genre.songCount, genre.songCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = content.copy(alpha = 0.8f),
                 )
             }
         }
@@ -1014,47 +1201,32 @@ private fun PerformersList(
 }
 
 @Composable
-private fun GenresList(
-    genres: List<Genre>,
-    sort: SortState<GenreSortOption>,
-    listState: LazyListState,
-    onSortSelect: (GenreSortOption) -> Unit,
-    onClick: (String) -> Unit,
-) {
-    if (genres.isEmpty()) {
-        EmptyState(stringResource(R.string.library_empty_genres), Icons.Rounded.Category)
-        return
-    }
-    ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
-
-    ScrollAwareSortHeader(
-        sortChips = {
-            SortChipRow(options = GenreSortOption.entries, sort = sort, onSelect = onSortSelect)
-        },
-    ) { topPadding ->
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(top = topPadding),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(genres, key = { it.name }) { genre ->
-                ListItem(
-                    headlineContent = { Text(genre.name) },
-                    supportingContent = {
-                        Text(
-                            pluralStringResource(
-                                R.plurals.song_count,
-                                genre.songCount,
-                                genre.songCount,
-                            ),
-                        )
-                    },
-                    leadingContent = {
-                        Icon(Icons.Rounded.Category, contentDescription = null)
-                    },
-                    modifier = Modifier.clickableRow { onClick(genre.name) },
-                )
-            }
+private fun PlaylistIcon(playlist: Playlist) {
+    when (playlist.systemType) {
+        SystemPlaylist.FAVORITES -> ShapedIcon(
+            symbol = AppSymbols.Favorite,
+            polygon = MaterialShapes.Heart,
+            size = 48.dp,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        SystemPlaylist.ALL_SONGS -> ShapedIcon(
+            symbol = AppSymbols.MusicNote,
+            polygon = MaterialShapes.Cookie9Sided,
+            size = 48.dp,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+        null -> {
+            val name = playlist.userPlaylist?.name.orEmpty()
+            val (container, content) = tonalPairFor(name)
+            ShapedIcon(
+                symbol = AppSymbols.QueueMusic,
+                polygon = MaterialShapes.Square,
+                size = 48.dp,
+                containerColor = container,
+                contentColor = content,
+            )
         }
     }
 }
@@ -1073,181 +1245,73 @@ private fun PlaylistsList(
 ) {
     ScrollToTopWhenSortChanges(sort) { listState.scrollToItem(0) }
 
-    ScrollAwareSortHeader(
-        sortChips = {
-            SortChipRow(options = PlaylistSortOption.entries, sort = sort, onSelect = onSortSelect)
-        },
-    ) { topPadding ->
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(top = topPadding),
+        contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, bottom = 120.dp),
+        verticalArrangement = Arrangement.spacedBy(SegmentedShapes.gap),
         modifier = Modifier.fillMaxSize(),
     ) {
-        item(key = "create") {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.playlist_new)) },
-                leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.clickableRow(onCreate),
-            )
+        item(key = "sort") {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SortButton(PlaylistSortOption.entries, sort, onSortSelect)
+                Spacer(Modifier.weight(1f))
+                Button(onClick = onCreate, shapes = ButtonDefaults.shapes()) {
+                    AppIcon(AppSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(Spacing.s))
+                    Text(stringResource(R.string.playlist_new))
+                }
+            }
         }
-        items(playlists, key = { it.systemType?.name ?: it.userPlaylist!!.id }) { playlist ->
-            val count = pluralStringResource(
-                R.plurals.song_count,
-                playlist.songCount,
-                playlist.songCount,
-            )
+        itemsIndexed(playlists, key = { _, playlist -> playlist.systemType?.name ?: playlist.userPlaylist!!.id }) { index, playlist ->
             val userPlaylist = playlist.userPlaylist
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = userPlaylist?.name
-                            ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
-                    )
+            ResultTile(
+                title = userPlaylist?.name ?: stringResource(systemPlaylistNameRes(playlist.systemType!!)),
+                subtitle = pluralStringResource(R.plurals.song_count, playlist.songCount, playlist.songCount) +
+                    if (playlist.durationMs > 0) "  ·  " + formatDuration(playlist.durationMs) else "",
+                shape = segmentedItemShape(index, playlists.size),
+                onClick = {
+                    if (userPlaylist != null) onUserClick(userPlaylist.id)
+                    else onSystemClick(playlist.systemType!!)
                 },
-                supportingContent = { Text(count) },
-                leadingContent = {
-                    Icon(
-                        imageVector = when {
-                            playlist.systemType == SystemPlaylist.FAVORITES -> Icons.Rounded.Favorite
-                            playlist.systemType == SystemPlaylist.ALL_SONGS -> Icons.Rounded.MusicNote
-                            else -> Icons.Rounded.QueueMusic
-                        },
-                        contentDescription = null,
-                    )
-                },
-                trailingContent = userPlaylist?.let {
+                leading = { PlaylistIcon(playlist) },
+                trailing = userPlaylist?.let { user ->
                     {
-                        Row {
-                            IconButton(onClick = { onRename(it) }) {
-                                Icon(
-                                    Icons.Rounded.Edit,
-                                    contentDescription = stringResource(R.string.playlist_rename),
-                                )
+                        var menuOpen by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { menuOpen = true }, shapes = IconButtonDefaults.shapes()) {
+                                AppIcon(AppSymbols.MoreVert, contentDescription = stringResource(R.string.action_more))
                             }
-                            IconButton(onClick = { onDelete(it) }) {
-                                Icon(
-                                    Icons.Rounded.Delete,
-                                    contentDescription = stringResource(R.string.playlist_delete),
-                                )
+                            AppMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                AppMenuGroup {
+                                    AppMenuItem(
+                                        text = stringResource(R.string.playlist_rename),
+                                        symbol = AppSymbols.Edit,
+                                        onClick = {
+                                            menuOpen = false
+                                            onRename(user)
+                                        },
+                                    )
+                                    AppMenuItem(
+                                        text = stringResource(R.string.playlist_delete),
+                                        symbol = AppSymbols.Delete,
+                                        destructive = true,
+                                        onClick = {
+                                            menuOpen = false
+                                            onDelete(user)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
                 },
-                modifier = Modifier.clickableRow {
-                    if (userPlaylist != null) onUserClick(userPlaylist.id)
-                    else onSystemClick(playlist.systemType!!)
-                },
-            )
-        }
-    }
-    }
-}
-
-@Composable
-private fun ScrollAwareSortHeader(
-    sortChips: @Composable () -> Unit,
-    content: @Composable (topPadding: Dp) -> Unit,
-) {
-    var chipHeightPx by remember { mutableIntStateOf(0) }
-    var chipOffsetYPx by remember { mutableFloatStateOf(0f) }
-    val density = LocalDensity.current
-
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val oldOffset = chipOffsetYPx
-                chipOffsetYPx = (chipOffsetYPx + available.y).coerceIn(-chipHeightPx.toFloat(), 0f)
-                val consumed = chipOffsetYPx - oldOffset
-                return Offset(0f, consumed)
-            }
-        }
-    }
-
-    Box(modifier = Modifier.zIndex(1f).fillMaxSize().nestedScroll(nestedScrollConnection)) {
-        val topPadding = with(density) { (chipHeightPx + chipOffsetYPx).coerceAtLeast(0f).toDp() }
-        content(topPadding)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { chipHeightPx = it.height }
-                .offset { IntOffset(0, chipOffsetYPx.roundToInt()) }
-                .background(MaterialTheme.colorScheme.surface),
-        ) {
-            sortChips()
-        }
-    }
-}
-
-@Composable
-private fun <T : Enum<T>> SortChipRow(
-    options: List<T>,
-    sort: SortState<T>,
-    onSelect: (T) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        options.forEach { option ->
-            val selected = option == sort.option
-            FilterChip(
-                selected = selected,
-                onClick = { onSelect(option) },
-                label = {
-                    val labelRes = when (option) {
-                        is AlbumSortOption -> option.labelRes
-                        is ArtistSortOption -> option.labelRes
-                        is GenreSortOption -> option.labelRes
-                        is PlaylistSortOption -> option.labelRes
-                        else -> 0
-                    }
-                    Text(stringResource(labelRes))
-                },
-                trailingIcon = {
-                    if (selected) {
-                        Icon(
-                            imageVector = if (sort.direction == SortDirection.ASC) {
-                                Icons.Rounded.KeyboardArrowUp
-                            } else {
-                                Icons.Rounded.KeyboardArrowDown
-                            },
-                            contentDescription = stringResource(
-                                if (sort.direction == SortDirection.ASC) {
-                                    R.string.sort_direction_asc
-                                } else {
-                                    R.string.sort_direction_desc
-                                },
-                            ),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(message: String, icon: ImageVector) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(56.dp),
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.animateItem(),
             )
         }
     }

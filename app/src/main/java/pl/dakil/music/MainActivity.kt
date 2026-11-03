@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
                 colorTheme = settings.colorTheme,
                 darkThemeOption = settings.darkThemeOption,
                 pureBlack = settings.pureBlack,
+                hapticsEnabled = settings.hapticsEnabled,
+                playerArtColors = settings.playerArtColors,
             ) {
                 AudioPermissionGate(onGranted = ::scanLibrary) {
                     MusicApp(navigateToNowPlaying = openNowPlaying)

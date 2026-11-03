@@ -1,53 +1,26 @@
 package pl.dakil.music.presentation.settings
 
 import android.os.Build
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,12 +28,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
+import androidx.graphics.shapes.Morph
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.dakil.music.R
@@ -68,6 +44,8 @@ import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.AppColorTheme
 import pl.dakil.music.domain.model.DarkThemeOption
+import pl.dakil.music.domain.model.NavComponent
+import pl.dakil.music.domain.model.NavItem
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -75,86 +53,127 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.albumAuthorModeNameRes
 import pl.dakil.music.presentation.components.colorThemeNameRes
 import pl.dakil.music.presentation.components.darkThemeOptionNameRes
-import pl.dakil.music.presentation.components.queueRemoveModeNameRes
 import pl.dakil.music.presentation.components.statDefaultRangeNameRes
 import pl.dakil.music.presentation.components.statMetricNameRes
 import pl.dakil.music.presentation.components.weekdayNameRes
+import pl.dakil.music.ui.designsystem.ConnectedToggleRow
+import pl.dakil.music.ui.designsystem.FormSheet
+import pl.dakil.music.ui.designsystem.MorphShape
+import pl.dakil.music.ui.designsystem.SegmentedGroup
+import pl.dakil.music.ui.designsystem.ToggleOption
+import pl.dakil.music.ui.designsystem.bleedHorizontally
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.designsystem.pressScale
+import pl.dakil.music.ui.designsystem.rememberHaptics
+import pl.dakil.music.ui.theme.LocalDarkTheme
+import pl.dakil.music.ui.theme.Spacing
 import pl.dakil.music.ui.theme.colorSchemeFor
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The settings root: every category as a shaped-icon row that opens its own screen. */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onOpenAlbumRules: () -> Unit,
+    onOpenAppearance: () -> Unit,
+    onOpenLibrary: () -> Unit,
+    onOpenPlayback: () -> Unit,
+    onOpenStatistics: () -> Unit,
     onOpenNavigation: () -> Unit,
-    modifier: Modifier = Modifier,
+    // Hidden (with a large title) when the screen is a bottom-bar tab: a tab has nothing to go back to.
+    showBack: Boolean = true,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-
-    Scaffold(
-        modifier = modifier,
-        // The host already insets for the bottom navigation bar; don't add it twice.
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
-                },
+    SettingsSubscreen(stringResource(R.string.settings_title), onBack, showBack = showBack) {
+        SectionHeader(stringResource(R.string.settings_section_personalize))
+        SegmentedGroup {
+            NavigationRow(
+                title = stringResource(R.string.settings_appearance),
+                summary = stringResource(R.string.settings_appearance_summary),
+                icon = AppSymbols.Palette,
+                onClick = onOpenAppearance,
             )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            SectionHeader(stringResource(R.string.settings_section_theme))
-            val availableThemes = remember {
-                AppColorTheme.entries.filter {
-                    it != AppColorTheme.DYNAMIC || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                }
-            }
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(availableThemes.size) { index ->
-                    val theme = availableThemes[index]
-                    ThemeColorSwatch(
-                        theme = theme,
-                        isSelected = theme == settings.colorTheme,
-                        onClick = { viewModel.setColorTheme(theme) },
-                    )
-                }
-            }
+            NavigationRow(
+                title = stringResource(R.string.settings_navigation),
+                summary = stringResource(R.string.settings_navigation_summary),
+                icon = AppSymbols.DockToBottom,
+                onClick = onOpenNavigation,
+            )
+        }
+        SectionHeader(stringResource(R.string.settings_section_music))
+        SegmentedGroup {
+            NavigationRow(
+                title = stringResource(R.string.settings_section_library),
+                summary = stringResource(R.string.settings_library_summary),
+                icon = AppSymbols.LibraryMusic,
+                onClick = onOpenLibrary,
+            )
+            NavigationRow(
+                title = stringResource(R.string.settings_playback),
+                summary = stringResource(R.string.settings_playback_summary),
+                icon = AppSymbols.PlayCircle,
+                onClick = onOpenPlayback,
+            )
+        }
+        SectionHeader(stringResource(R.string.settings_section_data))
+        SegmentedGroup {
+            NavigationRow(
+                title = stringResource(R.string.settings_section_statistics),
+                summary = stringResource(R.string.settings_statistics_summary),
+                icon = AppSymbols.BarChart,
+                badge = if (!settings.statisticsEnabled) stringResource(R.string.settings_off_badge) else null,
+                onClick = onOpenStatistics,
+            )
+        }
+    }
+}
 
-            SectionHeader(stringResource(R.string.settings_dark_mode))
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                DarkThemeOption.entries.forEachIndexed { index, option ->
-                    SegmentedButton(
-                        selected = option == settings.darkThemeOption,
-                        onClick = { viewModel.setDarkThemeOption(option) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = DarkThemeOption.entries.size,
-                        ),
-                    ) {
-                        Text(stringResource(darkThemeOptionNameRes(option)))
-                    }
-                }
+/** Theme colors, dark mode, pure black and the "feel" switches (haptics, art colors). */
+@Composable
+fun AppearanceSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
+
+    SettingsSubscreen(stringResource(R.string.settings_appearance), onBack) {
+        SectionHeader(stringResource(R.string.settings_section_theme))
+        val availableThemes = remember {
+            AppColorTheme.entries.filter {
+                it != AppColorTheme.DYNAMIC || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
             }
+        }
+        // Bleeds into the page gutters so swatches scroll edge to edge.
+        LazyRow(
+            modifier = Modifier.bleedHorizontally(Spacing.gutter),
+            contentPadding = PaddingValues(horizontal = Spacing.gutter, vertical = Spacing.s),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            items(availableThemes) { theme ->
+                ThemeColorSwatch(
+                    theme = theme,
+                    isSelected = theme == settings.colorTheme,
+                    onClick = {
+                        if (theme != settings.colorTheme) haptics.tick()
+                        viewModel.setColorTheme(theme)
+                    },
+                )
+            }
+        }
+
+        SectionHeader(stringResource(R.string.settings_dark_mode))
+        ConnectedToggleRow(
+            options = listOf(
+                ToggleOption(DarkThemeOption.FOLLOW_SYSTEM, stringResource(darkThemeOptionNameRes(DarkThemeOption.FOLLOW_SYSTEM)), AppSymbols.BrightnessAuto),
+                ToggleOption(DarkThemeOption.LIGHT, stringResource(darkThemeOptionNameRes(DarkThemeOption.LIGHT)), AppSymbols.LightMode),
+                ToggleOption(DarkThemeOption.DARK, stringResource(darkThemeOptionNameRes(DarkThemeOption.DARK)), AppSymbols.DarkMode),
+            ),
+            selected = settings.darkThemeOption,
+            onSelect = viewModel::setDarkThemeOption,
+            modifier = Modifier.padding(bottom = Spacing.s),
+        )
+        SegmentedGroup {
             SwitchRow(
                 title = stringResource(R.string.settings_pure_black),
                 summary = stringResource(R.string.settings_pure_black_summary),
@@ -162,27 +181,54 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setPureBlack,
                 enabled = settings.darkThemeOption != DarkThemeOption.LIGHT,
             )
-
-            SectionHeader(stringResource(R.string.settings_section_navigation))
-            NavigationRow(
-                title = stringResource(R.string.settings_navigation),
-                summary = stringResource(R.string.settings_navigation_summary),
-                onClick = onOpenNavigation,
-            )
-
-            SectionHeader(stringResource(R.string.settings_section_library))
             SwitchRow(
-                title = stringResource(R.string.settings_remember_sort),
-                summary = stringResource(R.string.settings_remember_sort_summary),
-                checked = settings.rememberSortState,
-                onCheckedChange = viewModel::setRememberSortState,
+                title = stringResource(R.string.settings_player_art_colors),
+                summary = stringResource(R.string.settings_player_art_colors_summary),
+                checked = settings.playerArtColors,
+                onCheckedChange = viewModel::setPlayerArtColors,
             )
+        }
+
+        SectionHeader(stringResource(R.string.settings_section_feel))
+        SegmentedGroup {
+            SwitchRow(
+                title = stringResource(R.string.settings_haptics),
+                summary = stringResource(R.string.settings_haptics_summary),
+                checked = settings.hapticsEnabled,
+                onCheckedChange = viewModel::setHapticsEnabled,
+            )
+        }
+    }
+}
+
+/** Library grid, covers, album authorship, sorting memory and album rules. */
+@Composable
+fun LibrarySettingsScreen(
+    onBack: () -> Unit,
+    onOpenAlbumRules: () -> Unit,
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    SettingsSubscreen(stringResource(R.string.settings_section_library), onBack) {
+        SectionHeader(stringResource(R.string.tab_albums))
+        SegmentedGroup {
             SliderRow(
                 title = stringResource(R.string.settings_album_columns),
                 summary = stringResource(R.string.settings_album_columns_summary),
                 value = settings.albumColumns,
                 onValueChange = viewModel::setAlbumColumns,
                 valueRange = 1..4,
+                leading = { ColumnsPreview(settings.albumColumns) },
+            )
+            SliderRow(
+                title = stringResource(R.string.settings_album_corner_roundness),
+                summary = stringResource(R.string.settings_album_corner_roundness_summary),
+                value = settings.albumCornerRoundnessDp,
+                onValueChange = { viewModel.setAlbumCornerRoundnessDp((it / 4) * 4) },
+                valueRange = 0..64,
+                steps = 15,
+                valueLabel = { "${it}dp" },
+                leading = { CornerPreview(settings.albumCornerRoundnessDp) },
             )
             SwitchRow(
                 title = stringResource(R.string.settings_album_shared_cover_art),
@@ -201,22 +247,53 @@ fun SettingsScreen(
                 options = AlbumAuthorMode.entries.map { it to stringResource(albumAuthorModeNameRes(it)) },
                 onSelect = viewModel::setAlbumAuthorMode,
             )
-            SliderRow(
-                title = stringResource(R.string.settings_album_corner_roundness),
-                summary = stringResource(R.string.settings_album_corner_roundness_summary),
-                value = settings.albumCornerRoundnessDp,
-                onValueChange = { viewModel.setAlbumCornerRoundnessDp((it / 4) * 4) },
-                valueRange = 0..64,
-                steps = 15,
-                valueLabel = { "${it}dp" },
-            )
             NavigationRow(
                 title = stringResource(R.string.settings_album_rules),
                 summary = stringResource(R.string.settings_album_rules_summary),
+                icon = AppSymbols.Rule,
                 onClick = onOpenAlbumRules,
             )
+        }
+        SectionHeader(stringResource(R.string.settings_section_sorting))
+        SegmentedGroup {
+            SwitchRow(
+                title = stringResource(R.string.settings_remember_sort),
+                summary = stringResource(R.string.settings_remember_sort_summary),
+                checked = settings.rememberSortState,
+                onCheckedChange = viewModel::setRememberSortState,
+            )
+        }
+    }
+}
 
-            SectionHeader(stringResource(R.string.settings_section_now_playing))
+/** The player's look, how the queue removes songs, playback behaviour and lyrics. */
+@Composable
+fun PlaybackSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    navViewModel: NavigationCustomizationViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val navConfig by navViewModel.config.collectAsStateWithLifecycle()
+    // Without the bar, the player is only reachable through a Now Playing entry, so the bar can
+    // only be switched off once one exists somewhere.
+    val nowPlayingHasEntry = NavComponent.entries.any { NavItem.NOW_PLAYING in navConfig.enabled(it) }
+    SettingsSubscreen(stringResource(R.string.settings_playback), onBack) {
+        SectionHeader(stringResource(R.string.settings_section_now_playing))
+        SegmentedGroup {
+            SwitchRow(
+                title = stringResource(R.string.settings_show_mini_player),
+                summary = stringResource(
+                    if (settings.showMiniPlayer && !nowPlayingHasEntry) {
+                        R.string.settings_show_mini_player_locked
+                    } else {
+                        R.string.settings_show_mini_player_summary
+                    },
+                ),
+                checked = settings.showMiniPlayer,
+                onCheckedChange = viewModel::setShowMiniPlayer,
+                enabled = !settings.showMiniPlayer || nowPlayingHasEntry,
+            )
             SliderRow(
                 title = stringResource(R.string.settings_now_playing_corner_roundness),
                 summary = stringResource(R.string.settings_now_playing_corner_roundness_summary),
@@ -225,7 +302,41 @@ fun SettingsScreen(
                 valueRange = 0..64,
                 steps = 15,
                 valueLabel = { "${it}dp" },
+                leading = { CornerPreview(settings.nowPlayingCornerRoundnessDp) },
             )
+        }
+
+        SectionHeader(stringResource(R.string.settings_queue_remove_mode))
+        Text(
+            stringResource(R.string.settings_queue_remove_mode_summary),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = Spacing.l, end = Spacing.l, bottom = Spacing.s),
+        )
+        ConnectedToggleRow(
+            options = QueueRemoveMode.entries.map {
+                ToggleOption(
+                    it,
+                    stringResource(
+                        when (it) {
+                            QueueRemoveMode.MENU -> R.string.queue_remove_short_menu
+                            QueueRemoveMode.BUTTON -> R.string.queue_remove_short_button
+                            QueueRemoveMode.SWIPE -> R.string.queue_remove_short_swipe
+                        },
+                    ),
+                    when (it) {
+                        QueueRemoveMode.MENU -> AppSymbols.MoreVert
+                        QueueRemoveMode.BUTTON -> AppSymbols.Close
+                        QueueRemoveMode.SWIPE -> AppSymbols.SwipeLeft
+                    },
+                )
+            },
+            selected = settings.queueRemoveMode,
+            onSelect = viewModel::setQueueRemoveMode,
+        )
+
+        SectionHeader(stringResource(R.string.settings_playback))
+        SegmentedGroup {
             SwitchRow(
                 title = stringResource(R.string.settings_gapless),
                 summary = stringResource(R.string.settings_gapless_summary),
@@ -245,13 +356,10 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setAutoResumeOnVolumeRestored,
                 enabled = settings.autoPauseOnZeroVolume,
             )
-            SelectRow(
-                title = stringResource(R.string.settings_queue_remove_mode),
-                summary = stringResource(R.string.settings_queue_remove_mode_summary),
-                selectedLabel = stringResource(queueRemoveModeNameRes(settings.queueRemoveMode)),
-                options = QueueRemoveMode.entries.map { it to stringResource(queueRemoveModeNameRes(it)) },
-                onSelect = viewModel::setQueueRemoveMode,
-            )
+        }
+
+        SectionHeader(stringResource(R.string.lyrics_title))
+        SegmentedGroup {
             SwitchRow(
                 title = stringResource(R.string.settings_display_lyrics),
                 summary = stringResource(R.string.settings_display_lyrics_summary),
@@ -265,10 +373,21 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setFetchMissingLyricsFromLrclib,
                 enabled = settings.displayLyrics,
             )
+        }
+    }
+}
 
-            SectionHeader(stringResource(R.string.settings_section_statistics))
+/** Whether history is recorded, how sessions count, and the statistics screen's defaults. */
+@Composable
+fun StatisticsSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    var showDisableDialog by remember { mutableStateOf(false) }
 
-            var showDisableDialog by remember { mutableStateOf(false) }
+    SettingsSubscreen(stringResource(R.string.settings_section_statistics), onBack) {
+        SegmentedGroup(Modifier.padding(top = Spacing.s)) {
             SwitchRow(
                 title = stringResource(R.string.settings_statistics_enabled),
                 summary = stringResource(R.string.settings_statistics_enabled_summary),
@@ -277,16 +396,10 @@ fun SettingsScreen(
                     if (enabled) viewModel.setStatisticsEnabled(true) else showDisableDialog = true
                 },
             )
-            if (showDisableDialog) {
-                DisableStatisticsDialog(
-                    onConfirm = {
-                        viewModel.setStatisticsEnabled(false)
-                        showDisableDialog = false
-                    },
-                    onDismiss = { showDisableDialog = false },
-                )
-            }
-            val statsEnabled = settings.statisticsEnabled
+        }
+        val statsEnabled = settings.statisticsEnabled
+        SectionHeader(stringResource(R.string.settings_section_recording))
+        SegmentedGroup {
             SliderRow(
                 title = stringResource(R.string.settings_min_play_seconds),
                 summary = stringResource(R.string.settings_min_play_seconds_summary),
@@ -307,6 +420,9 @@ fun SettingsScreen(
                 valueLabel = { if (it == 0) offLabel else "${it}s" },
                 enabled = statsEnabled,
             )
+        }
+        SectionHeader(stringResource(R.string.more_statistics))
+        SegmentedGroup {
             SelectRow(
                 title = stringResource(R.string.settings_first_day_of_week),
                 summary = stringResource(R.string.settings_first_day_of_week_summary),
@@ -333,201 +449,110 @@ fun SettingsScreen(
             )
         }
     }
+
+    if (showDisableDialog) {
+        FormSheet(
+            title = stringResource(R.string.settings_disable_stats_title),
+            symbol = AppSymbols.History,
+            supportingText = stringResource(R.string.settings_disable_stats_message),
+            onDismiss = { showDisableDialog = false },
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmLabel = stringResource(R.string.settings_disable_stats_confirm),
+            destructive = true,
+            onConfirm = {
+                viewModel.setStatisticsEnabled(false)
+                showDisableDialog = false
+            },
+        )
+    }
 }
 
+/** A tile whose corners follow a roundness setting, springing as the slider moves. */
 @Composable
-private fun DisableStatisticsDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_disable_stats_title)) },
-        text = { Text(stringResource(R.string.settings_disable_stats_message)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.settings_disable_stats_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
+private fun CornerPreview(cornerDp: Int) {
+    val corner by animateDpAsState(
+        targetValue = (cornerDp * 0.5f).dp,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "cornerPreview",
     )
+    Box(
+        Modifier
+            .size(44.dp)
+            // The spring overshoots its target; at 0dp that would be a negative (illegal) radius.
+            .clip(RoundedCornerShape(corner.coerceAtLeast(0.dp)))
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppIcon(AppSymbols.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, filled = true)
+    }
 }
 
+/** A tiny grid showing how many album columns the library uses. */
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-        color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp, end = 16.dp),
-    )
+private fun ColumnsPreview(columns: Int) {
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center,
+    ) {
+        val cell = MaterialTheme.colorScheme.primary
+        Canvas(Modifier.size(32.dp)) {
+            val gap = 2.dp.toPx()
+            val w = (size.width - gap * (columns - 1)) / columns
+            for (row in 0 until columns) {
+                for (col in 0 until columns) {
+                    drawRoundRect(
+                        color = cell,
+                        topLeft = androidx.compose.ui.geometry.Offset(col * (w + gap), row * (w + gap)),
+                        size = androidx.compose.ui.geometry.Size(w, w),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(w / 4),
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**
- * Shared base for every settings row, so switches, sliders and selects share the
- * exact same paddings and sizing (the "minimum listening time" look). [trailing]
- * is sized to its own content.
+ * A color swatch in the style of Android 16's theme picker: the top half shows the theme's
+ * primary color, the bottom quadrants its secondary and tertiary containers. Selecting one morphs
+ * it from a circle into a cookie and gives it a little spin.
  */
-@Composable
-private fun SettingRow(
-    title: String,
-    summary: String,
-    enabled: Boolean = true,
-    onClick: (() -> Unit)? = null,
-    supporting: (@Composable () -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null,
-) {
-    ListItem(
-        modifier = Modifier
-            .then(
-                if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier,
-            )
-            .alpha(if (enabled) 1f else DISABLED_ALPHA),
-        headlineContent = { Text(title) },
-        supportingContent = {
-            Column {
-                Text(summary)
-                supporting?.invoke()
-            }
-        },
-        trailingContent = trailing,
-    )
-}
-
-@Composable
-private fun <T> SelectRow(
-    title: String,
-    summary: String,
-    selectedLabel: String,
-    options: List<Pair<T, String>>,
-    onSelect: (T) -> Unit,
-    enabled: Boolean = true,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    SettingRow(
-        title = title,
-        summary = summary,
-        enabled = enabled,
-        onClick = { expanded = true },
-        trailing = {
-            // Menu anchored to this trailing box so it opens on the right.
-            Box {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(selectedLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
-                }
-                DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
-                    options.forEach { (value, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                onSelect(value)
-                                expanded = false
-                            },
-                        )
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun SliderRow(
-    title: String,
-    summary: String,
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    valueRange: IntRange,
-    steps: Int = valueRange.last - valueRange.first - 1,
-    valueLabel: (Int) -> String = { it.toString() },
-    enabled: Boolean = true,
-) {
-    SettingRow(
-        title = title,
-        summary = summary,
-        enabled = enabled,
-        supporting = {
-            Slider(
-                value = value.toFloat(),
-                onValueChange = { onValueChange(it.roundToInt()) },
-                valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
-                steps = steps,
-                enabled = enabled,
-            )
-        },
-        trailing = { Text(valueLabel(value)) },
-    )
-}
-
-@Composable
-private fun SwitchRow(
-    title: String,
-    summary: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-) {
-    SettingRow(
-        title = title,
-        summary = summary,
-        enabled = enabled,
-        trailing = { Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled) },
-    )
-}
-
-/** A row that opens another screen, marked with a trailing chevron. */
-@Composable
-private fun NavigationRow(
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    SettingRow(
-        title = title,
-        summary = summary,
-        onClick = onClick,
-        trailing = {
-            Icon(
-                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-    )
-}
-
 @Composable
 private fun ThemeColorSwatch(
     theme: AppColorTheme,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val isDark = isSystemInDarkTheme()
-    val scheme = colorSchemeFor(colorTheme = theme, darkTheme = isDark)
+    val scheme = colorSchemeFor(colorTheme = theme, darkTheme = LocalDarkTheme.current)
+    val morph = remember { Morph(MaterialShapes.Circle, MaterialShapes.Cookie9Sided) }
+    val progress by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "swatchMorph",
+    )
+    val interactionSource = remember { MutableInteractionSource() }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(76.dp),
+        modifier = Modifier
+            .width(80.dp)
+            .semantics { selected = isSelected }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.RadioButton,
+                onClick = onClick,
+            ),
     ) {
         Box(
             modifier = Modifier
                 .size(72.dp)
-                .then(
-                    if (isSelected) {
-                        Modifier.border(
-                            width = 3.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .padding(if (isSelected) 6.dp else 0.dp)
-                .clip(CircleShape)
-                .clickable { onClick() },
+                .pressScale(interactionSource, pressedScale = 0.9f)
+                .graphicsLayer { rotationZ = progress * 40f }
+                .clip(MorphShape(morph, progress.coerceIn(0f, 1f))),
             contentAlignment = Alignment.Center,
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -535,27 +560,29 @@ private fun ThemeColorSwatch(
                 drawArc(scheme.secondaryContainer, startAngle = 90f, sweepAngle = 90f, useCenter = true)
                 drawArc(scheme.tertiaryContainer, startAngle = 0f, sweepAngle = 90f, useCenter = true)
             }
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = null,
-                    tint = scheme.onPrimary,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
-                        .size(20.dp),
-                )
-            }
+            AppIcon(
+                AppSymbols.Check,
+                contentDescription = null,
+                tint = scheme.onPrimary,
+                filled = true,
+                modifier = Modifier
+                    .graphicsLayer {
+                        // Counter-rotate so the check stays upright while the cookie spins.
+                        rotationZ = -progress * 40f
+                        scaleX = progress
+                        scaleY = progress
+                        alpha = progress.coerceIn(0f, 1f)
+                    }
+                    .size(28.dp),
+            )
         }
-        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = stringResource(colorThemeNameRes(theme)),
-            style = MaterialTheme.typography.labelMedium,
+            style = if (isSelected) MaterialTheme.typography.labelMediumEmphasized else MaterialTheme.typography.labelMedium,
             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 2,
+            modifier = Modifier.padding(top = Spacing.s),
         )
     }
 }
-
-private const val DISABLED_ALPHA = 0.38f

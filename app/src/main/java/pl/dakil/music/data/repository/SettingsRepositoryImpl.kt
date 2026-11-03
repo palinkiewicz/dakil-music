@@ -61,6 +61,9 @@ class SettingsRepositoryImpl(
             nowPlayingCornerRoundnessDp = prefs[KEY_NOW_PLAYING_CORNER_DP] ?: 32,
             displayLyrics = prefs[KEY_DISPLAY_LYRICS] ?: true,
             fetchMissingLyricsFromLrclib = prefs[KEY_FETCH_MISSING_LYRICS] ?: true,
+            hapticsEnabled = prefs[KEY_HAPTICS] ?: true,
+            playerArtColors = prefs[KEY_PLAYER_ART_COLORS] ?: true,
+            showMiniPlayer = prefs[KEY_SHOW_MINI_PLAYER] ?: true,
         )
     }
 
@@ -140,6 +143,15 @@ class SettingsRepositoryImpl(
     override suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean) =
         edit(KEY_FETCH_MISSING_LYRICS, enabled)
 
+    override suspend fun setHapticsEnabled(enabled: Boolean) =
+        edit(KEY_HAPTICS, enabled)
+
+    override suspend fun setPlayerArtColors(enabled: Boolean) =
+        edit(KEY_PLAYER_ART_COLORS, enabled)
+
+    override suspend fun setShowMiniPlayer(enabled: Boolean) =
+        edit(KEY_SHOW_MINI_PLAYER, enabled)
+
     private suspend fun edit(key: Preferences.Key<Boolean>, value: Boolean) {
         dataStore.edit { it[key] = value }
     }
@@ -169,5 +181,8 @@ class SettingsRepositoryImpl(
         val KEY_NOW_PLAYING_CORNER_DP = intPreferencesKey("now_playing_corner_roundness_dp")
         val KEY_DISPLAY_LYRICS = booleanPreferencesKey("display_lyrics")
         val KEY_FETCH_MISSING_LYRICS = booleanPreferencesKey("fetch_missing_lyrics_lrclib")
+        val KEY_HAPTICS = booleanPreferencesKey("haptics_enabled")
+        val KEY_PLAYER_ART_COLORS = booleanPreferencesKey("player_art_colors")
+        val KEY_SHOW_MINI_PLAYER = booleanPreferencesKey("show_mini_player")
     }
 }

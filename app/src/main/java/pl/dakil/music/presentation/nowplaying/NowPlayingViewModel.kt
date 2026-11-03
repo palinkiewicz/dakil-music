@@ -45,6 +45,8 @@ data class NowPlayingUiState(
     val playbackSpeed: Float = 1f,
     val sleepTimerRemainingMs: Long? = null,
     val sleepTimerMode: SleepTimerMode? = null,
+    /** Whether the mini player bar is shown under the screens (a display setting). */
+    val miniPlayerEnabled: Boolean = true,
 )
 
 /** State for the equalizer bottom sheet: effect capabilities + the persisted settings. */
@@ -103,6 +105,7 @@ class NowPlayingViewModel(private val container: AppContainer) : ViewModel() {
             playbackSpeed = playback.playbackSpeed,
             sleepTimerRemainingMs = playback.sleepTimerRemainingMs,
             sleepTimerMode = playback.sleepTimerMode,
+            miniPlayerEnabled = settings.showMiniPlayer,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 

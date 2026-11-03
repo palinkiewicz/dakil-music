@@ -94,10 +94,11 @@ object NavDefaults {
     }
 
     private val DEFAULT_ENABLED = mapOf(
-        NavComponent.BOTTOM_BAR to listOf(NavItem.NOW_PLAYING, NavItem.LIBRARY, NavItem.MORE),
+        // Now Playing has no default entry: the player is reached through the mini player bar,
+        // which is on by default (and can only be switched off once Now Playing has an entry).
+        NavComponent.BOTTOM_BAR to listOf(NavItem.LIBRARY, NavItem.STATISTICS, NavItem.MORE),
         NavComponent.MORE_SCREEN to listOf(
             NavItem.LISTENING_HISTORY,
-            NavItem.STATISTICS,
             NavItem.REFRESH_LIBRARY,
             NavItem.SETTINGS,
             NavItem.BACKUP,
@@ -110,6 +111,39 @@ object NavDefaults {
             NavItem.PLAYLISTS,
         ),
     )
+
+    // What the app shipped with before the mini player bar, when the bottom bar had to hold Now Playing.
+    private val LEGACY_ENABLED = mapOf(
+        NavComponent.BOTTOM_BAR to listOf(NavItem.NOW_PLAYING, NavItem.LIBRARY, NavItem.MORE),
+        NavComponent.MORE_SCREEN to listOf(
+            NavItem.LISTENING_HISTORY,
+            NavItem.STATISTICS,
+            NavItem.REFRESH_LIBRARY,
+            NavItem.SETTINGS,
+            NavItem.BACKUP,
+            NavItem.ABOUT,
+        ),
+    )
+
+    /**
+     * Moves a layout still on the old defaults to the current ones; anything the user arranged is
+     * kept. A bottom bar left at Now Playing · Library · More becomes Library · Statistics · More,
+     * but only while [miniPlayerShown] (otherwise Now Playing is the only way to the player). An
+     * untouched More screen drops Statistics, but only once the bottom bar holds it.
+     */
+    fun upgradeLegacyDefaults(config: NavConfig, miniPlayerShown: Boolean): NavConfig {
+        var upgraded = config
+        if (miniPlayerShown && upgraded.isLegacy(NavComponent.BOTTOM_BAR)) {
+            upgraded = upgraded.withComponent(NavComponent.BOTTOM_BAR, defaultEntries(NavComponent.BOTTOM_BAR))
+        }
+        if (upgraded.isLegacy(NavComponent.MORE_SCREEN) && NavItem.STATISTICS in upgraded.enabled(NavComponent.BOTTOM_BAR)) {
+            upgraded = upgraded.withComponent(NavComponent.MORE_SCREEN, defaultEntries(NavComponent.MORE_SCREEN))
+        }
+        return upgraded
+    }
+
+    private fun NavConfig.isLegacy(component: NavComponent): Boolean =
+        enabled(component) == LEGACY_ENABLED.getValue(component)
 
     /** Whether an item defaults to enabled when it first appears in a component. */
     fun defaultEnabled(component: NavComponent, item: NavItem): Boolean =
@@ -146,11 +180,13 @@ object NavRules {
     /**
      * Items in [component] that must stay ON (rendered as a checked, disabled switch):
      * the last reachable Settings / Now Playing, plus More when it is the only path to Settings.
+     * While [miniPlayerShown], the mini player already reaches Now Playing, so it is not locked.
      */
-    fun lockedItems(config: NavConfig, component: NavComponent): Set<NavItem> {
+    fun lockedItems(config: NavConfig, component: NavComponent, miniPlayerShown: Boolean = false): Set<NavItem> {
         val locked = mutableSetOf<NavItem>()
 
         for (item in NavDefaults.LOCKED_ITEMS) {
+            if (item == NavItem.NOW_PLAYING && miniPlayerShown) continue
             val componentsEnabling = NavComponent.entries.filter { item in config.enabled(it) }
             if (componentsEnabling.size == 1 && componentsEnabling.first() == component) {
                 locked += item

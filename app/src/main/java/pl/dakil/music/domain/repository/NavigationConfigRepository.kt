@@ -11,4 +11,10 @@ interface NavigationConfigRepository {
 
     /** Replaces the ordered entry list for a single [component]. */
     suspend fun setComponent(component: NavComponent, entries: List<NavEntry>)
+
+    /**
+     * Once per install, moves a saved layout still on the old defaults to the current ones
+     * (see [pl.dakil.music.domain.model.NavDefaults.upgradeLegacyDefaults]).
+     */
+    suspend fun upgradeLegacyDefaults(miniPlayerShown: Boolean)
 }
