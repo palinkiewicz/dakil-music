@@ -519,7 +519,7 @@ private fun formatOffset(offsetMs: Long): String {
 }
 
 /** Where the active synced line rests, as a fraction of the pane's height from the top. */
-private const val ACTIVE_LINE_FRACTION = 0.28f
+private const val ACTIVE_LINE_FRACTION = 0.45f
 
 private const val STEP_MS = 100L
 private const val RANGE_MS = 10_000L

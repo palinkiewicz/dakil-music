@@ -95,19 +95,27 @@ import pl.dakil.music.ui.designsystem.icon.AppSymbol
 import pl.dakil.music.ui.designsystem.icon.AppSymbols
 import pl.dakil.music.ui.designsystem.rememberHaptics
 import pl.dakil.music.ui.theme.Spacing
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.absoluteValue
+import kotlin.math.sin
 
-private enum class PlayerSheetKind { QUEUE, SLEEP, SPEED, EQUALIZER, ALIGN, LRCLIB }
+private enum class PlayerSheetKind { SLEEP, SPEED, EQUALIZER, ALIGN, LRCLIB }
 
 /**
- * The expanded player. The cover sits in a pager over the queue (swipe to skip), and can give way
- * to synced lyrics; under it the song, a wavy seek bar, an expressive transport row and a strip of
- * tools that open sheets (sleep timer, speed, equalizer, queue).
+ * The expanded player. The cover sits in a pager over the queue (swipe to skip) and flips over to
+ * synced lyrics; under it the song, a wavy seek bar, an expressive transport row and a strip of
+ * tools that open sheets (sleep timer, speed, equalizer) and the queue panel.
  *
- * [dragModifier] is the sheet's collapse gesture; it is applied to the header, the art and the
- * song info, leaving the controls and the lyrics' own scrolling alone. [onArtSlotPlaced] reports
- * where the cover sits so the sheet can fly the art between the mini and the full player.
+ * Vertical drags follow the finger: down anywhere but the lyrics closes the player ([sheetDrag]),
+ * up on the cover flips it to the lyrics, and up on the controls raises the queue.
+ * [onArtSlotPlaced] reports where the cover sits so the sheet can fly the art between the mini and
+ * the full player.
  */
 @Composable
 fun FullPlayer(
@@ -115,7 +123,7 @@ fun FullPlayer(
     state: NowPlayingUiState,
     artVisible: Boolean,
     onArtSlotPlaced: (LayoutCoordinates?) -> Unit,
-    dragModifier: Modifier,
+    sheetDrag: DragTarget,
     onCollapse: () -> Unit,
     onOpenAlbum: (Long) -> Unit,
     onOpenArtist: (String) -> Unit,
@@ -128,15 +136,47 @@ fun FullPlayer(
     val equalizer by viewModel.equalizer.collectAsStateWithLifecycle()
     val userPlaylists by viewModel.userPlaylists.collectAsStateWithLifecycle()
     val showAddToPlaylist by viewModel.showAddToPlaylist.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val flipSpec = motion.slowSpatialSpec<Float>()
+    val panelSpec = motion.defaultSpatialSpec<Float>()
 
+    // The cover's turn toward the lyrics on its back: 0 shows the cover, 1 the lyrics. A drag up
+    // the cover turns it under the finger; the lyrics button turns it on its own.
     var showLyrics by rememberSaveable { mutableStateOf(false) }
-    if (!lyricsCard.visible) showLyrics = false
+    val flip = remember { GestureProgress(if (showLyrics) 1f else 0f) }
+    flip.spec = flipSpec
+    fun setLyrics(show: Boolean) {
+        showLyrics = show
+        scope.launch { flip.animateTo(if (show) 1f else 0f) }
+    }
+    LaunchedEffect(lyricsCard.visible) { if (!lyricsCard.visible && flip.targetValue != 0f) setLyrics(false) }
+    var artHeight by remember { mutableFloatStateOf(1f) }
+    val flipDrag = flip.rememberDragTarget(scope, travel = { artHeight * 0.6f }) { target ->
+        if ((target == 1f) != showLyrics) haptics.toggle(target == 1f)
+        showLyrics = target == 1f
+    }
+    val turning by remember { derivedStateOf { flip.value > 0f } }
+    val lyricsSide by remember { derivedStateOf { flip.value >= 0.5f } }
+
+    val queuePanel = remember { GestureProgress(0f) }
+    queuePanel.spec = panelSpec
+    var panelTravel by remember { mutableFloatStateOf(1f) }
+    val queueDrag = queuePanel.rememberDragTarget(scope, travel = { panelTravel }) { target ->
+        if (target != queuePanel.value) haptics.tick()
+    }
+
+    // Down closes the player wherever it's grabbed; up has a job of its own on the cover (when
+    // there are lyrics to turn to) and on the controls.
+    val headerDrag = rememberVerticalDrag(up = sheetDrag, down = sheetDrag)
+    val artDrag = rememberVerticalDrag(up = flipDrag.takeIf { lyricsCard.visible }, down = sheetDrag, enabled = !showLyrics)
+    val controlsDrag = rememberVerticalDrag(up = queueDrag.takeIf { state.queue.isNotEmpty() }, down = sheetDrag)
+
     var openSheet by remember { mutableStateOf<PlayerSheetKind?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // The lyrics view model only spins up while lyrics are on screen or being edited.
+    // The lyrics view model only spins up while lyrics are on screen, turning in, or being edited.
     val lyricsViewModel: LyricsViewModel? =
-        if (showLyrics || openSheet == PlayerSheetKind.ALIGN || openSheet == PlayerSheetKind.LRCLIB) {
+        if (showLyrics || turning || openSheet == PlayerSheetKind.ALIGN || openSheet == PlayerSheetKind.LRCLIB) {
             viewModel(factory = AppViewModelProvider.Factory)
         } else {
             null
@@ -144,7 +184,11 @@ fun FullPlayer(
     val lyricsState = lyricsViewModel?.state?.collectAsStateWithLifecycle()?.value
     lyricsViewModel?.let { LyricsEventsEffect(it, snackbarHostState) }
 
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .onSizeChanged { panelTravel = it.height.toFloat() },
+    ) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -164,7 +208,7 @@ fun FullPlayer(
                 onAlign = { openSheet = PlayerSheetKind.ALIGN },
                 onLrclib = { openSheet = PlayerSheetKind.LRCLIB },
                 onBurn = { lyricsViewModel?.burn() },
-                modifier = dragModifier,
+                modifier = headerDrag,
             )
 
             // Portrait stacks the cover over the controls; a wide window (landscape phone,
@@ -173,102 +217,116 @@ fun FullPlayer(
                 val wide = maxWidth >= 600.dp && maxWidth > maxHeight
                 val artArea: @Composable (Modifier) -> Unit = { artModifier ->
                     BoxWithConstraints(
-                        modifier = artModifier,
+                        modifier = artModifier
+                            .onSizeChanged { artHeight = it.height.toFloat().coerceAtLeast(1f) }
+                            .then(artDrag),
                         contentAlignment = Alignment.Center,
                     ) {
                         val side = minOf(maxWidth - Spacing.xl * 2, maxHeight - Spacing.l)
-                        AnimatedContent(
-                            targetState = showLyrics && lyricsState != null,
-                            transitionSpec = {
-                                (fadeIn(motion.defaultEffectsSpec()) +
-                                    scaleIn(motion.defaultSpatialSpec(), initialScale = 0.92f)) togetherWith
-                                    (fadeOut(motion.fastEffectsSpec()) +
-                                        scaleOut(motion.fastSpatialSpec(), targetScale = 0.92f))
-                            },
-                            label = "artOrLyrics",
-                        ) { lyricsShown ->
-                            if (lyricsShown && lyricsState != null) {
-                                LaunchedEffect(Unit) { onArtSlotPlaced(null) }
-                                LyricsPane(
-                                    state = lyricsState,
-                                    onSeekLine = { lyricsViewModel?.onSeekToLine(it) },
-                                    onSearchLrclib = if (lyricsState.lrclibEnabled) {
-                                        { openSheet = PlayerSheetKind.LRCLIB }
-                                    } else {
-                                        null
-                                    },
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                ArtPager(
-                                    state = state,
-                                    side = side,
-                                    artVisible = artVisible,
-                                    onArtSlotPlaced = onArtSlotPlaced,
-                                    onSkipTo = {
-                                        haptics.tick()
-                                        viewModel.onQueueItemClick(it)
-                                    },
-                                    modifier = dragModifier,
-                                )
+                        // Both faces turn about the horizontal axis, the cover's lower edge rising
+                        // toward the viewer; each shows only on its own half of the turn.
+                        if (!lyricsSide) {
+                            ArtPager(
+                                state = state,
+                                side = side,
+                                artVisible = artVisible,
+                                onArtSlotPlaced = onArtSlotPlaced,
+                                onSkipTo = {
+                                    haptics.tick()
+                                    viewModel.onQueueItemClick(it)
+                                },
+                                modifier = Modifier.flipFace(flip, back = false),
+                            )
+                        } else {
+                            LaunchedEffect(Unit) { onArtSlotPlaced(null) }
+                            Box(Modifier.fillMaxSize().flipFace(flip, back = true), contentAlignment = Alignment.Center) {
+                                if (lyricsState != null) {
+                                    LyricsPane(
+                                        state = lyricsState,
+                                        onSeekLine = { lyricsViewModel?.onSeekToLine(it) },
+                                        onSearchLrclib = if (lyricsState.lrclibEnabled) {
+                                            { openSheet = PlayerSheetKind.LRCLIB }
+                                        } else {
+                                            null
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    LoadingIndicator()
+                                }
                             }
                         }
                     }
                 }
-                val controls: @Composable () -> Unit = {
-                    SongInfo(
-                        song = song,
-                        index = state.currentIndex,
-                        isFavorite = state.isCurrentFavorite,
-                        onToggleFavorite = viewModel::onToggleFavorite,
-                        modifier = dragModifier.padding(horizontal = Spacing.xl),
-                    )
-                    Spacer(Modifier.height(Spacing.s))
-                    TimeBar(
-                        positionMs = state.positionMs,
-                        durationMs = state.durationMs,
-                        onSeek = viewModel::onSeek,
-                        isPlaying = state.isPlaying,
-                        modifier = Modifier.padding(horizontal = Spacing.xl),
-                    )
-                    Spacer(Modifier.height(Spacing.s))
-                    TransportRow(
-                        state = state,
-                        onPlayPause = viewModel::onPlayPause,
-                        onPrevious = viewModel::onPrevious,
-                        onNext = viewModel::onNext,
-                        onToggleShuffle = viewModel::onToggleShuffle,
-                        onCycleRepeat = viewModel::onCycleRepeat,
-                        modifier = Modifier.padding(horizontal = Spacing.l),
-                    )
-                    Spacer(Modifier.height(Spacing.l))
-                    ToolsRow(
-                        state = state,
-                        lyricsAvailable = lyricsCard.visible,
-                        showLyrics = showLyrics,
-                        equalizerOn = equalizer.capabilities.available && equalizer.settings.masterEnabled,
-                        onToggleLyrics = {
-                            haptics.toggle(!showLyrics)
-                            showLyrics = !showLyrics
-                        },
-                        onOpen = { openSheet = it },
-                        modifier = Modifier.padding(horizontal = Spacing.l),
-                    )
-                    Spacer(Modifier.height(Spacing.l))
+                val controls: @Composable (Modifier) -> Unit = { controlsModifier ->
+                    Column(controlsModifier.then(controlsDrag)) {
+                        SongInfo(
+                            song = song,
+                            index = state.currentIndex,
+                            isFavorite = state.isCurrentFavorite,
+                            onToggleFavorite = viewModel::onToggleFavorite,
+                            modifier = Modifier.padding(horizontal = Spacing.xl),
+                        )
+                        Spacer(Modifier.height(Spacing.s))
+                        TimeBar(
+                            positionMs = state.positionMs,
+                            durationMs = state.durationMs,
+                            onSeek = viewModel::onSeek,
+                            isPlaying = state.isPlaying,
+                            modifier = Modifier.padding(horizontal = Spacing.xl),
+                        )
+                        Spacer(Modifier.height(Spacing.s))
+                        TransportRow(
+                            state = state,
+                            onPlayPause = viewModel::onPlayPause,
+                            onPrevious = viewModel::onPrevious,
+                            onNext = viewModel::onNext,
+                            onToggleShuffle = viewModel::onToggleShuffle,
+                            onCycleRepeat = viewModel::onCycleRepeat,
+                            modifier = Modifier.padding(horizontal = Spacing.l),
+                        )
+                        Spacer(Modifier.height(Spacing.l))
+                        ToolsRow(
+                            state = state,
+                            lyricsAvailable = lyricsCard.visible,
+                            showLyrics = showLyrics,
+                            equalizerOn = equalizer.capabilities.available && equalizer.settings.masterEnabled,
+                            onToggleLyrics = {
+                                haptics.toggle(!showLyrics)
+                                setLyrics(!showLyrics)
+                            },
+                            onOpen = { openSheet = it },
+                            onOpenQueue = { scope.launch { queuePanel.animateTo(1f) } },
+                            modifier = Modifier.padding(horizontal = Spacing.l),
+                        )
+                        Spacer(Modifier.height(Spacing.l))
+                    }
                 }
                 if (wide) {
                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                         artArea(Modifier.weight(1f).fillMaxHeight())
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) { controls() }
+                        controls(Modifier.weight(1f))
                     }
                 } else {
                     Column(Modifier.fillMaxSize()) {
                         artArea(Modifier.weight(1f).fillMaxWidth())
-                        controls()
+                        controls(Modifier)
                     }
                 }
             }
         }
+
+        QueuePanel(
+            progress = queuePanel,
+            queue = state.queue,
+            currentIndex = state.currentIndex,
+            isPlaying = state.isPlaying,
+            removeMode = state.queueRemoveMode,
+            onItemClick = viewModel::onQueueItemClick,
+            onMove = viewModel::onMoveQueueItem,
+            onRemove = viewModel::onRemoveQueueItem,
+            onClear = viewModel::onClearQueue,
+        )
 
         SnackbarHost(
             snackbarHostState,
@@ -279,17 +337,6 @@ fun FullPlayer(
     }
 
     when (openSheet) {
-        PlayerSheetKind.QUEUE -> QueueSheet(
-            queue = state.queue,
-            currentIndex = state.currentIndex,
-            isPlaying = state.isPlaying,
-            removeMode = state.queueRemoveMode,
-            onDismiss = { openSheet = null },
-            onItemClick = viewModel::onQueueItemClick,
-            onMove = viewModel::onMoveQueueItem,
-            onRemove = viewModel::onRemoveQueueItem,
-            onClear = viewModel::onClearQueue,
-        )
         PlayerSheetKind.SLEEP -> SleepTimerSheet(
             remainingMs = state.sleepTimerRemainingMs,
             mode = state.sleepTimerMode,
@@ -601,6 +648,19 @@ private fun SongInfo(
     }
 }
 
+/**
+ * One face of the cover's flip: the front turns away over the first half of [flip], the back
+ * (lyrics) turns in over the second, sinking a little at the edge-on midpoint for depth.
+ */
+private fun Modifier.flipFace(flip: GestureProgress, back: Boolean): Modifier = graphicsLayer {
+    val p = flip.value
+    rotationX = if (back) (p - 1f) * 180f else p * 180f
+    cameraDistance = 14f * density
+    val sink = 1f - 0.08f * sin(PI.toFloat() * p.coerceIn(0f, 1f))
+    scaleX = sink
+    scaleY = sink
+}
+
 /** A heart that pops with a little spring overshoot when it fills. */
 @Composable
 private fun FavoriteButton(isFavorite: Boolean, onToggle: () -> Unit) {
@@ -781,6 +841,7 @@ private fun ToolsRow(
     equalizerOn: Boolean,
     onToggleLyrics: () -> Unit,
     onOpen: (PlayerSheetKind) -> Unit,
+    onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val timerLabel = when {
@@ -817,7 +878,7 @@ private fun ToolsRow(
             onClick = { onOpen(PlayerSheetKind.SPEED) },
         )
         ToolButton(AppSymbols.GraphicEq, stringResource(R.string.eq_open), active = equalizerOn, onClick = { onOpen(PlayerSheetKind.EQUALIZER) })
-        ToolButton(AppSymbols.QueueMusic, stringResource(R.string.now_playing_queue), active = false, onClick = { onOpen(PlayerSheetKind.QUEUE) })
+        ToolButton(AppSymbols.QueueMusic, stringResource(R.string.now_playing_queue), active = false, onClick = onOpenQueue)
     }
 }
 

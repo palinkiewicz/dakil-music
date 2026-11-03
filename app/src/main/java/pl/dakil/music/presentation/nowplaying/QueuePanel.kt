@@ -1,5 +1,25 @@
 package pl.dakil.music.presentation.nowplaying
 
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -24,12 +44,10 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,48 +86,131 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
- * The play queue as a modal sheet: drag a row's handle to reorder, remove it the way the user chose
- * in settings ([QueueRemoveMode]), tap a row to jump to it. Opens scrolled to the current song.
+ * The play queue as a panel that rises over the full player: drag a row's handle to reorder,
+ * remove it the way the user chose in settings ([QueueRemoveMode]), tap a row to jump to it. Opens
+ * scrolled to the current song.
+ *
+ * Its rise is [progress], which the player also drives straight from a drag on its controls, so
+ * the panel follows the finger there; here the handle, a pull down on the list's top and
+ * (predictive) back close it again. Composed only while it's at least partly open.
  */
 @Composable
-fun QueueSheet(
+fun QueuePanel(
+    progress: GestureProgress,
     queue: List<Song>,
     currentIndex: Int,
     isPlaying: Boolean,
     removeMode: QueueRemoveMode,
-    onDismiss: () -> Unit,
     onItemClick: (Int) -> Unit,
     onMove: (from: Int, to: Int) -> Unit,
     onRemove: (Int) -> Unit,
     onClear: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val visible by remember { derivedStateOf { progress.value > 0f || progress.targetValue > 0f } }
+    val open by remember { derivedStateOf { progress.targetValue == 1f } }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            QueueHeader(
-                queue = queue,
-                onClear = {
-                    haptics.confirm()
-                    onClear()
-                    onDismiss()
-                },
-            )
-            QueueList(
-                queue = queue,
-                currentIndex = currentIndex,
-                isPlaying = isPlaying,
-                removeMode = removeMode,
-                onItemClick = onItemClick,
-                onMove = onMove,
-                onRemove = onRemove,
-            )
+    // Registered when the panel opens, after the player's own handler, so back closes it first.
+    if (open) {
+        PredictiveBackHandler { events ->
+            try {
+                progress.stopAnimation()
+                events.collect { event -> progress.snapTo(1f - event.progress * 0.15f) }
+                scope.launch { progress.animateTo(0f) }
+            } catch (e: CancellationException) {
+                scope.launch { progress.animateTo(1f) }
+                throw e
+            }
         }
+    }
+
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        if (!visible) return@BoxWithConstraints
+        val density = LocalDensity.current
+        val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + Spacing.s
+        val panelHeight = maxHeight - top
+        val travel = with(density) { panelHeight.toPx() }.coerceAtLeast(1f)
+        val drag = progress.rememberDragTarget(scope, travel = { travel }) { target ->
+            if (target != progress.value) haptics.tick()
+        }
+        val pullConnection = remember(progress, drag) { PanelPullConnection(progress, drag, travel = { travel }) }
+
+        // Scrim: dims the player and closes the panel when tapped.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = progress.fraction }
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                .pointerInput(Unit) { detectTapGestures { scope.launch { progress.animateTo(0f) } } },
+        )
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(panelHeight)
+                .graphicsLayer {
+                    // Past 1 (the spring's overshoot) it would lift off the bottom edge.
+                    translationY = (1f - progress.value.coerceAtMost(1f)) * size.height
+                }
+                .nestedScroll(pullConnection),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                // The grip and title drag the panel either way.
+                Column(rememberVerticalDrag(up = drag, down = drag)) {
+                    BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    QueueHeader(
+                        queue = queue,
+                        onClear = {
+                            haptics.confirm()
+                            onClear()
+                            scope.launch { progress.animateTo(0f) }
+                        },
+                    )
+                }
+                QueueList(
+                    queue = queue,
+                    currentIndex = currentIndex,
+                    isPlaying = isPlaying,
+                    removeMode = removeMode,
+                    onItemClick = onItemClick,
+                    onMove = onMove,
+                    onRemove = onRemove,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Lets the list hand its scrolling to the panel, like a bottom sheet: a pull down once the list is
+ * at its top lowers the panel, scrolling back up raises it first, and a fling settles it.
+ */
+private class PanelPullConnection(
+    private val progress: GestureProgress,
+    private val drag: DragTarget,
+    private val travel: () -> Float,
+) : NestedScrollConnection {
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        if (source != NestedScrollSource.UserInput || available.y >= 0f || progress.value >= 1f) return Offset.Zero
+        val before = progress.value
+        drag.onDelta(available.y)
+        return Offset(0f, (progress.value - before) * -travel())
+    }
+
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
+        drag.onDelta(available.y)
+        return Offset(0f, available.y)
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        if (progress.value >= 1f) return Velocity.Zero
+        drag.onStop(available.y)
+        return available
     }
 }
 
