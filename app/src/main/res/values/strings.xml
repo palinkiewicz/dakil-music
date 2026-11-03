@@ -295,7 +295,6 @@
 
     <!-- History screen -->
     <string name="history_empty">No listening history yet</string>
-    <string name="history_show_more">Show more</string>
     <string name="history_export">Export to CSV</string>
     <string name="history_import">Import from CSV</string>
     <string name="history_import_result">Imported %1$d, skipped %2$d</string>
@@ -313,7 +312,6 @@
 
     <!-- Statistics screen -->
     <string name="stats_total_time">Total listening time</string>
-    <string name="stats_overview_counts">%1$d tracks by %2$d artists played %3$d times</string>
     <string name="stats_top_tracks">Top tracks</string>
     <string name="stats_top_artists">Top artists</string>
     <string name="stats_top_albums">Top albums</string>
@@ -481,4 +479,9 @@
     <string name="queue_remove_short_menu">Menu</string>
     <string name="queue_remove_short_button">Button</string>
     <string name="queue_remove_short_swipe">Swipe</string>
+    <string name="history_today">Today</string>
+    <string name="history_yesterday">Yesterday</string>
+    <string name="stats_tile_songs">Songs</string>
+    <string name="stats_tile_artists">Artists</string>
+    <string name="stats_tile_plays">Plays</string>
 </resources>

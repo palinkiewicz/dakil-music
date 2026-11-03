@@ -10,6 +10,7 @@ arrow_downward
 arrow_drop_down
 arrow_upward
 check
+chevron_left
 chevron_right
 close
 drag_indicator

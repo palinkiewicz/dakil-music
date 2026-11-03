@@ -10,6 +10,7 @@ object AppSymbols {
     val ArrowDropDown = AppSymbol(R.drawable.sym_arrow_drop_down, R.drawable.sym_arrow_drop_down_fill)
     val ArrowUpward = AppSymbol(R.drawable.sym_arrow_upward, R.drawable.sym_arrow_upward_fill)
     val Check = AppSymbol(R.drawable.sym_check, R.drawable.sym_check_fill)
+    val ChevronLeft = AppSymbol(R.drawable.sym_chevron_left, R.drawable.sym_chevron_left_fill)
     val ChevronRight = AppSymbol(R.drawable.sym_chevron_right, R.drawable.sym_chevron_right_fill)
     val Close = AppSymbol(R.drawable.sym_close, R.drawable.sym_close_fill)
     val DragIndicator = AppSymbol(R.drawable.sym_drag_indicator, R.drawable.sym_drag_indicator_fill)

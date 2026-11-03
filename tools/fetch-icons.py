@@ -22,7 +22,7 @@ URL = "https://raw.githubusercontent.com/google/material-design-icons/master/sym
 
 # Directional glyphs that must flip in right-to-left layouts.
 MIRRORED = {
-    "arrow_back", "chevron_right", "undo", "redo", "send", "open_in_new", "wrap_text", "sort",
+    "arrow_back", "chevron_left", "chevron_right", "undo", "redo", "send", "open_in_new", "wrap_text", "sort",
     "queue_music", "playlist_add", "playlist_play", "playlist_remove", "volume_up", "volume_off", "trending_up",
 }
 

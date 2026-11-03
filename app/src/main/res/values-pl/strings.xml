@@ -282,7 +282,6 @@
 
     <!-- Ekran historii -->
     <string name="history_empty">Brak historii odsłuchów</string>
-    <string name="history_show_more">Pokaż więcej</string>
     <string name="history_export">Eksportuj do CSV</string>
     <string name="history_import">Importuj z CSV</string>
     <string name="history_import_result">Zaimportowano %1$d, pominięto %2$d</string>
@@ -300,7 +299,6 @@
 
     <!-- Ekran statystyk -->
     <string name="stats_total_time">Łączny czas słuchania</string>
-    <string name="stats_overview_counts">%1$d utworów %2$d artystów, %3$d odtworzeń</string>
     <string name="stats_top_tracks">Najczęstsze utwory</string>
     <string name="stats_top_artists">Najczęstsi artyści</string>
     <string name="stats_top_albums">Najczęstsze albumy</string>
@@ -476,4 +474,9 @@
     <string name="queue_remove_short_menu">Menu</string>
     <string name="queue_remove_short_button">Przycisk</string>
     <string name="queue_remove_short_swipe">Przesunięcie</string>
+    <string name="history_today">Dzisiaj</string>
+    <string name="history_yesterday">Wczoraj</string>
+    <string name="stats_tile_songs">Utwory</string>
+    <string name="stats_tile_artists">Wykonawcy</string>
+    <string name="stats_tile_plays">Odtworzenia</string>
 </resources>

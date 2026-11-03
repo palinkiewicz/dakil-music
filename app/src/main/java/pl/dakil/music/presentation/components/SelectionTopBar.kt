@@ -45,7 +45,8 @@ import pl.dakil.music.ui.theme.Spacing
  * multi-select (song lists, library search, history): a top bar with the rolling count, close and
  * select-all, and a floating toolbar with the actions — favourite and queue up front, the rest in
  * an overflow menu. Both slide in and out with the selection. [showRemoveFromPlaylist] adds
- * "remove from playlist" (user-playlist sources only). Place it over the screen's content.
+ * "remove from playlist" (user-playlist sources only); null actions are left out (history can't
+ * change cover art or show file info). Place it over the screen's content.
  */
 @Composable
 fun SelectionChrome(
@@ -61,10 +62,10 @@ fun SelectionChrome(
     onAddToPlaylist: () -> Unit,
     onEditTags: () -> Unit,
     onDecompose: () -> Unit,
-    onChangeCoverArt: () -> Unit,
+    onChangeCoverArt: (() -> Unit)?,
     onRemoveFromPlaylist: () -> Unit,
-    onShare: () -> Unit,
-    onShowInfo: () -> Unit,
+    onShare: (() -> Unit)?,
+    onShowInfo: (() -> Unit)?,
     modifier: Modifier = Modifier,
     windowInsets: WindowInsets = TopAppBarDefaults.windowInsets,
     onTopBarHeightChanged: (Int) -> Unit = {},
@@ -141,23 +142,27 @@ fun SelectionChrome(
                 }
                 ToolbarAction(AppSymbols.PlaylistAdd, stringResource(R.string.action_add_to_playlist), onAddToPlaylist)
                 val multi = selectedCount > 1
-                ToolbarAction(
-                    AppSymbols.Share,
-                    stringResource(if (multi) R.string.action_share_files else R.string.action_share_file),
-                    onShare,
-                )
+                if (onShare != null) {
+                    ToolbarAction(
+                        AppSymbols.Share,
+                        stringResource(if (multi) R.string.action_share_files else R.string.action_share_file),
+                        onShare,
+                    )
+                }
                 Box {
                     ToolbarAction(AppSymbols.MoreVert, stringResource(R.string.action_more)) { menuExpanded = true }
                     AppMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         AppMenuGroup(index = 0, count = 2) {
-                            AppMenuItem(
-                                // "Add" when the lone selected song has no art, else "Change".
-                                text = stringResource(
-                                    if (!singleSelectionHasArt) R.string.action_add_cover_art else R.string.action_change_cover_art,
-                                ),
-                                symbol = AppSymbols.Image,
-                                onClick = { menuExpanded = false; onChangeCoverArt() },
-                            )
+                            if (onChangeCoverArt != null) {
+                                AppMenuItem(
+                                    // "Add" when the lone selected song has no art, else "Change".
+                                    text = stringResource(
+                                        if (!singleSelectionHasArt) R.string.action_add_cover_art else R.string.action_change_cover_art,
+                                    ),
+                                    symbol = AppSymbols.Image,
+                                    onClick = { menuExpanded = false; onChangeCoverArt() },
+                                )
+                            }
                             AppMenuItem(
                                 text = stringResource(R.string.action_edit_tags),
                                 symbol = AppSymbols.Label,
@@ -168,11 +173,13 @@ fun SelectionChrome(
                                 symbol = AppSymbols.CallSplit,
                                 onClick = { menuExpanded = false; onDecompose() },
                             )
-                            AppMenuItem(
-                                text = stringResource(if (multi) R.string.action_files_info else R.string.action_file_info),
-                                symbol = AppSymbols.Info,
-                                onClick = { menuExpanded = false; onShowInfo() },
-                            )
+                            if (onShowInfo != null) {
+                                AppMenuItem(
+                                    text = stringResource(if (multi) R.string.action_files_info else R.string.action_file_info),
+                                    symbol = AppSymbols.Info,
+                                    onClick = { menuExpanded = false; onShowInfo() },
+                                )
+                            }
                         }
                         AppMenuGroup(index = 1, count = 2) {
                             if (showRemoveFromPlaylist) {
