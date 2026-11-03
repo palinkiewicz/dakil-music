@@ -69,6 +69,7 @@ import pl.dakil.music.presentation.history.MergeWithExistingDialog
 import java.time.DayOfWeek
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.platform.LocalConfiguration
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -370,7 +371,7 @@ private fun ChartRow(
         Column(horizontalAlignment = Alignment.End) {
             Text(formatMetricValue(value, metric), style = MaterialTheme.typography.labelLarge)
             Text(
-                String.format(Locale.getDefault(), "%.1f%%", pct),
+                String.format(LocalConfiguration.current.locales[0], "%.1f%%", pct),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

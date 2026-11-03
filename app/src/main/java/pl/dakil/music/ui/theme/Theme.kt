@@ -2,276 +2,34 @@ package pl.dakil.music.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import pl.dakil.music.domain.model.AppColorTheme
 import pl.dakil.music.domain.model.DarkThemeOption
 
-// ---------------------------------------------------------------------------
-// Dakil's Music (default vibrant pink) — colors live in Color.kt
-// ---------------------------------------------------------------------------
-
-private val DakilsMusicLight = lightColorScheme(
-    primary = md_theme_light_primary,
-    onPrimary = md_theme_light_onPrimary,
-    primaryContainer = md_theme_light_primaryContainer,
-    onPrimaryContainer = md_theme_light_onPrimaryContainer,
-    secondary = md_theme_light_secondary,
-    onSecondary = md_theme_light_onSecondary,
-    secondaryContainer = md_theme_light_secondaryContainer,
-    onSecondaryContainer = md_theme_light_onSecondaryContainer,
-    tertiary = md_theme_light_tertiary,
-    onTertiary = md_theme_light_onTertiary,
-    tertiaryContainer = md_theme_light_tertiaryContainer,
-    onTertiaryContainer = md_theme_light_onTertiaryContainer,
-    background = md_theme_light_background,
-    onBackground = md_theme_light_onBackground,
-    surface = md_theme_light_surface,
-    onSurface = md_theme_light_onSurface,
-)
-
-private val DakilsMusicDark = darkColorScheme(
-    primary = md_theme_dark_primary,
-    onPrimary = md_theme_dark_onPrimary,
-    primaryContainer = md_theme_dark_primaryContainer,
-    onPrimaryContainer = md_theme_dark_onPrimaryContainer,
-    secondary = md_theme_dark_secondary,
-    onSecondary = md_theme_dark_onSecondary,
-    secondaryContainer = md_theme_dark_secondaryContainer,
-    onSecondaryContainer = md_theme_dark_onSecondaryContainer,
-    tertiary = md_theme_dark_tertiary,
-    onTertiary = md_theme_dark_onTertiary,
-    tertiaryContainer = md_theme_dark_tertiaryContainer,
-    onTertiaryContainer = md_theme_dark_onTertiaryContainer,
-    background = md_theme_dark_background,
-    onBackground = md_theme_dark_onBackground,
-    surface = md_theme_dark_surface,
-    onSurface = md_theme_dark_onSurface,
-)
-
-// ---------------------------------------------------------------------------
-// Ocean (blue)
-// ---------------------------------------------------------------------------
-
-private val OceanLight = lightColorScheme(
-    primary = Color(0xFF0061A4),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFD1E4FF),
-    onPrimaryContainer = Color(0xFF001D36),
-    secondary = Color(0xFF535F70),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD7E3F7),
-    onSecondaryContainer = Color(0xFF101C2B),
-    tertiary = Color(0xFF6B5778),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFF2DAFF),
-    onTertiaryContainer = Color(0xFF251431),
-    background = Color(0xFFF8F9FF),
-    onBackground = Color(0xFF191C20),
-    surface = Color(0xFFF8F9FF),
-    onSurface = Color(0xFF191C20),
-)
-
-private val OceanDark = darkColorScheme(
-    primary = Color(0xFF9ECAFF),
-    onPrimary = Color(0xFF003258),
-    primaryContainer = Color(0xFF00497D),
-    onPrimaryContainer = Color(0xFFD1E4FF),
-    secondary = Color(0xFFBBC7DB),
-    onSecondary = Color(0xFF253140),
-    secondaryContainer = Color(0xFF3B4858),
-    onSecondaryContainer = Color(0xFFD7E3F7),
-    tertiary = Color(0xFFD6BEE4),
-    onTertiary = Color(0xFF3B2948),
-    tertiaryContainer = Color(0xFF523F5F),
-    onTertiaryContainer = Color(0xFFF2DAFF),
-    background = Color(0xFF191C20),
-    onBackground = Color(0xFFE2E2E9),
-    surface = Color(0xFF191C20),
-    onSurface = Color(0xFFE2E2E9),
-)
-
-// ---------------------------------------------------------------------------
-// Lavender (purple)
-// ---------------------------------------------------------------------------
-
-private val LavenderLight = lightColorScheme(
-    primary = Color(0xFF6750A4),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFEADDFF),
-    onPrimaryContainer = Color(0xFF21005D),
-    secondary = Color(0xFF625B71),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE8DEF8),
-    onSecondaryContainer = Color(0xFF1D192B),
-    tertiary = Color(0xFF7D5260),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFD8E4),
-    onTertiaryContainer = Color(0xFF31111D),
-    background = Color(0xFFFEF7FF),
-    onBackground = Color(0xFF1D1B20),
-    surface = Color(0xFFFEF7FF),
-    onSurface = Color(0xFF1D1B20),
-)
-
-private val LavenderDark = darkColorScheme(
-    primary = Color(0xFFD0BCFF),
-    onPrimary = Color(0xFF381E72),
-    primaryContainer = Color(0xFF4F378B),
-    onPrimaryContainer = Color(0xFFEADDFF),
-    secondary = Color(0xFFCCC2DC),
-    onSecondary = Color(0xFF332D41),
-    secondaryContainer = Color(0xFF4A4458),
-    onSecondaryContainer = Color(0xFFE8DEF8),
-    tertiary = Color(0xFFEFB8C8),
-    onTertiary = Color(0xFF492532),
-    tertiaryContainer = Color(0xFF633B48),
-    onTertiaryContainer = Color(0xFFFFD8E4),
-    background = Color(0xFF141218),
-    onBackground = Color(0xFFE6E0E9),
-    surface = Color(0xFF141218),
-    onSurface = Color(0xFFE6E0E9),
-)
-
-// ---------------------------------------------------------------------------
-// Sunset (amber/orange)
-// ---------------------------------------------------------------------------
-
-private val SunsetLight = lightColorScheme(
-    primary = Color(0xFF8C5000),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFDCBE),
-    onPrimaryContainer = Color(0xFF2D1600),
-    secondary = Color(0xFF745B45),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFDCBE),
-    onSecondaryContainer = Color(0xFF2A1808),
-    tertiary = Color(0xFF5A623A),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFDEE7B3),
-    onTertiaryContainer = Color(0xFF191E00),
-    background = Color(0xFFFFF8F4),
-    onBackground = Color(0xFF221A11),
-    surface = Color(0xFFFFF8F4),
-    onSurface = Color(0xFF221A11),
-)
-
-private val SunsetDark = darkColorScheme(
-    primary = Color(0xFFFFB877),
-    onPrimary = Color(0xFF4B2800),
-    primaryContainer = Color(0xFF6B3C00),
-    onPrimaryContainer = Color(0xFFFFDCBE),
-    secondary = Color(0xFFE3C1A7),
-    onSecondary = Color(0xFF422C1A),
-    secondaryContainer = Color(0xFF5B422F),
-    onSecondaryContainer = Color(0xFFFFDCBE),
-    tertiary = Color(0xFFC2CB99),
-    onTertiary = Color(0xFF2C3410),
-    tertiaryContainer = Color(0xFF424B24),
-    onTertiaryContainer = Color(0xFFDEE7B3),
-    background = Color(0xFF19120B),
-    onBackground = Color(0xFFEFE0D4),
-    surface = Color(0xFF19120B),
-    onSurface = Color(0xFFEFE0D4),
-)
-
-// ---------------------------------------------------------------------------
-// Rose (pink)
-// ---------------------------------------------------------------------------
-
-private val RoseLight = lightColorScheme(
-    primary = Color(0xFF984061),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFD9E2),
-    onPrimaryContainer = Color(0xFF3E001D),
-    secondary = Color(0xFF74565F),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFD9E2),
-    onSecondaryContainer = Color(0xFF2B151C),
-    tertiary = Color(0xFF7C5635),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFDCC1),
-    onTertiaryContainer = Color(0xFF2E1500),
-    background = Color(0xFFFFF8F8),
-    onBackground = Color(0xFF22191C),
-    surface = Color(0xFFFFF8F8),
-    onSurface = Color(0xFF22191C),
-)
-
-private val RoseDark = darkColorScheme(
-    primary = Color(0xFFFFB1C8),
-    onPrimary = Color(0xFF5E1133),
-    primaryContainer = Color(0xFF7B2949),
-    onPrimaryContainer = Color(0xFFFFD9E2),
-    secondary = Color(0xFFE2BDC6),
-    onSecondary = Color(0xFF422931),
-    secondaryContainer = Color(0xFF5A3F47),
-    onSecondaryContainer = Color(0xFFFFD9E2),
-    tertiary = Color(0xFFEFBD94),
-    onTertiary = Color(0xFF48290B),
-    tertiaryContainer = Color(0xFF613F20),
-    onTertiaryContainer = Color(0xFFFFDCC1),
-    background = Color(0xFF191114),
-    onBackground = Color(0xFFEFDFE2),
-    surface = Color(0xFF191114),
-    onSurface = Color(0xFFEFDFE2),
-)
-
-// ---------------------------------------------------------------------------
-// Teal (sea green)
-// ---------------------------------------------------------------------------
-
-private val TealLight = lightColorScheme(
-    primary = Color(0xFF006A60),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFF74F8E5),
-    onPrimaryContainer = Color(0xFF00201C),
-    secondary = Color(0xFF4A635F),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFCCE8E2),
-    onSecondaryContainer = Color(0xFF05201C),
-    tertiary = Color(0xFF456179),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFCCE5FF),
-    onTertiaryContainer = Color(0xFF001E31),
-    background = Color(0xFFF4FBF8),
-    onBackground = Color(0xFF161D1B),
-    surface = Color(0xFFF4FBF8),
-    onSurface = Color(0xFF161D1B),
-)
-
-private val TealDark = darkColorScheme(
-    primary = Color(0xFF53DBC9),
-    onPrimary = Color(0xFF003731),
-    primaryContainer = Color(0xFF005048),
-    onPrimaryContainer = Color(0xFF74F8E5),
-    secondary = Color(0xFFB1CCC6),
-    onSecondary = Color(0xFF1C3531),
-    secondaryContainer = Color(0xFF334B47),
-    onSecondaryContainer = Color(0xFFCCE8E2),
-    tertiary = Color(0xFFADCAE6),
-    onTertiary = Color(0xFF153349),
-    tertiaryContainer = Color(0xFF2D4961),
-    onTertiaryContainer = Color(0xFFCCE5FF),
-    background = Color(0xFF0E1513),
-    onBackground = Color(0xFFDDE4E1),
-    surface = Color(0xFF0E1513),
-    onSurface = Color(0xFFDDE4E1),
-)
+/** Whether the resolved app theme is dark, which can differ from the system setting. */
+val LocalDarkTheme = staticCompositionLocalOf { false }
 
 // Pure black variant for OLED screens, applied on top of any dark scheme.
-private fun ColorScheme.toPureBlack() = copy(
+internal fun ColorScheme.toPureBlack() = copy(
     background = Color.Black,
     surface = Color.Black,
     surfaceDim = Color.Black,
@@ -306,12 +64,18 @@ fun colorSchemeFor(colorTheme: AppColorTheme, darkTheme: Boolean): ColorScheme {
     }
 }
 
+/** Swallows every haptic request: what the app provides while the user has haptics turned off. */
+private object NoHapticFeedback : HapticFeedback {
+    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) = Unit
+}
+
 @Composable
 fun MusicTheme(
     colorTheme: AppColorTheme = AppColorTheme.DAKILS_MUSIC,
     darkThemeOption: DarkThemeOption = DarkThemeOption.FOLLOW_SYSTEM,
     pureBlack: Boolean = false,
-    content: @Composable () -> Unit,
+    hapticsEnabled: Boolean = true,
+    content: @Composable () -> Unit
 ) {
     val darkTheme = when (darkThemeOption) {
         DarkThemeOption.FOLLOW_SYSTEM -> isSystemInDarkTheme()
@@ -335,10 +99,66 @@ fun MusicTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = ExpressiveShapes,
-        content = content,
+    // Every haptic in the app goes through LocalHapticFeedback, so swapping it here is the one
+    // switch that silences the app's own calls and the Material components' alike.
+    val haptics = if (hapticsEnabled) LocalHapticFeedback.current else NoHapticFeedback
+    CompositionLocalProvider(
+        LocalDarkTheme provides darkTheme,
+        LocalHapticFeedback provides haptics,
+    ) {
+        MaterialExpressiveTheme(
+            colorScheme = animateColorScheme(colorScheme),
+            motionScheme = MotionScheme.expressive(),
+            shapes = AppShapes,
+            typography = AppTypography,
+            content = content,
+        )
+    }
+}
+
+/** Cross-fades every role so switching theme, dark mode or pure black glides instead of snapping. */
+@Composable
+internal fun animateColorScheme(target: ColorScheme): ColorScheme {
+    val spec: AnimationSpec<Color> = tween(durationMillis = 450)
+
+    @Composable
+    fun Color.animated(): Color = animateColorAsState(this, spec, label = "scheme").value
+
+    return target.copy(
+        primary = target.primary.animated(),
+        onPrimary = target.onPrimary.animated(),
+        primaryContainer = target.primaryContainer.animated(),
+        onPrimaryContainer = target.onPrimaryContainer.animated(),
+        inversePrimary = target.inversePrimary.animated(),
+        secondary = target.secondary.animated(),
+        onSecondary = target.onSecondary.animated(),
+        secondaryContainer = target.secondaryContainer.animated(),
+        onSecondaryContainer = target.onSecondaryContainer.animated(),
+        tertiary = target.tertiary.animated(),
+        onTertiary = target.onTertiary.animated(),
+        tertiaryContainer = target.tertiaryContainer.animated(),
+        onTertiaryContainer = target.onTertiaryContainer.animated(),
+        background = target.background.animated(),
+        onBackground = target.onBackground.animated(),
+        surface = target.surface.animated(),
+        onSurface = target.onSurface.animated(),
+        surfaceVariant = target.surfaceVariant.animated(),
+        onSurfaceVariant = target.onSurfaceVariant.animated(),
+        surfaceTint = target.surfaceTint.animated(),
+        inverseSurface = target.inverseSurface.animated(),
+        inverseOnSurface = target.inverseOnSurface.animated(),
+        error = target.error.animated(),
+        onError = target.onError.animated(),
+        errorContainer = target.errorContainer.animated(),
+        onErrorContainer = target.onErrorContainer.animated(),
+        outline = target.outline.animated(),
+        outlineVariant = target.outlineVariant.animated(),
+        surfaceBright = target.surfaceBright.animated(),
+        surfaceDim = target.surfaceDim.animated(),
+        surfaceContainer = target.surfaceContainer.animated(),
+        surfaceContainerHigh = target.surfaceContainerHigh.animated(),
+        surfaceContainerHighest = target.surfaceContainerHighest.animated(),
+        surfaceContainerLow = target.surfaceContainerLow.animated(),
+        surfaceContainerLowest = target.surfaceContainerLowest.animated(),
     )
 }

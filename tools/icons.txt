@@ -1,0 +1,93 @@
+# Material Symbols Rounded used by Music, one name per line.
+# The only way an icon enters the app: add a name here and rerun
+#   python3 -I tools/fetch-icons.py
+# which regenerates res/drawable/sym_*.xml and ui/designsystem/icon/AppSymbols.kt.
+
+# Navigation and chrome
+add
+arrow_back
+arrow_downward
+arrow_drop_down
+arrow_upward
+check
+chevron_right
+close
+drag_indicator
+expand_more
+info
+keyboard_arrow_down
+more_horiz
+more_vert
+open_in_new
+refresh
+search
+select_all
+sort
+sync
+
+# Playback
+bedtime
+equalizer
+forward_10
+graphic_eq
+library_music
+lyrics
+music_note
+music_off
+pause
+play_arrow
+play_circle
+playlist_add
+playlist_play
+playlist_remove
+queue_music
+repeat
+repeat_one
+replay_10
+shuffle
+skip_next
+skip_previous
+speed
+timer
+volume_off
+volume_up
+
+# Library
+album
+audio_file
+call_split
+category
+cloud_download
+delete
+edit
+favorite
+folder_off
+image
+label
+person
+save
+share
+star
+
+# More, settings, statistics
+bar_chart
+brightness_auto
+calendar_today
+colorize
+contrast
+dark_mode
+dock_to_bottom
+download
+grid_view
+history
+insights
+inventory_2
+light_mode
+palette
+rounded_corner
+schedule
+settings
+trending_up
+tune
+upload
+vibration
