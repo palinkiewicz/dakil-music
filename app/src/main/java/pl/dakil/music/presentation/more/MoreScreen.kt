@@ -1,5 +1,7 @@
 package pl.dakil.music.presentation.more
 
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -116,7 +118,7 @@ fun MoreScreen(
 
 @Composable
 private fun MoreItem(
-    icon: ImageVector,
+    icon: AppSymbol,
     title: String,
     summary: String,
     onClick: () -> Unit,
@@ -125,7 +127,7 @@ private fun MoreItem(
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = { Text(summary) },
-        leadingContent = { Icon(icon, contentDescription = null) },
+        leadingContent = { AppIcon(icon, contentDescription = null) },
         trailingContent = trailing,
         modifier = Modifier.clickableRow(onClick),
     )

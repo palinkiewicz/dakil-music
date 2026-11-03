@@ -1,5 +1,7 @@
 package pl.dakil.music.presentation.components
 
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +44,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 data class ToggleRow(
     val item: NavItem,
     val label: String,
-    val icon: ImageVector,
+    val icon: AppSymbol,
     val enabled: Boolean,
     /** When false the switch is shown but greyed out (e.g. forced-on or capped). */
     val switchEnabled: Boolean,
@@ -125,8 +127,8 @@ fun ReorderableToggleList(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Icon(
-                                imageVector = row.icon,
+                            AppIcon(
+                                row.icon,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

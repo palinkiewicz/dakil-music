@@ -33,8 +33,6 @@
 
     <!-- Now Playing -->
     <string name="now_playing_title">Now Playing</string>
-    <string name="now_playing_empty">Nothing is playing</string>
-    <string name="now_playing_empty_hint">Pick a song from your library to start listening.</string>
     <string name="now_playing_queue">Queue</string>
     <string name="sleep_timer">Off</string>
     <string name="sleep_timer_title">Sleep</string>
@@ -46,7 +44,6 @@
     <string name="sleep_end_of_track_short">Track</string>
     <string name="sleep_end_of_queue_short">Queue</string>
     <string name="speed_title">Speed</string>
-    <string name="speed_custom">Custom speed…</string>
     <string name="eq_open">EQ</string>
     <string name="equalizer_title">Equalizer</string>
     <string name="eq_preset_custom">Custom</string>
@@ -62,8 +59,6 @@
     <string name="eq_bass_boost">Bass boost</string>
     <string name="eq_reset_flat">Reset</string>
     <string name="eq_not_supported">Audio effects aren\'t supported on this device.</string>
-    <string name="action_apply">Apply</string>
-    <string name="action_start">Start</string>
     <string name="action_clear_queue">Clear</string>
     <string name="action_remove_from_queue">Remove from queue</string>
     <string name="cd_reorder">Reorder</string>
@@ -454,4 +449,10 @@
     <string name="lyrics_field_track">Track</string>
     <string name="lyrics_no_matches">No results</string>
     <string name="lyrics_resync">Resync</string>
+
+    <!-- Player (mini + full) -->
+    <string name="player_collapse">Collapse player</string>
+    <string name="player_queue_position">%1$d of %2$d</string>
+    <string name="player_go_to_album">Go to album</string>
+    <string name="player_go_to_artist">Go to artist</string>
 </resources>
