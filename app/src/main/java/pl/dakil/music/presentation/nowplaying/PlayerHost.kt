@@ -159,14 +159,20 @@ fun PlayerHost(
     }
 
     val expandedTarget by remember { derivedStateOf { sheet.targetValue == 1f } }
-    PredictiveBackHandler(enabled = expandedTarget && state.song != null) { events ->
-        try {
-            sheet.stopAnimation()
-            events.collect { event -> sheet.snapTo(1f - event.progress * 0.12f) }
-            scope.launch { sheet.collapse() }
-        } catch (e: CancellationException) {
-            scope.launch { sheet.expand() }
-            throw e
+    // Composed only while the player is open, so its callback is registered at that moment and
+    // outranks every handler the screen underneath registered earlier (the dispatcher asks the
+    // most recently added callback first). An always-present handler that is merely toggled on
+    // keeps its early slot, and back would close the album page behind the player first.
+    if (expandedTarget && state.song != null) {
+        PredictiveBackHandler { events ->
+            try {
+                sheet.stopAnimation()
+                events.collect { event -> sheet.snapTo(1f - event.progress * 0.12f) }
+                scope.launch { sheet.collapse() }
+            } catch (e: CancellationException) {
+                scope.launch { sheet.expand() }
+                throw e
+            }
         }
     }
 
