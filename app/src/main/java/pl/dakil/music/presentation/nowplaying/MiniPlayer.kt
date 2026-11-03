@@ -59,6 +59,7 @@ import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.coverArtModel
 import pl.dakil.music.ui.designsystem.MorphShape
 import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbol
 import pl.dakil.music.ui.designsystem.icon.AppSymbols
 import pl.dakil.music.ui.designsystem.rememberHaptics
 import pl.dakil.music.ui.theme.Spacing
@@ -90,6 +91,23 @@ fun MiniPlayer(
     var armed by remember { mutableFloatStateOf(0f) }
 
     Box(modifier.fillMaxSize()) {
+        // Behind the row, in the room it uncovers as it slides: what letting go will do.
+        SwipeHint(
+            symbol = AppSymbols.SkipPrevious,
+            visible = state.hasPrevious,
+            reach = { swipe.value / threshold },
+            armed = armed == 1f,
+            fromStart = true,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = Spacing.m),
+        )
+        SwipeHint(
+            symbol = AppSymbols.SkipNext,
+            visible = state.hasNext,
+            reach = { -swipe.value / threshold },
+            armed = armed == -1f,
+            fromStart = false,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = Spacing.m),
+        )
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -213,13 +231,59 @@ private fun MiniProgress(progress: Float, isPlaying: Boolean) {
             trackColor = MaterialTheme.colorScheme.secondaryContainer,
             amplitude = { if (isPlaying) 0.5f else 0f },
             wavelength = 18.dp,
-            waveSpeed = if (isPlaying) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
+            waveSpeed = if (isPlaying) WavyProgressIndicatorDefaults.LinearDeterminateWavelength * 0.45f else 0.dp,
             gapSize = 2.dp,
         )
         Box(
             Modifier
                 .size(4.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape),
+        )
+    }
+}
+
+/**
+ * A skip badge that grows in from the edge as the mini player is swiped toward it ([reach] is the
+ * swipe as a fraction of the skip threshold) and pops once letting go would skip.
+ */
+@Composable
+private fun SwipeHint(
+    symbol: AppSymbol,
+    visible: Boolean,
+    reach: () -> Float,
+    armed: Boolean,
+    fromStart: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (!visible) return
+    val pop by animateFloatAsState(
+        targetValue = if (armed) 1.15f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "hintPop",
+    )
+    Box(
+        modifier
+            .size(32.dp)
+            .graphicsLayer {
+                val p = reach().coerceIn(0f, 1f)
+                alpha = p
+                val scale = (0.5f + 0.5f * p) * pop
+                scaleX = scale
+                scaleY = scale
+                translationX = (1f - p) * 12.dp.toPx() * if (fromStart) -1f else 1f
+            }
+            .background(
+                if (armed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                CircleShape,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppIcon(
+            symbol,
+            contentDescription = null,
+            filled = true,
+            tint = if (armed) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.size(18.dp),
         )
     }
 }

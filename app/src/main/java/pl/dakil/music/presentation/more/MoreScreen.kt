@@ -1,12 +1,7 @@
 package pl.dakil.music.presentation.more
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -138,13 +133,10 @@ fun MoreScreen(
 
 @Composable
 private fun MoreHero() {
-    val spin = rememberInfiniteTransition(label = "badgeSpin")
-    val angle by spin.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(40_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "badgeAngle",
-    )
+    // The badge turns into place once as the screen comes in, then rests.
+    val turn = remember { Animatable(-120f) }
+    val turnSpec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+    LaunchedEffect(Unit) { turn.animateTo(0f, turnSpec) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -154,13 +146,13 @@ private fun MoreHero() {
         verticalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         ShapedIcon(
-            symbol = AppSymbols.LibraryMusic,
+            symbol = AppSymbols.MusicNote2,
             polygon = MaterialShapes.Cookie12Sided,
             size = 112.dp,
             iconSize = 48.dp,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            containerRotation = angle,
+            containerRotation = turn.value,
             modifier = Modifier
                 .padding(bottom = Spacing.s)
                 .entrance(0),

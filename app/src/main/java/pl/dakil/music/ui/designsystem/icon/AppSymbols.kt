@@ -32,6 +32,7 @@ object AppSymbols {
     val LibraryMusic = AppSymbol(R.drawable.sym_library_music, R.drawable.sym_library_music_fill)
     val Lyrics = AppSymbol(R.drawable.sym_lyrics, R.drawable.sym_lyrics_fill)
     val MusicNote = AppSymbol(R.drawable.sym_music_note, R.drawable.sym_music_note_fill)
+    val MusicNote2 = AppSymbol(R.drawable.sym_music_note_2, R.drawable.sym_music_note_2_fill)
     val MusicOff = AppSymbol(R.drawable.sym_music_off, R.drawable.sym_music_off_fill)
     val Pause = AppSymbol(R.drawable.sym_pause, R.drawable.sym_pause_fill)
     val PlayArrow = AppSymbol(R.drawable.sym_play_arrow, R.drawable.sym_play_arrow_fill)
