@@ -61,6 +61,9 @@ private val SLEEP_PRESETS_MIN = listOf(5, 15, 30, 45, 60, 90)
 private const val SLEEP_MIN_MINUTES = 1
 private const val SLEEP_MAX_MINUTES = 180
 
+/** Snaps a speed to 0.05× steps. */
+private fun snapSpeed(speed: Float): Float = (speed * 20f).roundToInt() / 20f
+
 /** Formats a speed as a compact multiplier label, e.g. "1×" or "1.5×". */
 internal fun formatSpeed(speed: Float): String {
     val text = if (speed == speed.toInt().toFloat()) {
@@ -115,7 +118,7 @@ fun SpeedSheet(
     val haptics = rememberHaptics()
     var value by remember { mutableFloatStateOf(speed.coerceIn(SPEED_MIN, SPEED_MAX)) }
     // Snap to 0.05 increments so the label stays clean.
-    val snapped = (value * 20f).roundToInt() / 20f
+    val snapped = snapSpeed(value)
 
     PlayerSheet(symbol = AppSymbols.Speed, title = stringResource(R.string.speed_title), onDismiss = onDismiss) {
         RollingNumber(
@@ -139,7 +142,10 @@ fun SpeedSheet(
                 if ((it * 20f).roundToInt() != (value * 20f).roundToInt()) haptics.frequentTick()
                 value = it
             },
-            onValueChangeFinished = { onSetSpeed(snapped) },
+            // Read the state now, not the composed `snapped`: a tap (or a quick fling) reports the
+            // new value and finishes in the same frame, before any recomposition, so the
+            // composed value would still be the old speed and the change would be undone.
+            onValueChangeFinished = { onSetSpeed(snapSpeed(value)) },
             valueRange = SPEED_MIN..SPEED_MAX,
         )
     }
