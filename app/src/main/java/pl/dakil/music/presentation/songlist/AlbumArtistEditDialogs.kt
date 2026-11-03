@@ -72,6 +72,7 @@ fun EditAlbumDialog(
             onValueChange = { title = it },
             label = { Text(stringResource(R.string.album_edit_field_title)) },
             singleLine = true,
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -80,6 +81,7 @@ fun EditAlbumDialog(
             label = { Text(stringResource(R.string.album_edit_field_year)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
         )
         Row(

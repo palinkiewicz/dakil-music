@@ -83,6 +83,7 @@ fun DecomposeTitleDialog(
             onValueChange = { mainSeparator = it },
             label = { Text(stringResource(R.string.decompose_main_separator)) },
             singleLine = true,
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
         )
         SwitchRow(
@@ -100,6 +101,7 @@ fun DecomposeTitleDialog(
             onValueChange = { removeAfter = it },
             label = { Text(stringResource(R.string.decompose_remove_after)) },
             singleLine = true,
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
         )
 
