@@ -94,10 +94,11 @@ object NavDefaults {
     }
 
     private val DEFAULT_ENABLED = mapOf(
-        NavComponent.BOTTOM_BAR to listOf(NavItem.NOW_PLAYING, NavItem.LIBRARY, NavItem.MORE),
+        // Now Playing has no default entry: the player is reached through the mini player bar,
+        // which is on by default (and can only be switched off once Now Playing has an entry).
+        NavComponent.BOTTOM_BAR to listOf(NavItem.LIBRARY, NavItem.STATISTICS, NavItem.MORE),
         NavComponent.MORE_SCREEN to listOf(
             NavItem.LISTENING_HISTORY,
-            NavItem.STATISTICS,
             NavItem.REFRESH_LIBRARY,
             NavItem.SETTINGS,
             NavItem.BACKUP,
@@ -146,11 +147,13 @@ object NavRules {
     /**
      * Items in [component] that must stay ON (rendered as a checked, disabled switch):
      * the last reachable Settings / Now Playing, plus More when it is the only path to Settings.
+     * While [miniPlayerShown], the mini player already reaches Now Playing, so it is not locked.
      */
-    fun lockedItems(config: NavConfig, component: NavComponent): Set<NavItem> {
+    fun lockedItems(config: NavConfig, component: NavComponent, miniPlayerShown: Boolean = false): Set<NavItem> {
         val locked = mutableSetOf<NavItem>()
 
         for (item in NavDefaults.LOCKED_ITEMS) {
+            if (item == NavItem.NOW_PLAYING && miniPlayerShown) continue
             val componentsEnabling = NavComponent.entries.filter { item in config.enabled(it) }
             if (componentsEnabling.size == 1 && componentsEnabling.first() == component) {
                 locked += item

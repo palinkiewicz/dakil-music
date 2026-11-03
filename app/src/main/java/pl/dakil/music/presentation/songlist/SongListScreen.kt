@@ -62,6 +62,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -87,6 +88,7 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.ArtistAvatar
 import pl.dakil.music.presentation.components.FileInfoDialog
+import pl.dakil.music.presentation.components.NoAlbumArt
 import pl.dakil.music.presentation.components.SelectionChrome
 import pl.dakil.music.presentation.components.SongLeading
 import pl.dakil.music.presentation.components.SongPickerDialog
@@ -255,6 +257,7 @@ fun SongListScreen(
                                 visual = when {
                                     isPerformer -> HeroVisual.Artist((source as SongListSource.PerformerSource).name)
                                     isFavorites -> HeroVisual.Symbol(AppSymbols.Favorite, MaterialShapes.Heart)
+                                    isNoAlbumSource -> HeroVisual.NoAlbum((source as SongListSource.AlbumSource).albumId)
                                     else -> HeroVisual.Art(
                                         model = heroArt,
                                         sharedKey = (source as? SongListSource.AlbumSource)?.albumId?.let(::albumArtKey),
@@ -564,6 +567,7 @@ fun SongListScreen(
 private sealed interface HeroVisual {
     data class Art(val model: Any?, val sharedKey: String?) : HeroVisual
     data class Artist(val name: String) : HeroVisual
+    data class NoAlbum(val albumId: Long) : HeroVisual
     data class Symbol(val symbol: AppSymbol, val polygon: androidx.graphics.shapes.RoundedPolygon) : HeroVisual
 }
 
@@ -613,6 +617,14 @@ private fun SongListHero(
                         .then(if (visual.sharedKey != null) Modifier.sharedElement(visual.sharedKey, shape) else Modifier),
                 )
             }
+
+            is HeroVisual.NoAlbum -> NoAlbumArt(
+                shape = shape,
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .aspectRatio(1f)
+                    .sharedElement(albumArtKey(visual.albumId), shape),
+            )
 
             is HeroVisual.Artist -> ArtistAvatar(
                 name = visual.name,
@@ -817,7 +829,7 @@ private fun AuthoredAlbumsSection(
         HorizontalUncontainedCarousel(
             state = rememberCarouselState { albums.size },
             itemWidth = 148.dp,
-            itemSpacing = Spacing.m,
+            itemSpacing = Spacing.xs,
             contentPadding = PaddingValues(horizontal = Spacing.s),
             modifier = Modifier.fillMaxWidth(),
         ) { index ->
@@ -825,17 +837,19 @@ private fun AuthoredAlbumsSection(
             Column(
                 Modifier
                     .width(148.dp)
-                    .maskClip(MaterialTheme.shapes.large)
-                    .clickable { onAlbumClick(album.id) },
+                    .clip(MaterialTheme.shapes.large)
+                    .clickable { onAlbumClick(album.id) }
+                    .padding(Spacing.s),
             ) {
-                AlbumArt(
-                    model = album.coverArtModel(coverArtVersion),
-                    shape = shape,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .sharedElement(albumArtKey(album.id), shape),
-                )
+                val coverModifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .sharedElement(albumArtKey(album.id), shape)
+                if (album.isNoAlbum) {
+                    NoAlbumArt(shape = shape, modifier = coverModifier)
+                } else {
+                    AlbumArt(model = album.coverArtModel(coverArtVersion), shape = shape, modifier = coverModifier)
+                }
                 Text(
                     text = album.title.ifBlank { stringResource(R.string.unknown_album) },
                     style = MaterialTheme.typography.titleSmallEmphasized,

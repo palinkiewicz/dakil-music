@@ -39,4 +39,5 @@ class UpdateSettingsUseCase(private val repository: SettingsRepository) {
     suspend fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = repository.setFetchMissingLyricsFromLrclib(enabled)
     suspend fun setHapticsEnabled(enabled: Boolean) = repository.setHapticsEnabled(enabled)
     suspend fun setPlayerArtColors(enabled: Boolean) = repository.setPlayerArtColors(enabled)
+    suspend fun setShowMiniPlayer(enabled: Boolean) = repository.setShowMiniPlayer(enabled)
 }

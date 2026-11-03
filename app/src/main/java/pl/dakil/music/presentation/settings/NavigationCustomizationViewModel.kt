@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pl.dakil.music.di.AppContainer
@@ -18,10 +19,15 @@ class NavigationCustomizationViewModel(private val container: AppContainer) : Vi
     val config: StateFlow<NavConfig> = container.observeNavigationConfig()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NavConfig.DEFAULT)
 
+    /** Whether the mini player bar is on, which keeps Now Playing reachable without an entry. */
+    val miniPlayerShown: StateFlow<Boolean> = container.observeSettings()
+        .map { it.showMiniPlayer }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun setEnabled(component: NavComponent, item: NavItem, enabled: Boolean) {
         val current = config.value
         // Never toggle a locked-on item off, and never exceed the bottom-bar cap.
-        if (!enabled && item in NavRules.lockedItems(current, component)) return
+        if (!enabled && item in NavRules.lockedItems(current, component, miniPlayerShown.value)) return
         if (enabled && component == NavComponent.BOTTOM_BAR &&
             item !in current.enabled(component) &&
             current.enabled(component).size >= NavDefaults.MAX_BOTTOM_BAR

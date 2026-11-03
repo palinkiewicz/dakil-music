@@ -59,6 +59,8 @@ interface SettingsRepository {
     suspend fun setHapticsEnabled(enabled: Boolean)
 
     suspend fun setPlayerArtColors(enabled: Boolean)
+
+    suspend fun setShowMiniPlayer(enabled: Boolean)
 }
 
 data class AppSettings(
@@ -101,4 +103,6 @@ data class AppSettings(
     val hapticsEnabled: Boolean = true,
     /** Tint the player with colors taken from the current song's cover art. */
     val playerArtColors: Boolean = true,
+    /** Show the mini player above the navigation bar while something is loaded. */
+    val showMiniPlayer: Boolean = true,
 )

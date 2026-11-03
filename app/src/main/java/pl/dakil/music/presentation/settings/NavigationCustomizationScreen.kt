@@ -56,6 +56,7 @@ fun NavigationCustomizationScreen(
     viewModel: NavigationCustomizationViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val config by viewModel.config.collectAsStateWithLifecycle()
+    val miniPlayerShown by viewModel.miniPlayerShown.collectAsStateWithLifecycle()
     val tabs = NavTab.entries
     val pagerState = rememberPagerState { tabs.size }
     val scope = rememberCoroutineScope()
@@ -76,7 +77,7 @@ fun NavigationCustomizationScreen(
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 val component = tabs[page].component
                 ReorderableToggleList(
-                    rows = rowsFor(config, component),
+                    rows = rowsFor(config, component, miniPlayerShown),
                     onToggle = { item, enabled -> viewModel.setEnabled(component, item, enabled) },
                     onMove = { from, to -> viewModel.move(component, from, to) },
                 )
@@ -86,8 +87,8 @@ fun NavigationCustomizationScreen(
 }
 
 @Composable
-private fun rowsFor(config: NavConfig, component: NavComponent): List<ToggleRow> {
-    val locked = NavRules.lockedItems(config, component)
+private fun rowsFor(config: NavConfig, component: NavComponent, miniPlayerShown: Boolean): List<ToggleRow> {
+    val locked = NavRules.lockedItems(config, component, miniPlayerShown)
     val atCapacity = config.enabled(NavComponent.BOTTOM_BAR).size >= NavDefaults.MAX_BOTTOM_BAR
     return config.entries(component).map { entry ->
         val ui = navItemUi(entry.item)

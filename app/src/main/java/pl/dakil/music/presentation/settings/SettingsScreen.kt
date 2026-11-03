@@ -44,6 +44,8 @@ import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AlbumCoverArtMode
 import pl.dakil.music.domain.model.AppColorTheme
 import pl.dakil.music.domain.model.DarkThemeOption
+import pl.dakil.music.domain.model.NavComponent
+import pl.dakil.music.domain.model.NavItem
 import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
@@ -77,10 +79,12 @@ fun SettingsScreen(
     onOpenPlayback: () -> Unit,
     onOpenStatistics: () -> Unit,
     onOpenNavigation: () -> Unit,
+    // Hidden (with a large title) when the screen is a bottom-bar tab: a tab has nothing to go back to.
+    showBack: Boolean = true,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    SettingsSubscreen(stringResource(R.string.settings_title), onBack) {
+    SettingsSubscreen(stringResource(R.string.settings_title), onBack, showBack = showBack) {
         SectionHeader(stringResource(R.string.settings_section_personalize))
         SegmentedGroup {
             NavigationRow(
@@ -267,11 +271,29 @@ fun LibrarySettingsScreen(
 fun PlaybackSettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    navViewModel: NavigationCustomizationViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val navConfig by navViewModel.config.collectAsStateWithLifecycle()
+    // Without the bar, the player is only reachable through a Now Playing entry, so the bar can
+    // only be switched off once one exists somewhere.
+    val nowPlayingHasEntry = NavComponent.entries.any { NavItem.NOW_PLAYING in navConfig.enabled(it) }
     SettingsSubscreen(stringResource(R.string.settings_playback), onBack) {
         SectionHeader(stringResource(R.string.settings_section_now_playing))
         SegmentedGroup {
+            SwitchRow(
+                title = stringResource(R.string.settings_show_mini_player),
+                summary = stringResource(
+                    if (settings.showMiniPlayer && !nowPlayingHasEntry) {
+                        R.string.settings_show_mini_player_locked
+                    } else {
+                        R.string.settings_show_mini_player_summary
+                    },
+                ),
+                checked = settings.showMiniPlayer,
+                onCheckedChange = viewModel::setShowMiniPlayer,
+                enabled = !settings.showMiniPlayer || nowPlayingHasEntry,
+            )
             SliderRow(
                 title = stringResource(R.string.settings_now_playing_corner_roundness),
                 summary = stringResource(R.string.settings_now_playing_corner_roundness_summary),
@@ -456,7 +478,8 @@ private fun CornerPreview(cornerDp: Int) {
     Box(
         Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(corner))
+            // The spring overshoots its target; at 0dp that would be a negative (illegal) radius.
+            .clip(RoundedCornerShape(corner.coerceAtLeast(0.dp)))
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -529,7 +552,7 @@ private fun ThemeColorSwatch(
                 .size(72.dp)
                 .pressScale(interactionSource, pressedScale = 0.9f)
                 .graphicsLayer { rotationZ = progress * 40f }
-                .clip(MorphShape(morph, progress)),
+                .clip(MorphShape(morph, progress.coerceIn(0f, 1f))),
             contentAlignment = Alignment.Center,
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {

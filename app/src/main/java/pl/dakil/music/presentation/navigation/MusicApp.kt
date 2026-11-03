@@ -170,6 +170,14 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
 
     fun NavBackStackEntry.isTabRoot() = destination.route in tabRoutes
 
+    // A bottom-bar tab lands directly on top of the start destination, so it has no parent to go
+    // back to; the same screen reached from More (or another screen) sits above it.
+    @Composable
+    fun rememberShowBack(entry: NavBackStackEntry): Boolean = remember(entry) {
+        navController.previousBackStackEntry?.destination?.route !=
+            navController.graph.findStartDestination().route
+    }
+
     // The dock under the player: the navigation bar, plus room for the mini player while a
     // song is loaded. It sinks out of the way as the player opens.
     var navBarHeight by remember { mutableStateOf(0.dp) }
@@ -191,7 +199,7 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                         .background(MaterialTheme.colorScheme.surfaceContainer),
                 ) {
                     AnimatedVisibility(
-                        visible = hasSong,
+                        visible = hasSong && nowPlaying.miniPlayerEnabled,
                         enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
                         exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
                     ) {
@@ -301,8 +309,9 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                                 onReselect = remember { reselectFlow.filter { it == Routes.MORE }.map {} },
                             )
                         }
-                        composable(Routes.SETTINGS) {
+                        composable(Routes.SETTINGS) { entry ->
                             SettingsScreen(
+                                showBack = rememberShowBack(entry),
                                 onBack = { navController.popBackStack() },
                                 onOpenAppearance = { navController.navigate(Routes.SETTINGS_APPEARANCE) },
                                 onOpenLibrary = { navController.navigate(Routes.SETTINGS_LIBRARY) },
@@ -332,14 +341,14 @@ fun MusicApp(navigateToNowPlaying: Flow<Unit> = emptyFlow()) {
                         composable(Routes.NAVIGATION) {
                             NavigationCustomizationScreen(onBack = { navController.popBackStack() })
                         }
-                        composable(Routes.LISTENING_HISTORY) {
-                            ListeningHistoryScreen(onBack = { navController.popBackStack() })
+                        composable(Routes.LISTENING_HISTORY) { entry ->
+                            ListeningHistoryScreen(onBack = { navController.popBackStack() }, showBack = rememberShowBack(entry))
                         }
-                        composable(Routes.STATISTICS) {
-                            StatisticsScreen(onBack = { navController.popBackStack() })
+                        composable(Routes.STATISTICS) { entry ->
+                            StatisticsScreen(onBack = { navController.popBackStack() }, showBack = rememberShowBack(entry))
                         }
-                        composable(Routes.BACKUP) {
-                            BackupScreen(onBack = { navController.popBackStack() })
+                        composable(Routes.BACKUP) { entry ->
+                            BackupScreen(onBack = { navController.popBackStack() }, showBack = rememberShowBack(entry))
                         }
                         composable(
                             route = Routes.SONG_LIST_PATTERN,

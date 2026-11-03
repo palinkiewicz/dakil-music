@@ -1,5 +1,7 @@
 package pl.dakil.music.presentation.nowplaying
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -17,6 +19,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -132,30 +135,38 @@ fun MiniPlayer(
                     .size(MiniArtSize)
                     .graphicsLayer { alpha = if (artVisible) 1f else 0f },
             )
-            AnimatedContent(
-                targetState = song,
-                transitionSpec = {
-                    (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 3 } + fadeOut())
-                },
-                contentKey = { it.id },
-                modifier = Modifier.weight(1f),
-                label = "miniSong",
-            ) { current ->
-                Column {
-                    Text(
-                        current.title,
-                        style = MaterialTheme.typography.titleSmallEmphasized,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2_000),
-                    )
-                    Text(
-                        current.artistsLabel.ifBlank { stringResource(R.string.unknown_artist) },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            // Title, artist and the progress line move as one block, centred in the bar, so the
+            // text sits up off the line with even room above and below.
+            Column(Modifier.weight(1f)) {
+                AnimatedContent(
+                    targetState = song,
+                    transitionSpec = {
+                        (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 3 } + fadeOut())
+                    },
+                    contentKey = { it.id },
+                    label = "miniSong",
+                ) { current ->
+                    Column {
+                        Text(
+                            current.title,
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2_000),
+                        )
+                        Text(
+                            current.artistsLabel.ifBlank { stringResource(R.string.unknown_artist) },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
+                Spacer(Modifier.height(Spacing.xs))
+                MiniProgress(
+                    progress = if (state.durationMs > 0L) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f,
+                    isPlaying = state.isPlaying,
+                )
             }
             FilledIconToggleButton(
                 checked = state.isPlaying,
@@ -183,24 +194,32 @@ fun MiniPlayer(
                 AppIcon(AppSymbols.SkipNext, contentDescription = stringResource(R.string.cd_next), filled = true)
             }
         }
+    }
+}
 
-        val progress = if (state.durationMs > 0L) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
-        val animatedProgress by animateFloatAsState(progress, tween(500, easing = LinearEasing), label = "miniProgress")
+/**
+ * The mini player's progress: a thin wavy line that ripples while playing, with a dot marking the
+ * start and the usual stop dot at the end, like the app's other progress bars.
+ */
+@Composable
+private fun MiniProgress(progress: Float, isPlaying: Boolean) {
+    val animatedProgress by animateFloatAsState(progress, tween(500, easing = LinearEasing), label = "miniProgress")
+    Box(Modifier.fillMaxWidth().height(8.dp), contentAlignment = Alignment.CenterStart) {
         LinearWavyProgressIndicator(
             progress = { animatedProgress },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                // Under the text column, clear of the art.
-                .padding(start = Spacing.s + MiniArtSize + Spacing.m, end = Spacing.l, bottom = Spacing.xs)
-                .height(6.dp),
+            modifier = Modifier.fillMaxWidth().height(8.dp),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            amplitude = { if (state.isPlaying) 0.5f else 0f },
+            // The card itself is surfaceContainerHighest; the track needs a tone of its own.
+            trackColor = MaterialTheme.colorScheme.secondaryContainer,
+            amplitude = { if (isPlaying) 0.5f else 0f },
             wavelength = 18.dp,
-            waveSpeed = if (state.isPlaying) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
+            waveSpeed = if (isPlaying) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
             gapSize = 2.dp,
-            stopSize = 0.dp,
+        )
+        Box(
+            Modifier
+                .size(4.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
         )
     }
 }
@@ -226,7 +245,7 @@ private fun MiniArt(model: Any?, playing: Boolean, modifier: Modifier = Modifier
     Box(
         modifier
             .graphicsLayer { rotationZ = if (playing) angle * bloom else 0f }
-            .clip(MorphShape(morph, bloom)),
+            .clip(MorphShape(morph, bloom.coerceIn(0f, 1f))),
     ) {
         AlbumArt(
             model = model,

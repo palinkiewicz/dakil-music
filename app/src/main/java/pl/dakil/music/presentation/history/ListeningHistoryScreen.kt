@@ -94,6 +94,8 @@ import java.time.format.DateTimeFormatter
 fun ListeningHistoryScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // Hidden (with a large title) when the screen is a bottom-bar tab: a tab has nothing to go back to.
+    showBack: Boolean = true,
     viewModel: ListeningHistoryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,7 +142,8 @@ fun ListeningHistoryScreen(
     Box(modifier.fillMaxSize()) {
         CollapsingScaffold(
             title = stringResource(R.string.more_listening_history),
-            navigationIcon = { BackButton(onBack) },
+            large = !showBack,
+            navigationIcon = { if (showBack) BackButton(onBack) },
             actions = {
                 HistoryMenu(
                     onExport = { exportLauncher.launch("listening-history.csv") },

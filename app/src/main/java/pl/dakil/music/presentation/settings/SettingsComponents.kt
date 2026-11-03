@@ -53,11 +53,13 @@ import pl.dakil.music.ui.theme.tabular
 fun SettingsSubscreen(
     title: String,
     onNavigateBack: () -> Unit,
+    showBack: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     CollapsingScaffold(
         title = title,
-        navigationIcon = { BackButton(onNavigateBack) },
+        large = !showBack,
+        navigationIcon = { if (showBack) BackButton(onNavigateBack) },
     ) { padding ->
         PageColumn(padding, spacing = Spacing.xs, content = content)
     }

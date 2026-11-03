@@ -107,6 +107,8 @@ private const val TOP_ROWS = 5
 fun StatisticsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // Hidden (with a large title) when the screen is a bottom-bar tab: a tab has nothing to go back to.
+    showBack: Boolean = true,
     viewModel: StatisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -117,7 +119,8 @@ fun StatisticsScreen(
 
     CollapsingScaffold(
         title = stringResource(R.string.more_statistics),
-        navigationIcon = { BackButton(onBack) },
+        large = !showBack,
+        navigationIcon = { if (showBack) BackButton(onBack) },
         modifier = modifier,
     ) { padding ->
         when {

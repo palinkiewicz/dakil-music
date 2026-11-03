@@ -479,4 +479,7 @@
     <string name="stats_tile_songs">Utwory</string>
     <string name="stats_tile_artists">Wykonawcy</string>
     <string name="stats_tile_plays">Odtworzenia</string>
+    <string name="settings_show_mini_player">Pasek „Teraz odtwarzane”</string>
+    <string name="settings_show_mini_player_summary">Mini odtwarzacz nad paskiem nawigacji; dotknij go lub przesuń w górę, aby otworzyć odtwarzacz</string>
+    <string name="settings_show_mini_player_locked">Aby go wyłączyć, najpierw dodaj „Teraz odtwarzane” do dolnego paska lub ekranu Więcej w Nawigacji</string>
 </resources>

@@ -484,4 +484,7 @@
     <string name="stats_tile_songs">Songs</string>
     <string name="stats_tile_artists">Artists</string>
     <string name="stats_tile_plays">Plays</string>
+    <string name="settings_show_mini_player">Now playing bar</string>
+    <string name="settings_show_mini_player_summary">A mini player above the navigation bar; tap or swipe it up to open the player</string>
+    <string name="settings_show_mini_player_locked">To turn it off, first add Now Playing to the bottom bar or the More screen in Navigation</string>
 </resources>

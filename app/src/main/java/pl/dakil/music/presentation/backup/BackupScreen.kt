@@ -63,6 +63,8 @@ import pl.dakil.music.ui.theme.Spacing
 fun BackupScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // Hidden (with a large title) when the screen is a bottom-bar tab: a tab has nothing to go back to.
+    showBack: Boolean = true,
     viewModel: BackupViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val busy by viewModel.busy.collectAsStateWithLifecycle()
@@ -101,7 +103,8 @@ fun BackupScreen(
 
     CollapsingScaffold(
         title = stringResource(R.string.backup_title),
-        navigationIcon = { BackButton(onBack) },
+        large = !showBack,
+        navigationIcon = { if (showBack) BackButton(onBack) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { padding ->

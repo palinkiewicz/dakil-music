@@ -179,11 +179,12 @@ private fun LyricsBody(
     // User scrolling disengages auto-follow; the sync button re-engages it.
     LaunchedEffect(dragged) { if (dragged) autoScroll = false }
 
-    // Keep the active synced line a third of the way down while following.
+    // Keep the active synced line in the upper part of the pane while following. Scrolling to an
+    // item rests it right below the top content padding, so that padding alone sets where it sits
+    // (an extra negative offset pushed it down onto the song title).
     LaunchedEffect(state.activeLineIndex, autoScroll, state.synced) {
         if (state.synced && autoScroll && state.activeLineIndex >= 0) {
-            val viewportH = listState.layoutInfo.viewportSize.height
-            listState.animateScrollToItem(state.activeLineIndex, -viewportH / 3)
+            listState.animateScrollToItem(state.activeLineIndex)
         }
     }
 
@@ -191,7 +192,13 @@ private fun LyricsBody(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = maxHeight / 3),
+            contentPadding = PaddingValues(
+                start = Spacing.xl,
+                end = Spacing.xl,
+                top = maxHeight * ACTIVE_LINE_FRACTION,
+                // Room for the last line to reach the resting position too.
+                bottom = maxHeight * (1f - ACTIVE_LINE_FRACTION),
+            ),
             verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             itemsIndexed(state.lines) { index, line ->
@@ -230,8 +237,7 @@ private fun LyricsBody(
                     autoScroll = true
                     if (state.activeLineIndex >= 0) {
                         scope.launch {
-                            val viewportH = listState.layoutInfo.viewportSize.height
-                            listState.animateScrollToItem(state.activeLineIndex, -viewportH / 3)
+                            listState.animateScrollToItem(state.activeLineIndex)
                         }
                     }
                 },
@@ -511,6 +517,9 @@ private fun formatOffset(offsetMs: Long): String {
     }
     return "$sign$seconds s"
 }
+
+/** Where the active synced line rests, as a fraction of the pane's height from the top. */
+private const val ACTIVE_LINE_FRACTION = 0.28f
 
 private const val STEP_MS = 100L
 private const val RANGE_MS = 10_000L

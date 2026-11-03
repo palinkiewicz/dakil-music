@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.coverArtModel
@@ -150,9 +151,11 @@ fun PlayerHost(
     val haptics = rememberHaptics()
     sheet.spec = MaterialTheme.motionScheme.defaultSpatialSpec()
 
-    // Nothing to play: fold the sheet away.
+    // Nothing to play: fold the sheet away — once the queue has really emptied, not during a
+    // momentary gap between tracks, which would cancel an opening animation.
     LaunchedEffect(state.song == null) {
         if (state.song == null) {
+            delay(500)
             sheet.stopAnimation()
             sheet.snapTo(0f)
         }
@@ -245,6 +248,9 @@ fun PlayerHost(
                             shape = RoundedCornerShape(lerp(miniCornerPx, 0f, p))
                             clip = true
                             shadowElevation = lerp(6.dp.toPx(), 0f, p)
+                            // Without the mini player the sheet only exists while it's opening,
+                            // growing out of the navigation bar from nothing.
+                            if (!state.miniPlayerEnabled) alpha = (p / 0.12f).coerceIn(0f, 1f)
                         }
                         .drawBehind { drawRect(lerp(miniColor, fullColor, sheet.fraction)) }
                         .onGloballyPositioned { sheetCoords = it },
@@ -274,7 +280,7 @@ fun PlayerHost(
                             )
                         }
                     }
-                    if (showMini) {
+                    if (showMini && state.miniPlayerEnabled) {
                         Box(
                             Modifier
                                 .fillMaxWidth()

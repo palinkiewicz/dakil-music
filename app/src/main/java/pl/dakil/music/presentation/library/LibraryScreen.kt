@@ -108,6 +108,7 @@ import pl.dakil.music.presentation.AppViewModelProvider
 import pl.dakil.music.presentation.components.AlbumArt
 import pl.dakil.music.presentation.components.ArtistAvatar
 import pl.dakil.music.presentation.components.FileInfoDialog
+import pl.dakil.music.presentation.components.NoAlbumArt
 import pl.dakil.music.presentation.components.SelectionChrome
 import pl.dakil.music.presentation.components.SongLeading
 import pl.dakil.music.presentation.components.SongRow
@@ -817,11 +818,15 @@ private fun SearchResultsList(
                     shape = segmentedItemShape(index, shown.size),
                     onClick = { onAlbumClick(album.id) },
                     leading = {
-                        AlbumArt(
-                            model = album.coverArtModel(coverArtVersion),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.size(48.dp),
-                        )
+                        if (album.isNoAlbum) {
+                            NoAlbumArt(shape = MaterialTheme.shapes.medium, modifier = Modifier.size(48.dp))
+                        } else {
+                            AlbumArt(
+                                model = album.coverArtModel(coverArtVersion),
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.size(48.dp),
+                            )
+                        }
                     },
                     modifier = Modifier.animateItem(),
                 )
@@ -988,13 +993,14 @@ private fun AlbumsGrid(
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Fixed(columns),
-        contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, bottom = 120.dp),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        verticalArrangement = Arrangement.spacedBy(Spacing.l),
+        // Cards carry an 8dp inset of their own, so the gutters and gaps are trimmed to match.
+        contentPadding = PaddingValues(start = Spacing.s, end = Spacing.s, bottom = 120.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         modifier = Modifier.fillMaxSize(),
     ) {
         item(key = "sort", span = { GridItemSpan(maxLineSpan) }) {
-            SortBar(AlbumSortOption.entries, sort, onSortSelect)
+            Box(Modifier.padding(horizontal = Spacing.s)) { SortBar(AlbumSortOption.entries, sort, onSortSelect) }
         }
         itemsIndexed(albums, key = { _, album -> album.id }) { index, album ->
             AlbumCard(
@@ -1018,21 +1024,25 @@ private fun AlbumCard(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val artShape = RoundedCornerShape(cornerDp.dp)
+    // The rounded clip is only for the press ripple; the inner inset keeps both the cover's own
+    // corners (exactly as square as the setting says) and the text clear of it.
     Column(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(interaction)
             .clip(MaterialTheme.shapes.large)
-            .clickable(interactionSource = interaction, indication = ripple()) { onClick(album.id) },
+            .clickable(interactionSource = interaction, indication = ripple()) { onClick(album.id) }
+            .padding(Spacing.s),
     ) {
-        AlbumArt(
-            model = album.coverArtModel(coverArtVersion),
-            shape = artShape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .sharedElement(albumArtKey(album.id), artShape),
-        )
+        val coverModifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .sharedElement(albumArtKey(album.id), artShape)
+        if (album.isNoAlbum) {
+            NoAlbumArt(shape = artShape, modifier = coverModifier)
+        } else {
+            AlbumArt(model = album.coverArtModel(coverArtVersion), shape = artShape, modifier = coverModifier)
+        }
         Text(
             text = if (album.isNoAlbum) {
                 stringResource(R.string.no_album)

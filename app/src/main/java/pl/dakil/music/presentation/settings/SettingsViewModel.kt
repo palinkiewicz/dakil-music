@@ -111,6 +111,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.updateSettings.setPlayerArtColors(enabled)
     }
 
+    fun setShowMiniPlayer(enabled: Boolean) = viewModelScope.launch {
+        container.updateSettings.setShowMiniPlayer(enabled)
+    }
+
     fun setFetchMissingLyricsFromLrclib(enabled: Boolean) = viewModelScope.launch {
         container.updateSettings.setFetchMissingLyricsFromLrclib(enabled)
     }
