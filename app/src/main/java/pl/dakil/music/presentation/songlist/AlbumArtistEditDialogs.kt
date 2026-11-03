@@ -1,22 +1,21 @@
 package pl.dakil.music.presentation.songlist
 
+import pl.dakil.music.ui.designsystem.AppMenu
+import pl.dakil.music.ui.designsystem.AppMenuChoiceItem
+import pl.dakil.music.ui.designsystem.AppMenuGroup
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.FormSheet
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,71 +51,68 @@ fun EditAlbumDialog(
     }
     var author by remember { mutableStateOf(dialog.rule?.authorMode ?: dialog.globalAuthorMode) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.album_edit_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.album_edit_field_title)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+    FormSheet(
+        title = stringResource(R.string.album_edit_title),
+        symbol = AppSymbols.Album,
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.action_cancel),
+        confirmLabel = stringResource(R.string.action_save),
+        onConfirm = {
+            onSave(
+                title,
+                year,
+                useCustom,
+                if (sharedCover) AlbumCoverArtMode.SHARED else AlbumCoverArtMode.INDIVIDUAL,
+                author,
+            )
+        },
+    ) {
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text(stringResource(R.string.album_edit_field_title)) },
+            singleLine = true,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = year,
+            onValueChange = { new -> year = new.filter { it.isDigit() }.take(4) },
+            label = { Text(stringResource(R.string.album_edit_field_year)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.album_edit_use_custom), modifier = Modifier.weight(1f))
+            Switch(checked = useCustom, onCheckedChange = { useCustom = it })
+        }
+        Column(modifier = Modifier.alpha(if (useCustom) 1f else 0.38f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(R.string.settings_album_shared_cover_art),
+                    modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
-                    value = year,
-                    onValueChange = { new -> year = new.filter { it.isDigit() }.take(4) },
-                    label = { Text(stringResource(R.string.album_edit_field_year)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
+                Switch(
+                    checked = sharedCover,
+                    onCheckedChange = { sharedCover = it },
+                    enabled = useCustom,
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.album_edit_use_custom), modifier = Modifier.weight(1f))
-                    Switch(checked = useCustom, onCheckedChange = { useCustom = it })
-                }
-                Column(modifier = Modifier.alpha(if (useCustom) 1f else 0.38f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            stringResource(R.string.settings_album_shared_cover_art),
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(
-                            checked = sharedCover,
-                            onCheckedChange = { sharedCover = it },
-                            enabled = useCustom,
-                        )
-                    }
-                    AuthorModeSelector(
-                        selected = author,
-                        enabled = useCustom,
-                        onSelect = { author = it },
-                    )
-                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(
-                    title,
-                    year,
-                    useCustom,
-                    if (sharedCover) AlbumCoverArtMode.SHARED else AlbumCoverArtMode.INDIVIDUAL,
-                    author,
-                )
-            }) { Text(stringResource(R.string.action_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        },
-    )
+            AuthorModeSelector(
+                selected = author,
+                enabled = useCustom,
+                onSelect = { author = it },
+            )
+        }
+    }
 }
 
 @Composable
@@ -143,17 +139,20 @@ private fun AuthorModeSelector(
                     text = stringResource(albumAuthorModeNameRes(selected)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
+                AppIcon(AppSymbols.ArrowDropDown, contentDescription = null)
             }
-            DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
-                AlbumAuthorMode.entries.forEach { mode ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(albumAuthorModeNameRes(mode))) },
-                        onClick = {
-                            onSelect(mode)
-                            expanded = false
-                        },
-                    )
+            AppMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
+                AppMenuGroup {
+                    AlbumAuthorMode.entries.forEach { mode ->
+                        AppMenuChoiceItem(
+                            text = stringResource(albumAuthorModeNameRes(mode)),
+                            selected = mode == selected,
+                            onClick = {
+                                onSelect(mode)
+                                expanded = false
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -168,25 +167,22 @@ fun EditArtistDialog(
     onSave: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.artist_edit_title)) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.artist_edit_field_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(name) }, enabled = name.isNotBlank()) {
-                Text(stringResource(R.string.action_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        },
-    )
+    FormSheet(
+        title = stringResource(R.string.artist_edit_title),
+        symbol = AppSymbols.Person,
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.action_cancel),
+        confirmLabel = stringResource(R.string.action_save),
+        confirmEnabled = name.isNotBlank(),
+        onConfirm = { onSave(name) },
+    ) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text(stringResource(R.string.artist_edit_field_name)) },
+            singleLine = true,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }

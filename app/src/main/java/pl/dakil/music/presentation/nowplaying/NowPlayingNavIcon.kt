@@ -7,23 +7,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import pl.dakil.music.presentation.components.AlbumArt
+import pl.dakil.music.ui.designsystem.icon.AnimatedAppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
 
 /**
- * Bottom-bar icon for the Now Playing tab. With nothing loaded it is the plain
+ * Icon for the Now Playing navigation item. With nothing loaded it is the
  * play-circle glyph; while a track is loaded it becomes the cover-art thumbnail
- * encircled by a progress ring that animates toward the end of the song — giving an
+ * encircled by a wavy progress ring that ripples while music plays — giving an
  * at-a-glance sense of how much time is left.
  */
 @Composable
@@ -31,10 +32,12 @@ fun NowPlayingNavIcon(
     artModel: Any?,
     hasSong: Boolean,
     progress: Float,
+    isPlaying: Boolean,
+    selected: Boolean,
     modifier: Modifier = Modifier,
 ) {
     if (!hasSong) {
-        Icon(imageVector = Icons.Rounded.PlayCircle, contentDescription = null, modifier = modifier)
+        AnimatedAppIcon(AppSymbols.PlayCircle, contentDescription = null, filled = selected, modifier = modifier)
         return
     }
 
@@ -45,19 +48,24 @@ fun NowPlayingNavIcon(
         label = "navProgress",
     )
 
+    val stroke = with(LocalDensity.current) { Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round) }
+
     // Match the standard 24dp nav icon footprint so the label stays aligned with the others.
     Box(modifier = modifier.size(24.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
+        CircularWavyProgressIndicator(
             progress = { animatedProgress },
             modifier = Modifier.fillMaxSize(),
-            strokeWidth = 2.dp,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap = StrokeCap.Round,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            stroke = stroke,
+            trackStroke = stroke,
+            amplitude = { if (isPlaying) 1f else 0f },
+            wavelength = 6.dp,
+            gapSize = 1.dp,
         )
         AlbumArt(
             model = artModel,
             shape = CircleShape,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(15.dp),
         )
     }
 }

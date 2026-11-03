@@ -5,7 +5,6 @@ import pl.dakil.music.R
 import pl.dakil.music.domain.model.AlbumAuthorMode
 import pl.dakil.music.domain.model.AppColorTheme
 import pl.dakil.music.domain.model.DarkThemeOption
-import pl.dakil.music.domain.model.QueueRemoveMode
 import pl.dakil.music.domain.model.StatDefaultRange
 import pl.dakil.music.domain.model.StatMetric
 import pl.dakil.music.domain.model.StatRangeType
@@ -64,13 +63,6 @@ fun statRangeTypeNameRes(range: StatRangeType): Int = when (range) {
     StatRangeType.YEARLY -> R.string.stats_range_yearly
     StatRangeType.MONTHLY -> R.string.stats_range_monthly
     StatRangeType.WEEKLY -> R.string.stats_range_weekly
-}
-
-@StringRes
-fun queueRemoveModeNameRes(mode: QueueRemoveMode): Int = when (mode) {
-    QueueRemoveMode.MENU -> R.string.queue_remove_mode_menu
-    QueueRemoveMode.BUTTON -> R.string.queue_remove_mode_button
-    QueueRemoveMode.SWIPE -> R.string.queue_remove_mode_swipe
 }
 
 @StringRes

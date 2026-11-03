@@ -9,11 +9,14 @@ object Routes {
     const val LIBRARY = "library"
     const val MORE = "more"
     const val SETTINGS = "settings"
+    const val SETTINGS_APPEARANCE = "settings/appearance"
+    const val SETTINGS_LIBRARY = "settings/library"
+    const val SETTINGS_PLAYBACK = "settings/playback"
+    const val SETTINGS_STATISTICS = "settings/statistics"
     const val ALBUM_RULES = "album_rules"
     const val NAVIGATION = "navigation"
     const val LISTENING_HISTORY = "listening_history"
     const val STATISTICS = "statistics"
-    const val LYRICS = "lyrics"
     const val BACKUP = "backup"
 
     // Standalone library-category screens, reachable as bottom-bar / More shortcuts.

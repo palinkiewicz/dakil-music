@@ -6,7 +6,6 @@
     <string name="nav_more">Więcej</string>
 
     <!-- Dostosowanie nawigacji -->
-    <string name="settings_section_navigation">Nawigacja</string>
     <string name="settings_navigation">Dostosuj nawigację</string>
     <string name="settings_navigation_summary">Zmień kolejność oraz pokaż lub ukryj elementy dolnego paska, kart biblioteki i ekranu Więcej</string>
     <string name="nav_tab_bottom_bar">Dolny pasek</string>
@@ -30,8 +29,6 @@
     <string name="permission_denied_permanently">Odmówiono dostępu. Aby kontynuować, włącz dostęp do plików audio w ustawieniach systemowych.</string>
 
     <string name="now_playing_title">Teraz odtwarzane</string>
-    <string name="now_playing_empty">Nic nie jest odtwarzane</string>
-    <string name="now_playing_empty_hint">Wybierz utwór z biblioteki, aby zacząć słuchać.</string>
     <string name="now_playing_queue">Kolejka</string>
     <string name="sleep_timer">Wył.</string>
     <string name="sleep_timer_title">Wyłącznik</string>
@@ -43,7 +40,6 @@
     <string name="sleep_end_of_track_short">Utwór</string>
     <string name="sleep_end_of_queue_short">Kolejka</string>
     <string name="speed_title">Prędkość</string>
-    <string name="speed_custom">Własna prędkość…</string>
     <string name="eq_open">EQ</string>
     <string name="equalizer_title">Korektor</string>
     <string name="eq_preset_custom">Własny</string>
@@ -59,8 +55,6 @@
     <string name="eq_bass_boost">Wzmocnienie basów</string>
     <string name="eq_reset_flat">Resetuj</string>
     <string name="eq_not_supported">Efekty dźwiękowe nie są obsługiwane na tym urządzeniu.</string>
-    <string name="action_apply">Zastosuj</string>
-    <string name="action_start">Uruchom</string>
     <string name="action_clear_queue">Wyczyść</string>
     <string name="action_remove_from_queue">Usuń z kolejki</string>
     <string name="cd_reorder">Zmień kolejność</string>
@@ -88,7 +82,6 @@
     <string name="no_album">Brak albumu</string>
 
     <string name="action_play_all">Odtwórz wszystko</string>
-    <string name="action_shuffle_play">Odtwórz losowo</string>
     <string name="action_add_to_queue">Dodaj do kolejki</string>
     <string name="action_add_to_playlist">Dodaj do playlisty</string>
     <string name="action_more">Więcej opcji</string>
@@ -167,7 +160,6 @@
     <string name="decompose_preview">Podgląd</string>
     <string name="decompose_apply">Zastosuj</string>
 
-    <string name="more_title">Więcej</string>
     <string name="more_settings">Ustawienia</string>
     <string name="more_settings_summary">Konfiguracja aplikacji i opcje odtwarzania</string>
     <string name="more_backup">Kopia zapasowa</string>
@@ -188,7 +180,6 @@
 
     <!-- Kopia zapasowa -->
     <string name="backup_title">Kopia zapasowa</string>
-    <string name="backup_full_section">Pełna kopia zapasowa</string>
     <string name="backup_full_title">Wszystkie dane aplikacji</string>
     <string name="backup_full_summary">Pojedynczy plik .zip ze wszystkimi pozycjami poniżej</string>
     <string name="backup_individual_section">Poszczególne dane</string>
@@ -230,9 +221,6 @@
     <string name="settings_album_columns_summary">Liczba kolumn wyświetlanych w siatce albumów</string>
     <string name="settings_queue_remove_mode">Sposób usuwania z kolejki</string>
     <string name="settings_queue_remove_mode_summary">Jak usuwać utwór z kolejki odtwarzania</string>
-    <string name="queue_remove_mode_menu">Menu po przytrzymaniu</string>
-    <string name="queue_remove_mode_button">Przycisk usuwania</string>
-    <string name="queue_remove_mode_swipe">Przesuń, aby usunąć</string>
 
     <string name="about_title">O aplikacji Muzyka</string>
     <string name="about_version">Wersja %1$s</string>
@@ -294,7 +282,6 @@
 
     <!-- Ekran historii -->
     <string name="history_empty">Brak historii odsłuchów</string>
-    <string name="history_show_more">Pokaż więcej</string>
     <string name="history_export">Eksportuj do CSV</string>
     <string name="history_import">Importuj z CSV</string>
     <string name="history_import_result">Zaimportowano %1$d, pominięto %2$d</string>
@@ -312,7 +299,6 @@
 
     <!-- Ekran statystyk -->
     <string name="stats_total_time">Łączny czas słuchania</string>
-    <string name="stats_overview_counts">%1$d utworów %2$d artystów, %3$d odtworzeń</string>
     <string name="stats_top_tracks">Najczęstsze utwory</string>
     <string name="stats_top_artists">Najczęstsi artyści</string>
     <string name="stats_top_albums">Najczęstsze albumy</string>
@@ -445,4 +431,55 @@
     <string name="lyrics_field_track">Tytuł</string>
     <string name="lyrics_no_matches">Brak wyników</string>
     <string name="lyrics_resync">Synchronizuj</string>
+
+    <!-- Player (mini + full) -->
+    <string name="player_collapse">Zwiń odtwarzacz</string>
+    <string name="player_queue_position">%1$d z %2$d</string>
+    <string name="player_go_to_album">Przejdź do albumu</string>
+    <string name="player_go_to_artist">Przejdź do wykonawcy</string>
+    <plurals name="album_count">
+        <item quantity="one">%d album</item>
+        <item quantity="few">%d albumy</item>
+        <item quantity="many">%d albumów</item>
+        <item quantity="other">%d albumu</item>
+    </plurals>
+    <plurals name="artist_count">
+        <item quantity="one">%d wykonawca</item>
+        <item quantity="few">%d wykonawców</item>
+        <item quantity="many">%d wykonawców</item>
+        <item quantity="other">%d wykonawcy</item>
+    </plurals>
+    <string name="sort_by">Sortuj według</string>
+    <string name="action_play">Odtwórz</string>
+    <string name="action_shuffle">Losowo</string>
+    <!-- Settings (redesign) -->
+    <string name="settings_section_personalize">Personalizacja</string>
+    <string name="settings_section_music">Muzyka</string>
+    <string name="settings_section_data">Dane</string>
+    <string name="settings_section_feel">Wrażenia</string>
+    <string name="settings_section_sorting">Sortowanie</string>
+    <string name="settings_section_recording">Zapisywanie</string>
+    <string name="settings_appearance">Wygląd</string>
+    <string name="settings_appearance_summary">Kolory, tryb ciemny i wrażenia</string>
+    <string name="settings_library_summary">Siatka, okładki, autorzy albumów i reguły</string>
+    <string name="settings_playback">Odtwarzanie</string>
+    <string name="settings_playback_summary">Odtwarzacz, kolejka i teksty</string>
+    <string name="settings_statistics_summary">Historia słuchania i domyślne statystyki</string>
+    <string name="settings_off_badge">Wył.</string>
+    <string name="settings_haptics">Reakcje haptyczne</string>
+    <string name="settings_haptics_summary">Delikatne wibracje przy przełączaniu, przeciąganiu i potwierdzaniu</string>
+    <string name="settings_player_art_colors">Kolory z okładki</string>
+    <string name="settings_player_art_colors_summary">Barwi odtwarzacz i strony albumów kolorami okładki</string>
+    <string name="more_tagline">Twoja własna muzyka, odtwarzana pięknie. Bez konta, bez streamingu — wszystko zostaje na tym urządzeniu.</string>
+    <string name="queue_remove_short_menu">Menu</string>
+    <string name="queue_remove_short_button">Przycisk</string>
+    <string name="queue_remove_short_swipe">Przesunięcie</string>
+    <string name="history_today">Dzisiaj</string>
+    <string name="history_yesterday">Wczoraj</string>
+    <string name="stats_tile_songs">Utwory</string>
+    <string name="stats_tile_artists">Wykonawcy</string>
+    <string name="stats_tile_plays">Odtworzenia</string>
+    <string name="settings_show_mini_player">Pasek „Teraz odtwarzane”</string>
+    <string name="settings_show_mini_player_summary">Mini odtwarzacz nad paskiem nawigacji; dotknij go lub przesuń w górę, aby otworzyć odtwarzacz</string>
+    <string name="settings_show_mini_player_locked">Aby go wyłączyć, najpierw dodaj „Teraz odtwarzane” do dolnego paska lub ekranu Więcej w Nawigacji</string>
 </resources>

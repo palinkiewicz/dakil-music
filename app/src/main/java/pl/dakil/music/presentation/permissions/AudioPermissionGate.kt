@@ -1,5 +1,23 @@
 package pl.dakil.music.presentation.permissions
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.graphics.shapes.Morph
+import pl.dakil.music.ui.designsystem.MorphShape
+import pl.dakil.music.ui.designsystem.icon.AppIcon
+import pl.dakil.music.ui.designsystem.icon.AppSymbols
+import pl.dakil.music.ui.theme.Spacing
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -15,10 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,47 +120,88 @@ private fun PermissionRequest(
     onRequest: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.LibraryMusic,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(72.dp),
-        )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.permission_title),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(
-                if (deniedPermanently) {
-                    R.string.permission_denied_permanently
-                } else {
-                    R.string.permission_rationale
-                },
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(24.dp))
-        if (deniedPermanently) {
-            Button(onClick = onOpenSettings) {
-                Text(stringResource(R.string.permission_open_settings))
-            }
-        } else {
-            Button(onClick = onRequest) {
-                Text(stringResource(R.string.permission_grant))
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = Spacing.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            MorphingBadge()
+            Spacer(Modifier.height(Spacing.xxl))
+            Text(
+                text = stringResource(R.string.permission_title),
+                style = MaterialTheme.typography.headlineMediumEmphasized,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(Spacing.m))
+            Text(
+                text = stringResource(
+                    if (deniedPermanently) {
+                        R.string.permission_denied_permanently
+                    } else {
+                        R.string.permission_rationale
+                    },
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(Spacing.xxl))
+            Button(
+                onClick = if (deniedPermanently) onOpenSettings else onRequest,
+                shapes = ButtonDefaults.shapes(),
+                contentPadding = ButtonDefaults.MediumContentPadding,
+                modifier = Modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
+            ) {
+                Text(
+                    stringResource(if (deniedPermanently) R.string.permission_open_settings else R.string.permission_grant),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
         }
+    }
+}
+
+/** Polygons the welcome badge morphs through, in a loop. */
+private val BadgeShapes = listOf(
+    MaterialShapes.Cookie9Sided,
+    MaterialShapes.Flower,
+    MaterialShapes.Clover8Leaf,
+    MaterialShapes.Sunny,
+)
+
+/** A music symbol in a badge that keeps morphing from one expressive shape into the next. */
+@Composable
+private fun MorphingBadge() {
+    val morphs = remember { BadgeShapes.indices.map { Morph(BadgeShapes[it], BadgeShapes[(it + 1) % BadgeShapes.size]) } }
+    val transition = rememberInfiniteTransition(label = "badge")
+    // One unit per shape: the integer part picks the morph, the fraction is its progress.
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = BadgeShapes.size.toFloat(),
+        animationSpec = infiniteRepeatable(tween(BadgeShapes.size * 2_200, easing = LinearEasing)),
+        label = "badgePhase",
+    )
+    val index = phase.toInt().coerceIn(0, morphs.lastIndex)
+    // Ease each morph so the badge rests on a shape before moving on.
+    val local = FastOutSlowInEasing.transform((phase - index).coerceIn(0f, 1f))
+    Box(
+        Modifier
+            .size(160.dp)
+            .graphicsLayer { rotationZ = phase * 45f }
+            .background(MaterialTheme.colorScheme.primaryContainer, MorphShape(morphs[index], local)),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppIcon(
+            AppSymbols.LibraryMusic,
+            contentDescription = null,
+            filled = true,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier
+                .size(64.dp)
+                .graphicsLayer { rotationZ = -phase * 45f },
+        )
     }
 }
